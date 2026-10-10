@@ -21,211 +21,274 @@ struct NowPlayingSong: Equatable, Identifiable {
     let albumArtURL: URL?
     let position: Double?
     let duration: Double?  // Duration in seconds
+}
 
-    /// Initializes a song model from a given output string.
-    /// - Parameters:
-    ///   - application: The name of the music application.
-    ///   - output: The output string returned by AppleScript.
-    init?(application: String, from output: String) {
-        let components = output.components(separatedBy: "|")
-        guard components.count == 6,
-            let state = PlaybackState(rawValue: components[0])
-        else {
+// MARK: - media-control Payload
+
+/// The now playing information reported by `media-control stream`.
+///
+/// macOS 15.4 restricted the MediaRemote framework, so the widget reads the system-wide
+/// now playing session through media-control (https://github.com/ungive/media-control).
+/// Unlike AppleScript, this covers every player that reports to Now Playing,
+/// including browsers such as Firefox.
+struct MediaControlPayload: Decodable, Equatable {
+    let title: String?
+    let artist: String?
+    let playing: Bool?
+    let elapsedTime: Double?
+    let duration: Double?
+    let timestamp: String?
+    let playbackRate: Double?
+    let bundleIdentifier: String?
+
+    private static let timestampFormatter = ISO8601DateFormatter()
+
+    /// The moment `elapsedTime` was measured.
+    var timestampDate: Date? {
+        timestamp.flatMap { Self.timestampFormatter.date(from: $0) }
+    }
+
+    /// Identifies the track, so the artwork is fetched again only when it changes.
+    /// media-control's `contentItemIdentifier` is not used because it changes on every play/pause of the same track.
+    var trackKey: String {
+        [bundleIdentifier, title, artist].map { $0 ?? "" }.joined(separator: "\u{1f}")
+    }
+
+    /// Builds the song model, estimating the current position from the elapsed time and its timestamp.
+    func song(artworkURL: URL?, now: Date = Date()) -> NowPlayingSong? {
+        guard let title, !title.isEmpty else { return nil }
+        let isPlaying = playing ?? false
+        var position = elapsedTime
+        if isPlaying, let elapsed = elapsedTime, let measured = timestampDate {
+            position = elapsed + now.timeIntervalSince(measured) * (playbackRate ?? 1)
+        }
+        if let current = position, let duration {
+            position = min(max(current, 0), duration)
+        }
+        return NowPlayingSong(
+            appName: bundleIdentifier.flatMap(Self.appName(for:)) ?? "",
+            state: isPlaying ? .playing : .paused,
+            title: title,
+            artist: artist ?? "",
+            albumArtURL: artworkURL,
+            position: position,
+            duration: duration)
+    }
+
+    private static func appName(for bundleIdentifier: String) -> String? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
             return nil
         }
-        // Replace commas with dots for correct decimal conversion.
-        let positionString = components[4].replacingOccurrences(
-            of: ",", with: ".")
-        let durationString = components[5].replacingOccurrences(
-            of: ",", with: ".")
-        guard let position = Double(positionString),
-            let duration = Double(durationString)
-        else {
-            return nil
-        }
-
-        self.appName = application
-        self.state = state
-        self.title = components[1]
-        self.artist = components[2]
-        self.albumArtURL = URL(string: components[3])
-        self.position = position
-        if application == MusicApp.spotify.rawValue {
-            self.duration = duration / 1000
-        } else {
-            self.duration = duration
-        }
+        return FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
     }
 }
 
-// MARK: - Supported Music Applications
+// MARK: - media-control Process
 
-/// Supported music applications with corresponding AppleScript commands.
-enum MusicApp: String, CaseIterable {
-    case spotify = "Spotify"
-    case music = "Music"
+/// Runs media-control and exposes its now playing stream and playback commands.
+final class MediaControl {
+    /// Homebrew installs media-control in one of these locations, in the same way as yabai and AeroSpace.
+    static let executableURL: URL? = ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
+        .first { FileManager.default.isExecutableFile(atPath: $0) }
+        .map { URL(fileURLWithPath: $0) }
 
-    /// AppleScript to fetch the now playing song.
-    var nowPlayingScript: String {
-        if self == .music {
-            return """
-                if application "Music" is running then
-                    tell application "Music"
-                        if player state is playing or player state is paused then
-                            set currentTrack to current track
-                            try
-                                set artworkURL to (get URL of artwork 1 of currentTrack) as text
-                            on error
-                                set artworkURL to ""
-                            end try
-                            set stateText to ""
-                            if player state is playing then
-                                set stateText to "playing"
-                            else if player state is paused then
-                                set stateText to "paused"
-                            end if
-                            return stateText & "|" & (name of currentTrack) & "|" & (artist of currentTrack) & "|" & artworkURL & "|" & (player position as text) & "|" & ((duration of currentTrack) as text)
-                        else
-                            return "stopped"
-                        end if
-                    end tell
-                else
-                    return "stopped"
-                end if
-                """
-        } else {
-            return """
-                if application "\(rawValue)" is running then
-                    tell application "\(rawValue)"
-                        if player state is playing then
-                            set currentTrack to current track
-                            return "playing|" & (name of currentTrack) & "|" & (artist of currentTrack) & "|" & (artwork url of currentTrack) & "|" & player position & "|" & (duration of currentTrack)
-                        else if player state is paused then
-                            set currentTrack to current track
-                            return "paused|" & (name of currentTrack) & "|" & (artist of currentTrack) & "|" & (artwork url of currentTrack) & "|" & player position & "|" & (duration of currentTrack)
-                        else
-                            return "stopped"
-                        end if
-                    end tell
-                else
-                    return "stopped"
-                end if
-                """
+    private let onPayload: (MediaControlPayload?) -> Void
+    private var process: Process?
+    private var buffer = Data()
+    private var stopped = false
+
+    /// - Parameter onPayload: Called on the main queue with each update; `nil` means nothing is playing.
+    init(onPayload: @escaping (MediaControlPayload?) -> Void) {
+        self.onPayload = onPayload
+    }
+
+    /// Starts streaming, restarting media-control if it exits unexpectedly.
+    func start() {
+        guard let executableURL = Self.executableURL else {
+            print("media-control was not found; install it with `brew install media-control`")
+            return
         }
-    }
-
-    var previousTrackCommand: String {
-        "tell application \"\(rawValue)\" to previous track"
-    }
-
-    var togglePlayPauseCommand: String {
-        "tell application \"\(rawValue)\" to playpause"
-    }
-
-    var nextTrackCommand: String {
-        "tell application \"\(rawValue)\" to next track"
-    }
-}
-
-// MARK: - Now Playing Provider
-
-/// Provides functionality to fetch the now playing song and execute playback commands.
-final class NowPlayingProvider {
-
-    /// Returns the current playing song from any supported music application.
-    static func fetchNowPlaying() -> NowPlayingSong? {
-        for app in MusicApp.allCases {
-            if let song = fetchNowPlaying(from: app) {
-                return song
+        stopped = false
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["stream", "--no-diff", "--no-artwork"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            DispatchQueue.main.async { self?.receive(data) }
+        }
+        process.terminationHandler = { [weak self] _ in
+            pipe.fileHandleForReading.readabilityHandler = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                guard let self, !self.stopped else { return }
+                self.buffer.removeAll()
+                self.start()
             }
         }
-        return nil
+        do {
+            try process.run()
+            self.process = process
+        } catch {
+            print("Failed to start media-control: \(error)")
+        }
     }
 
-    /// Returns the now playing song for a specific music application.
-    private static func fetchNowPlaying(from app: MusicApp) -> NowPlayingSong? {
-        guard let output = runAppleScript(app.nowPlayingScript),
-            output != "stopped"
+    func stop() {
+        stopped = true
+        process?.terminate()
+        process = nil
+    }
+
+    private func receive(_ data: Data) {
+        buffer.append(data)
+        while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+            let line = buffer[buffer.startIndex..<newline]
+            buffer.removeSubrange(buffer.startIndex...newline)
+            guard let message = try? JSONDecoder().decode(StreamMessage.self, from: line) else { continue }
+            onPayload(message.payload.title == nil ? nil : message.payload)
+        }
+    }
+
+    private struct StreamMessage: Decodable {
+        let payload: MediaControlPayload
+    }
+
+    /// Fetches the current artwork, which the stream omits to avoid sending it with every update.
+    static func fetchArtwork() -> (data: Data, fileExtension: String)? {
+        guard let executableURL else { return nil }
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["get"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+        let output = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard let json = try? JSONSerialization.jsonObject(with: output) as? [String: Any],
+            let base64 = json["artworkData"] as? String,
+            let data = Data(base64Encoded: base64)
         else {
             return nil
         }
-        return NowPlayingSong(application: app.rawValue, from: output)
+        let fileExtension = (json["artworkMimeType"] as? String) == "image/png" ? "png" : "jpg"
+        return (data, fileExtension)
     }
 
-    /// Checks if the specified music application is currently running.
-    static func isAppRunning(_ app: MusicApp) -> Bool {
-        NSWorkspace.shared.runningApplications.contains {
-            $0.localizedName == app.rawValue
-        }
-    }
-
-    /// Executes the provided AppleScript and returns the trimmed result.
-    @discardableResult
-    static func runAppleScript(_ script: String) -> String? {
-        guard let appleScript = NSAppleScript(source: script) else {
-            return nil
-        }
-        var error: NSDictionary?
-        let outputDescriptor = appleScript.executeAndReturnError(&error)
-        if let error = error {
-            print("AppleScript Error: \(error)")
-            return nil
-        }
-        return outputDescriptor.stringValue?.trimmingCharacters(
-            in: .whitespacesAndNewlines)
-    }
-
-    /// Returns the first running music application.
-    static func activeMusicApp() -> MusicApp? {
-        MusicApp.allCases.first { isAppRunning($0) }
-    }
-
-    /// Executes a playback command for the active music application.
-    static func executeCommand(_ command: (MusicApp) -> String) {
-        guard let activeApp = activeMusicApp() else { return }
-        _ = runAppleScript(command(activeApp))
+    static func run(_ command: String) {
+        guard let executableURL else { return }
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = [command]
+        try? process.run()
     }
 }
 
 // MARK: - Now Playing Manager
 
-/// An observable manager that periodically updates the now playing song.
+/// An observable manager that follows the system-wide now playing session.
 final class NowPlayingManager: ObservableObject {
     static let shared = NowPlayingManager()
 
     @Published private(set) var nowPlaying: NowPlayingSong?
-    private var cancellable: AnyCancellable?
+
+    private var mediaControl: MediaControl?
+    private var payload: MediaControlPayload?
+    private var artworkURL: URL?
+    private var artworkTrackKey: String?
+    private var positionTimer: AnyCancellable?
+    private var terminateObserver: NSObjectProtocol?
+
+    /// Album art is written to this directory so the existing URL-based image views can load it.
+    private let artworkDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("barik-now-playing", isDirectory: true)
 
     private init() {
-        cancellable = Timer.publish(every: 0.3, on: .main, in: .common)
+        try? FileManager.default.removeItem(at: artworkDirectory)
+        try? FileManager.default.createDirectory(at: artworkDirectory, withIntermediateDirectories: true)
+
+        mediaControl = MediaControl { [weak self] payload in
+            self?.update(payload)
+        }
+        mediaControl?.start()
+
+        // Only the position changes while a song plays, so recompute it locally instead of polling media-control.
+        positionTimer = Timer.publish(every: 0.5, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.updateNowPlaying()
+                guard let self, self.payload?.playing == true else { return }
+                self.publish()
             }
+
+        terminateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.mediaControl?.stop()
+        }
     }
 
-    /// Updates the now playing song asynchronously.
-    private func updateNowPlaying() {
-        DispatchQueue.global(qos: .background).async {
-            let song = NowPlayingProvider.fetchNowPlaying()
-            DispatchQueue.main.async { [weak self] in
-                self?.nowPlaying = song
+    private func update(_ payload: MediaControlPayload?) {
+        self.payload = payload
+        guard let payload else {
+            setArtwork(nil, for: nil)
+            publish()
+            return
+        }
+        // The artwork sometimes arrives after the title, so retry on later updates until one is found.
+        if payload.trackKey != artworkTrackKey || artworkURL == nil {
+            let trackKey = payload.trackKey
+            DispatchQueue.global(qos: .utility).async { [weak self] in
+                let artwork = MediaControl.fetchArtwork()
+                DispatchQueue.main.async {
+                    guard let self, self.payload?.trackKey == trackKey else { return }
+                    self.setArtwork(artwork, for: trackKey)
+                    self.publish()
+                }
             }
+        }
+        publish()
+    }
+
+    /// Writes each artwork to a new file, because the image cache is keyed by URL.
+    private func setArtwork(_ artwork: (data: Data, fileExtension: String)?, for trackKey: String?) {
+        if let artworkURL {
+            try? FileManager.default.removeItem(at: artworkURL)
+        }
+        artworkURL = nil
+        artworkTrackKey = trackKey
+        guard let artwork else { return }
+        let url = artworkDirectory.appendingPathComponent("\(UUID().uuidString).\(artwork.fileExtension)")
+        if (try? artwork.data.write(to: url)) != nil {
+            artworkURL = url
+        }
+    }
+
+    private func publish() {
+        let song = payload?.song(artworkURL: artworkURL)
+        if song != nowPlaying {
+            nowPlaying = song
         }
     }
 
     /// Skips to the previous track.
     func previousTrack() {
-        NowPlayingProvider.executeCommand { $0.previousTrackCommand }
+        MediaControl.run("previous-track")
     }
 
     /// Toggles between play and pause.
     func togglePlayPause() {
-        NowPlayingProvider.executeCommand { $0.togglePlayPauseCommand }
+        MediaControl.run("toggle-play-pause")
     }
 
     /// Skips to the next track.
     func nextTrack() {
-        NowPlayingProvider.executeCommand { $0.nextTrackCommand }
+        MediaControl.run("next-track")
     }
 }
