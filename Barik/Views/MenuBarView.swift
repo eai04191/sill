@@ -67,6 +67,10 @@ struct MenuBarView: View {
             VolumeWidget()
                 .environmentObject(config)
 
+        case "default.frontapp":
+            FrontAppWidget()
+                .environmentObject(config)
+
         case "spacer":
             Spacer().frame(minWidth: 50, maxWidth: .infinity)
 
