@@ -78,6 +78,10 @@ final class UsageManager: ObservableObject {
 
     private var command = UsageManager.defaultCommand
     private var timer: AnyCancellable?
+    /// Set while the command runs, so a slow command is not started again on every tick.
+    private var isRunning = false
+    /// A command that hangs is stopped after this many seconds.
+    private static let timeout: TimeInterval = 10
 
     private init() {
         timer = Timer.publish(every: 5, on: .main, in: .common)
@@ -95,12 +99,17 @@ final class UsageManager: ObservableObject {
     }
 
     private func refresh() {
+        guard !isRunning else { return }
+        isRunning = true
         let path = (command as NSString).expandingTildeInPath
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let report = Self.run(path)
             DispatchQueue.main.async {
-                guard let self, self.report != report else { return }
-                self.report = report
+                guard let self else { return }
+                self.isRunning = false
+                if self.report != report {
+                    self.report = report
+                }
             }
         }
     }
@@ -118,6 +127,11 @@ final class UsageManager: ObservableObject {
             try process.run()
         } catch {
             return nil
+        }
+        // Terminating the command closes its end of the output and ends the read below. A child process of the command
+        // that still holds the output open keeps the read waiting until it exits; refresh() still never overlaps runs.
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
+            if process.isRunning { process.terminate() }
         }
         let output = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
