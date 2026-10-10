@@ -23,14 +23,23 @@ struct BackgroundView: View {
     var body: some View {
         if configManager.config.experimental.background.displayed {
             GeometryReader { geometry in
-                if configManager.config.experimental.background.black {
-                    spacer(geometry)
-                        .background(.black)
-                        .id("black")
-                } else {
-                    spacer(geometry)
-                        .background(configManager.config.experimental.background.blur)
-                        .id("blur")
+                VStack(spacing: 0) {
+                    // Keep the background on the same screen edge as the bar.
+                    if configManager.config.position == .bottom {
+                        Spacer(minLength: 0)
+                    }
+                    if configManager.config.experimental.background.black {
+                        spacer(geometry)
+                            .background(.black)
+                            .id("black")
+                    } else {
+                        spacer(geometry)
+                            .background(configManager.config.experimental.background.blur)
+                            .id("blur")
+                    }
+                    if configManager.config.position == .top {
+                        Spacer(minLength: 0)
+                    }
                 }
             }
         }

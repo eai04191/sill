@@ -1,8 +1,10 @@
+import Combine
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var backgroundPanel: NSPanel?
     private var menuBarPanel: NSPanel?
+    private var configCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let error = ConfigManager.shared.initError {
@@ -21,6 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         MenuBarPopup.setup()
         setupPanels()
+
+        // The config file is applied asynchronously after launch, and `position` may change while running,
+        // so place the panels again whenever the config changes.
+        configCancellable = ConfigManager.shared.$config
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.setupPanels() }
 
         NotificationCenter.default.addObserver(
             self,
@@ -43,15 +52,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hostingRootView: AnyView(BackgroundView()))
         setupPanel(
             &menuBarPanel,
-            frame: screenFrame,
+            frame: menuBarFrame(in: screenFrame),
             level: Int(CGWindowLevelForKey(.backstopMenu)),
-            hostingRootView: AnyView(MenuBarView()))
+            hostingRootView: AnyView(MenuBarView()),
+            fixedFrame: true)
+    }
+
+    /// The strip along the configured screen edge that the bar occupies.
+    private func menuBarFrame(in screenFrame: CGRect) -> CGRect {
+        let config = ConfigManager.shared.config
+        let height = max(config.experimental.foreground.resolveHeight(), 1)
+        let y = config.position == .bottom ? screenFrame.minY : screenFrame.maxY - height
+        return CGRect(x: screenFrame.minX, y: y, width: screenFrame.width, height: height)
     }
 
     /// Sets up an NSPanel with the provided parameters.
+    /// - Parameter fixedFrame: Keeps the given frame instead of letting the hosting view resize the panel
+    ///   to its content, which would anchor it to the top edge.
     private func setupPanel(
         _ panel: inout NSPanel?, frame: CGRect, level: Int,
-        hostingRootView: AnyView
+        hostingRootView: AnyView, fixedFrame: Bool = false
     ) {
         if let existingPanel = panel {
             existingPanel.setFrame(frame, display: true)
@@ -67,7 +87,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
-        newPanel.contentView = NSHostingView(rootView: hostingRootView)
+        let hostingView = NSHostingView(rootView: hostingRootView)
+        if fixedFrame {
+            hostingView.sizingOptions = []
+        }
+        newPanel.contentView = hostingView
+        newPanel.setFrame(frame, display: true)
         newPanel.orderFront(nil)
         panel = newPanel
     }

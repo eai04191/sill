@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootToml: Decodable {
     var theme: String?
+    var position: BarPosition?
     var yabai: YabaiConfig?
     var aerospace: AerospaceConfig?
     var experimental: ExperimentalConfig?
@@ -10,6 +11,7 @@ struct RootToml: Decodable {
 
     init() {
         self.theme = nil
+        self.position = nil
         self.yabai = nil
         self.aerospace = nil
         self.widgets = WidgetsSection(displayed: [], others: [:])
@@ -26,6 +28,10 @@ struct Config {
     var theme: String {
         rootToml.theme ?? "light"
     }
+
+    var position: BarPosition {
+        rootToml.position ?? .top
+    }
     
     var yabai: YabaiConfig {
         rootToml.yabai ?? YabaiConfig()
@@ -38,6 +44,11 @@ struct Config {
     var experimental: ExperimentalConfig {
         rootToml.experimental ?? ExperimentalConfig()
     }
+}
+
+/// The screen edge where the bar is placed (`position = "top"` or `"bottom"`).
+enum BarPosition: String, Decodable {
+    case top, bottom
 }
 
 typealias ConfigData = [String: TOMLValue]

@@ -36,6 +36,11 @@ class HidingPanel: NSPanel, NSWindowDelegate {
 class MenuBarPopup {
     static var lastContentIdentifier: String? = nil
 
+    /// The panel edge next to the bar, where the popup is anchored before MenuBarPopupView shifts it into the screen.
+    private static func edgeY(of panel: NSPanel) -> CGFloat {
+        ConfigManager.shared.config.position == .bottom ? panel.frame.height : 0
+    }
+
     static func show<Content: View>(
         rect: CGRect, id: String, @ViewBuilder content: @escaping () -> Content
     ) {
@@ -77,7 +82,7 @@ class MenuBarPopup {
                             MenuBarPopupView {
                                 content()
                             }
-                            .position(x: rect.midX)
+                            .position(x: rect.midX, y: edgeY(of: panel))
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id(UUID())
@@ -95,7 +100,7 @@ class MenuBarPopup {
                         MenuBarPopupView {
                             content()
                         }
-                        .position(x: rect.midX)
+                        .position(x: rect.midX, y: edgeY(of: panel))
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             )

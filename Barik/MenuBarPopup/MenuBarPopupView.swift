@@ -6,6 +6,7 @@ struct MenuBarPopupView<Content: View>: View {
 
     @ObservedObject var configManager = ConfigManager.shared
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
+    private var isBottom: Bool { configManager.config.position == .bottom }
 
     @State private var contentHeight: CGFloat = 0
     @State private var viewFrame: CGRect = .zero
@@ -34,7 +35,7 @@ struct MenuBarPopupView<Content: View>: View {
             content
                 .background(Color.black)
                 .cornerRadius(((1.0 - animationValue) * 1) + 40)
-                .padding(.top, foregroundHeight + 5)
+                .padding(isBottom ? .bottom : .top, foregroundHeight + 5)
                 .offset(x: computedOffset, y: computedYOffset)
                 .shadow(radius: 30)
                 .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
@@ -150,8 +151,9 @@ struct MenuBarPopupView<Content: View>: View {
         return 0
     }
 
+    /// MenuBarPopup centers the popup on the bar's edge of the panel, so shift it by half its height into the screen.
     var computedYOffset: CGFloat {
-        return viewFrame.height / 2
+        return isBottom ? -viewFrame.height / 2 : viewFrame.height / 2
     }
 }
 
