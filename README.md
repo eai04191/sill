@@ -134,6 +134,30 @@ displayed = false                            # wrap widgets in their own backgro
 blur = 3                                     # background type: from 1 to 6 for blur intensity
 ```
 
+### Additional options in this fork
+
+```toml
+position = "bottom"   # top (default) or bottom; popups open upward at the bottom
+liquid-glass = true   # macOS 26+: Liquid Glass for widget backgrounds and popups (needs widgets-background displayed)
+
+[widgets]
+displayed = [
+    "default.nowplaying", # now playing from media-control (`brew install media-control`), any player incl. browsers
+    "default.frontapp",   # frontmost app icon and name
+    "default.usage",      # Claude Code / Codex usage
+    "default.volume",     # output volume with a slider popup
+]
+
+[widgets.default.usage]
+command = "~/.local/bin/usage-display.sh" # prints {"claude": {"primary": {"pct": 10, "reset": "2h"}, "secondary": ...}, "codex": ...}
+
+[widgets.default.volume]
+show-percentage = true
+
+[widgets.default.frontapp]
+show-icon = true
+```
+
 Currently, you can customize the order of widgets (time, indicators, etc.) and adjust some of their settings. Soon, you’ll also be able to add custom widgets and completely change **barik**'s appearance—making it almost unrecognizable (hello, r/unixporn!).
 
 ## Future Plans
