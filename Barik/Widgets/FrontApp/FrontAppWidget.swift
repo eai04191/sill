@@ -9,7 +9,7 @@ final class FrontAppManager: ObservableObject {
     private var observer: NSObjectProtocol?
 
     private init() {
-        app = Self.ignoringSelf(NSWorkspace.shared.frontmostApplication)
+        app = Self.ignoringSelf(NSWorkspace.shared.frontmostApplication) ?? Self.frontmostWindowOwner()
         observer = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] notification in
@@ -18,6 +18,22 @@ final class FrontAppManager: ObservableObject {
                 self?.app = app
             }
         }
+    }
+
+    /// When Barik itself is frontmost at launch, use the owner of the frontmost normal window instead.
+    private static func frontmostWindowOwner() -> NSRunningApplication? {
+        guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+            as? [[String: Any]]
+        else { return nil }
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        for window in windows {
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                let pid = window[kCGWindowOwnerPID as String] as? pid_t, pid != ownPID,
+                let app = NSRunningApplication(processIdentifier: pid), app.activationPolicy == .regular
+            else { continue }
+            return app
+        }
+        return nil
     }
 
     /// Barik becomes active when it launches or a popup takes focus; keep showing the app the user was working in.
