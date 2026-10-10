@@ -48,9 +48,7 @@ private struct NowPlayingVerticalPopup: View {
     @ObservedObject private var playingManager = NowPlayingManager.shared
 
     var body: some View {
-        if let song = playingManager.nowPlaying,
-           let duration = song.duration,
-           let position = song.position {
+        if let song = playingManager.nowPlaying {
             VStack(spacing: 15) {
                 RotateAnimatedCachedImage(
                     url: song.albumArtURL,
@@ -79,17 +77,20 @@ private struct NowPlayingVerticalPopup: View {
                         .fontWeight(.light)
                 }
 
-                HStack {
-                    Text(timeString(from: position))
-                        .font(.caption)
-                    ProgressView(value: position, total: duration)
-                        .progressViewStyle(LinearProgressViewStyle())
-                        .tint(.white)
-                    Text("-" + timeString(from: duration - position))
-                        .font(.caption)
+                // Live streams report no duration or position; keep the song and its controls without the timeline.
+                if let duration = song.duration, let position = song.position {
+                    HStack {
+                        Text(timeString(from: position))
+                            .font(.caption)
+                        ProgressView(value: position, total: duration)
+                            .progressViewStyle(LinearProgressViewStyle())
+                            .tint(.white)
+                        Text("-" + timeString(from: duration - position))
+                            .font(.caption)
+                    }
+                    .foregroundColor(.gray)
+                    .monospacedDigit()
                 }
-                .foregroundColor(.gray)
-                .monospacedDigit()
 
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
@@ -116,9 +117,7 @@ struct NowPlayingHorizontalPopup: View {
     @ObservedObject private var playingManager = NowPlayingManager.shared
 
     var body: some View {
-        if let song = playingManager.nowPlaying,
-           let duration = song.duration,
-           let position = song.position {
+        if let song = playingManager.nowPlaying {
             VStack(spacing: 15) {
                 HStack(spacing: 15) {
                     RotateAnimatedCachedImage(
@@ -150,17 +149,20 @@ struct NowPlayingHorizontalPopup: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                HStack {
-                    Text(timeString(from: position))
-                        .font(.caption)
-                    ProgressView(value: position, total: duration)
-                        .progressViewStyle(LinearProgressViewStyle())
-                        .tint(.white)
-                    Text("-" + timeString(from: duration - position))
-                        .font(.caption)
+                // Live streams report no duration or position; keep the song and its controls without the timeline.
+                if let duration = song.duration, let position = song.position {
+                    HStack {
+                        Text(timeString(from: position))
+                            .font(.caption)
+                        ProgressView(value: position, total: duration)
+                            .progressViewStyle(LinearProgressViewStyle())
+                            .tint(.white)
+                        Text("-" + timeString(from: duration - position))
+                            .font(.caption)
+                    }
+                    .foregroundColor(.gray)
+                    .monospacedDigit()
                 }
-                .foregroundColor(.gray)
-                .monospacedDigit()
 
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
