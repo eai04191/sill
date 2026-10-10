@@ -29,7 +29,8 @@ struct NowPlayingPopup: View {
            let variant = MenuBarPopupVariant(rawValue: variantString) {
             selectedVariant = variant
         } else {
-            selectedVariant = .box
+            // This popup has no box variant, so falling back to .box rendered an empty popup.
+            selectedVariant = .horizontal
         }
     }
     
