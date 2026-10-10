@@ -12,15 +12,25 @@ private struct ExperimentalConfigurationModifier: ViewModifier {
             if !configManager.config.experimental.foreground.widgetsBackground.displayed {
                 content
             } else {
+                let radius = foregroundHeight < 30 ? 0 : cornerRadius
+                let usesGlass = configManager.config.usesLiquidGlass
                 content
                     .frame(height: foregroundHeight < 45 ? 30 : 38)
                     .padding(.horizontal, foregroundHeight < 45 && horizontalPadding != 15 ? 0 :
                                 foregroundHeight < 30 ? 0 : horizontalPadding
                     )
-                    .background(configManager.config.experimental.foreground.widgetsBackground.blur)
-                    .cornerRadius(foregroundHeight < 30 ? 0 : cornerRadius)
+                    // The bar's white text is meant to sit on the wallpaper; on glass, use the system label color
+                    // so it stays legible in light and dark mode, as the HIG recommends. The `.primary` style
+                    // rendered white on glass even in light mode, while a concrete Color is drawn as given.
+                    // glassEffect captures the content as styled so far, so this has to come before it.
+                    .foregroundStyle(usesGlass ? AnyShapeStyle(Color(nsColor: .labelColor)) : AnyShapeStyle(Color.foregroundOutside))
+                    .liquidGlassBackground(usesGlass, in: RoundedRectangle(cornerRadius: radius)) {
+                        Rectangle().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
+                    }
+                    .applying(!usesGlass) { $0.cornerRadius(radius) }
+                    // Liquid Glass draws its own edge highlight, so the outline is only for the material look.
                     .overlay(
-                        foregroundHeight < 30 ? nil :
+                        foregroundHeight < 30 || usesGlass ? nil :
                             Capsule().stroke(Color.noActive, lineWidth: 1)
                     )
             }

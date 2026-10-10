@@ -69,11 +69,10 @@ struct NowPlayingContent: View {
                 }
                 .padding(.horizontal, foregroundHeight < 45 ? 8 : 12)
                 .frame(height: foregroundHeight < 45 ? 30 : 38)
-                .background(configManager.config.experimental.foreground.widgetsBackground.blur)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(Color.noActive, lineWidth: 1)
-                )
+                .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule()) {
+                    Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
+                        .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
+                }
             }
         }
         .foregroundColor(.foreground)

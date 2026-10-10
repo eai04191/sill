@@ -63,7 +63,6 @@ struct FrontAppWidget: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
             }
-            .foregroundStyle(Color.foregroundOutside)
             .experimentalConfiguration(cornerRadius: 15)
             .frame(maxHeight: .infinity)
             .animation(.smooth(duration: 0.15), value: name)

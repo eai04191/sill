@@ -17,10 +17,15 @@ struct MenuBarView: View {
         let items = configManager.config.rootToml.widgets.displayed
 
         HStack(spacing: 0) {
-            HStack(spacing: configManager.config.experimental.foreground.spacing) {
-                ForEach(0..<items.count, id: \.self) { index in
-                    let item = items[index]
-                    buildView(for: item)
+            LiquidGlassContainer(
+                enabled: configManager.config.usesLiquidGlass,
+                spacing: configManager.config.experimental.foreground.spacing
+            ) {
+                HStack(spacing: configManager.config.experimental.foreground.spacing) {
+                    ForEach(0..<items.count, id: \.self) { index in
+                        let item = items[index]
+                        buildView(for: item)
+                    }
                 }
             }
 

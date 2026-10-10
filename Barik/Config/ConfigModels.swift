@@ -4,14 +4,21 @@ import SwiftUI
 struct RootToml: Decodable {
     var theme: String?
     var position: BarPosition?
+    var liquidGlass: Bool?
     var yabai: YabaiConfig?
     var aerospace: AerospaceConfig?
     var experimental: ExperimentalConfig?
     var widgets: WidgetsSection
 
+    enum CodingKeys: String, CodingKey {
+        case theme, position, yabai, aerospace, experimental, widgets
+        case liquidGlass = "liquid-glass"
+    }
+
     init() {
         self.theme = nil
         self.position = nil
+        self.liquidGlass = nil
         self.yabai = nil
         self.aerospace = nil
         self.widgets = WidgetsSection(displayed: [], others: [:])

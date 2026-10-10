@@ -7,6 +7,7 @@ struct MenuBarPopupView<Content: View>: View {
     @ObservedObject var configManager = ConfigManager.shared
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     private var isBottom: Bool { configManager.config.position == .bottom }
+    private var usesGlass: Bool { configManager.config.usesLiquidGlass }
 
     @State private var contentHeight: CGFloat = 0
     @State private var viewFrame: CGRect = .zero
@@ -33,12 +34,17 @@ struct MenuBarPopupView<Content: View>: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             content
-                .background(Color.black)
-                .cornerRadius(((1.0 - animationValue) * 1) + 40)
+                .liquidGlassBackground(usesGlass, in: RoundedRectangle(cornerRadius: 40)) {
+                    Color.black
+                }
+                .applying(!usesGlass) { $0.cornerRadius(((1.0 - animationValue) * 1) + 40) }
                 .padding(isBottom ? .bottom : .top, foregroundHeight + 5)
                 .offset(x: computedOffset, y: computedYOffset)
-                .shadow(radius: 30)
-                .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
+                // Glass popups animate with scale and opacity only; see `applying(_:_:)`.
+                .applying(!usesGlass) {
+                    $0.shadow(radius: 30)
+                        .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
+                }
                 .scaleEffect(x: 0.2 + 0.8 * animationValue, y: animationValue)
                 .opacity(animationValue)
                 .transaction { transaction in

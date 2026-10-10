@@ -73,7 +73,6 @@ private struct ServiceUsageView: View {
                     .monospacedDigit()
             }
         }
-        .foregroundStyle(Color.foregroundOutside)
     }
 }
 

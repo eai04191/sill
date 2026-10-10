@@ -23,7 +23,6 @@ struct VolumeWidget: View {
                         .opacity(volumeManager.isMuted ? 0.5 : 1)
                 }
             }
-            .foregroundStyle(Color.foregroundOutside)
             .experimentalConfiguration(cornerRadius: 15)
             .frame(maxHeight: .infinity)
             .background(.black.opacity(0.001))
