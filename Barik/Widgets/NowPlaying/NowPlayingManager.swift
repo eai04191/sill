@@ -34,6 +34,7 @@ struct NowPlayingSong: Equatable, Identifiable {
 struct MediaControlPayload: Decodable, Equatable {
     let title: String?
     let artist: String?
+    let album: String?
     let playing: Bool?
     let elapsedTime: Double?
     let duration: Double?
@@ -51,7 +52,7 @@ struct MediaControlPayload: Decodable, Equatable {
     /// Identifies the track, so the artwork is fetched again only when it changes.
     /// media-control's `contentItemIdentifier` is not used because it changes on every play/pause of the same track.
     var trackKey: String {
-        [bundleIdentifier, title, artist].map { $0 ?? "" }.joined(separator: "\u{1f}")
+        [bundleIdentifier, title, artist, album].map { $0 ?? "" }.joined(separator: "\u{1f}")
     }
 
     /// Builds the song model, estimating the current position from the elapsed time and its timestamp.
