@@ -8,6 +8,9 @@ struct TimeWidget: View {
     var calendarConfig: ConfigData? { config["calendar"]?.dictionaryValue }
 
     var format: String { config["format"]?.stringValue ?? "E d, J:mm" }
+    /// A fixed date format pattern used as is instead of `format`. `format` is a template the locale reorders and
+    /// rewrites, so it cannot keep a zero-padded hour like "09:05" in locales such as Japanese.
+    var fixedFormat: String? { config["fixed-format"]?.stringValue }
     var timeZone: String? { config["time-zone"]?.stringValue }
 
     var calendarFormat: String {
@@ -28,7 +31,7 @@ struct TimeWidget: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 0) {
-            Text(formattedTime(pattern: format, from: currentTime))
+            Text(barTime)
                 .fontWeight(.semibold)
             if let event = calendarManager.nextEvent, calendarShowEvents {
                 Text(eventText(for: event))
@@ -69,15 +72,27 @@ struct TimeWidget: View {
 
     /// The time and, when shown on the bar, the next event, so VoiceOver reads what is displayed.
     private var accessibilityValue: String {
-        let time = formattedTime(pattern: format, from: currentTime)
+        let time = barTime
         guard let event = calendarManager.nextEvent, calendarShowEvents else { return time }
         return "\(time), \(eventText(for: event))"
     }
 
-    // Format the current time.
-    private func formattedTime(pattern: String, from time: Date) -> String {
+    /// The time shown on the bar.
+    private var barTime: String {
+        if let fixedFormat {
+            return formattedTime(pattern: fixedFormat, from: currentTime, fixed: true)
+        }
+        return formattedTime(pattern: format, from: currentTime)
+    }
+
+    // Format the current time. A fixed pattern is used as is; otherwise it is a template localized for the locale.
+    private func formattedTime(pattern: String, from time: Date, fixed: Bool = false) -> String {
         let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate(pattern)
+        if fixed {
+            formatter.dateFormat = pattern
+        } else {
+            formatter.setLocalizedDateFormatFromTemplate(pattern)
+        }
 
         if let timeZone = timeZone,
             let tz = TimeZone(identifier: timeZone)
