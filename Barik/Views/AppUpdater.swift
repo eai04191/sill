@@ -204,7 +204,7 @@ final class AppUpdater: ObservableObject {
         }
     }
 
-    /// Installs the update by replacing the current application.
+    /// Installs the update by replacing the running application where it is installed, once it has quit.
     /// - Parameter version: The latest version string.
     func installUpdate(latest version: String) throws {
         guard let downloadedPath = downloadedUpdatePath else {
@@ -212,13 +212,25 @@ final class AppUpdater: ObservableObject {
         }
         let newAppURL = URL(fileURLWithPath: downloadedPath)
             .appendingPathComponent("Barik.app")
-        let destinationURL = URL(fileURLWithPath: "/Applications/Barik.app")
+        // The installed app is moved aside rather than deleted first, and moved back if the new app cannot be moved
+        // in, so a failed update keeps the old app.
         let script = """
             #!/bin/bash
-            sleep 2
-            rm -rf "\(destinationURL.path)"
-            mv "\(newAppURL.path)" "\(destinationURL.path)"
-            open "\(destinationURL.path)"
+            pid="$1"
+            new_app="$2"
+            app="$3"
+            backup="$app.previous-$$"
+            while kill -0 "$pid" 2>/dev/null; do
+                sleep 0.2
+            done
+            if mv "$app" "$backup"; then
+                if mv "$new_app" "$app"; then
+                    rm -rf "$backup"
+                else
+                    mv "$backup" "$app"
+                fi
+            fi
+            open "$app"
             rm -- "$0"
             """
 
@@ -235,6 +247,9 @@ final class AppUpdater: ObservableObject {
 
         let process = Process()
         process.executableURL = scriptURL
+        process.arguments = [
+            String(ProcessInfo.processInfo.processIdentifier), newAppURL.path, Bundle.main.bundleURL.path,
+        ]
         try process.run()
     }
 }
