@@ -8,7 +8,7 @@ struct YabaiWindow: WindowModel {
     let stackIndex: Int
     var appIcon: NSImage?
     let isHidden: Bool
-    let isFloating: Bool
+    let isMinimized: Bool
     let isSticky: Bool
     let spaceId: Int
 
@@ -20,7 +20,7 @@ struct YabaiWindow: WindowModel {
         case isFocused = "has-focus"
         case stackIndex = "stack-index"
         case isHidden = "is-hidden"
-        case isFloating = "is-floating"
+        case isMinimized = "is-minimized"
         case isSticky = "is-sticky"
     }
 
@@ -36,7 +36,7 @@ struct YabaiWindow: WindowModel {
         stackIndex =
             try container.decodeIfPresent(Int.self, forKey: .stackIndex) ?? 0
         isHidden = try container.decode(Bool.self, forKey: .isHidden)
-        isFloating = try container.decode(Bool.self, forKey: .isFloating)
+        isMinimized = try container.decode(Bool.self, forKey: .isMinimized)
         isSticky = try container.decode(Bool.self, forKey: .isSticky)
         if let name = appName {
             appIcon = IconCache.shared.icon(for: name)

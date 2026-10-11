@@ -25,8 +25,9 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     func getSpacesWithWindows() throws -> [YabaiSpace] {
         let spaces = try fetchSpaces()
         let windows = try fetchWindows()
+        // Floating windows are shown like tiled ones. Minimized windows are not on their space, so they are left out.
         let filteredWindows = windows.filter {
-            !($0.isHidden || $0.isFloating || $0.isSticky)
+            !($0.isHidden || $0.isMinimized || $0.isSticky)
         }
         var spaceDict = Dictionary(
             uniqueKeysWithValues: spaces.map { ($0.id, $0) })
