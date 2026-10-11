@@ -77,9 +77,10 @@ struct ChangelogPopup: View {
     ) -> String {
         let lines = changelog.components(separatedBy: .newlines)
 
+        // Match the whole heading, so 0.5.1 does not find the section of 0.5.10 or 0.5.1-beta.
         guard
             let versionIndex = lines.firstIndex(where: {
-                $0.contains("## \(version)")
+                $0.hasPrefix("## ") && $0.dropFirst(3).trimmingCharacters(in: .whitespaces) == version
             })
         else {
             return ""
