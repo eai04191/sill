@@ -130,9 +130,17 @@ class CalendarManager: ObservableObject {
         let events = eventStore.events(matching: predicate).sorted {
             $0.startDate < $1.startDate
         }
-        let filteredEvents = filterEvents(events)
-        let regularEvents = filteredEvents.filter { !$0.isAllDay }
-        return regularEvents.first ?? filteredEvents.first
+        let filteredEvents = filterEvents(events).filter { !Self.isCanceledOrDeclined($0) }
+        // The range also matches events that already started; a timed one of those is not the next event. All-day
+        // events, which started at midnight, are shown when no timed event is left today.
+        let upcomingEvents = filteredEvents.filter { !$0.isAllDay && $0.startDate >= now }
+        return upcomingEvents.first ?? filteredEvents.first { $0.isAllDay }
+    }
+
+    /// Events the user will not attend: canceled by the organizer, or declined by the user.
+    private static func isCanceledOrDeclined(_ event: EKEvent) -> Bool {
+        event.status == .canceled
+            || event.attendees?.first(where: \.isCurrentUser)?.participantStatus == .declined
     }
 
     private func fetchTodaysEvents(now: Date) -> [EKEvent] {
