@@ -29,7 +29,9 @@ struct ChangelogBannerWidget: View {
                     }
             }
         )
-        .buttonStyle(BannerButtonStyle(color: .green.opacity(0.8)))
+        // A dark, opaque green: white text on it has a contrast ratio of about 5.4:1, where the translucent system
+        // green had about 2:1.
+        .buttonStyle(BannerButtonStyle(color: Color(red: 0, green: 0.48, blue: 0.22)))
         // The close icon inside the button is a tap gesture that VoiceOver cannot reach, so offer it as an action.
         .accessibilityAction(named: "Hide") {
             WhatsNewBanner.shared.dismiss()
