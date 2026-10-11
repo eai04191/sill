@@ -47,7 +47,11 @@ final class ImageLoader: ObservableObject {
         // Cancel any ongoing request before starting a new one.
         cancellable?.cancel()
         
-        guard let url = url, let key = cacheKey else { return }
+        // Without a URL there is no image, rather than the previous URL's.
+        guard let url = url, let key = cacheKey else {
+            image = nil
+            return
+        }
         
         // Check for cached image.
         if let cachedImage = ImageCache.shared.object(forKey: key) {
@@ -137,7 +141,10 @@ struct RotateAnimatedCachedImage<RotatingContent: View>: View {
         }
         .onAppear { loader.load() }
         .onReceive(loader.$image) { newImage in
-            guard let newImage = newImage else { return }
+            guard let newImage = newImage else {
+                displayedImage = nil
+                return
+            }
             // If image is loading for the first time.
             if displayedImage == nil {
                 displayedImage = newImage
@@ -200,7 +207,12 @@ struct FadeAnimatedCachedImage<Content: View>: View {
         }
         .onAppear { loader.load() }
         .onReceive(loader.$image) { newImage in
-            guard let newImage = newImage else { return }
+            guard let newImage = newImage else {
+                currentImage = nil
+                nextImage = nil
+                showNextImage = false
+                return
+            }
             // Set the image for the first time.
             if currentImage == nil {
                 currentImage = newImage
