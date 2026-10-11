@@ -1,0 +1,38 @@
+# git-cliff picks the next version and writes the release notes from the conventional commits since the last tag
+# (scripts/release/next-release.sh). Only features, fixes, performance changes and breaking changes count: a
+# feat makes a minor release, a fix or perf a patch release, and a ! or BREAKING CHANGE a major one. When only
+# other commits (docs, chore and so on) came after the last tag, there is nothing to release.
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+# The notes of one release, shown under its title on GitHub Releases.
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
+  {% if commit.breaking %}**Breaking:** {% endif %}\
+  {{ commit.message | split(pat="\n") | first | upper_first }}\
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+# Tags keep barik's format, without a v.
+tag_pattern = "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+# Keep a breaking change even when its type is one that is skipped below.
+protect_breaking_commits = true
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->Features" },
+  { message = "^fix", group = "<!-- 1 -->Fixes" },
+  { message = "^perf", group = "<!-- 2 -->Performance" },
+  { message = ".*", skip = true },
+]
+sort_commits = "oldest"
+
+[bump]
+features_always_bump_minor = true
+breaking_always_bump_major = true

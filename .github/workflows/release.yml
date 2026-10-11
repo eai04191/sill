@@ -1,0 +1,182 @@
+name: Release
+
+# git-cliff (cliff.toml) picks the version from the conventional commits since the last tag and writes the release
+# notes. The build job signs and zips Sill with that version; the release job attests the zip, tags the commit with a
+# GitHub release that has the zip, and updates the cask in the tap. Nothing happens when no commit needs a release.
+# Run it from main.
+#
+# What the release needs from outside this repository (RELEASING.md explains how to prepare each one):
+# - Secrets of the release environment, which only main can use:
+#   - SIGNING_CERTIFICATE_P12_BASE64: a base64-encoded .p12 of the self-signed code signing certificate and its key
+#   - SIGNING_CERTIFICATE_PASSWORD: the .p12 password
+#   - TAP_GITHUB_TOKEN: a fine-grained token with Contents: Read and write on TAP_REPOSITORY only
+# - TAP_REPOSITORY below.
+#
+# Each secret is given only to the step that uses it. The build, which runs the Swift packages' code, gets a read-only
+# token; writing to the repository and signing attestations happen in the release job, which runs no project code.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TAP_REPOSITORY: eai04191/homebrew-tap
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+    env:
+      # The aarch64-apple-darwin archive of git-cliff, checked against this SHA-512.
+      # renovate: datasource=github-release-attachments depName=orhun/git-cliff
+      GIT_CLIFF_VERSION: v2.14.2
+      GIT_CLIFF_SHA512: 6ec30660233fcd73b92e9d888965945b6435d6fcd7120df8d7c0799faa46cf06d563d49de721ccf4387e6d61bdc5b37c8eb73273c7d9a0883b90cd9857c6ad9f
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # git-cliff reads the commits and tags since the last release.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install git-cliff
+        run: |
+          archive="git-cliff-${GIT_CLIFF_VERSION#v}-aarch64-apple-darwin.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --output "$archive" \
+            "https://github.com/orhun/git-cliff/releases/download/$GIT_CLIFF_VERSION/$archive"
+          echo "$GIT_CLIFF_SHA512  $archive" | shasum -a 512 -c
+          tar -xzf "$archive"
+          echo "GIT_CLIFF=$RUNNER_TEMP/git-cliff-${GIT_CLIFF_VERSION#v}/git-cliff" >> "$GITHUB_ENV"
+
+      - name: Pick the version
+        id: version
+        run: |
+          mkdir dist
+          version=$(scripts/release/next-release.sh dist/notes.md)
+          if [ -z "$version" ]; then
+            echo "No commit since the last release needs a release" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Releasing $version" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Select Xcode
+        if: steps.version.outputs.version != ''
+        # The runner's default Xcode changes over time; pin it so releases build with the same toolchain.
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+
+      - name: Import the signing certificate
+        if: steps.version.outputs.version != ''
+        env:
+          SIGNING_CERTIFICATE_P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12_BASE64 }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_CERTIFICATE_P12_BASE64" ] || [ -z "$SIGNING_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::The signing certificate secrets are not set in the release environment"
+            exit 1
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(openssl rand -hex 32)
+          certificate="$RUNNER_TEMP/signing.p12"
+          printf '%s' "$SIGNING_CERTIFICATE_P12_BASE64" | base64 --decode > "$certificate"
+          security create-keychain -p "$keychain_password" "$keychain"
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -k "$keychain" -f pkcs12 -P "$SIGNING_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm "$certificate"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
+          # xcodebuild finds identities only in the search list.
+          security list-keychains -d user | xargs security list-keychains -d user -s "$keychain"
+          # The certificate is self-signed and not trusted, which codesign accepts, so find-identity runs without -v.
+          identities=$(security find-identity -p codesigning "$keychain" | grep -E '^ +[0-9]+\)')
+          if [ "$(printf '%s\n' "$identities" | wc -l)" -ne 1 ]; then
+            echo "::error::The certificate must contain exactly one code signing identity"
+            printf '%s\n' "$identities"
+            exit 1
+          fi
+          # Signed by the certificate's SHA-1, which the designated requirement pins as the leaf, so print it to
+          # compare with a local build's (codesign -d -r- Sill.app).
+          printf '%s\n' "$identities"
+          echo "SIGNING_IDENTITY=$(printf '%s\n' "$identities" | awk '{ print $2 }')" >> "$GITHUB_ENV"
+
+      - name: Build
+        if: steps.version.outputs.version != ''
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/release/build.sh "$VERSION"
+
+      - name: Delete the signing keychain
+        if: always()
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then
+            security delete-keychain "$SIGNING_KEYCHAIN"
+          fi
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.version.outputs.version != ''
+        with:
+          name: release
+          path: |
+            dist/Sill-${{ steps.version.outputs.version }}.zip
+            dist/notes.md
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: build
+    if: needs.build.outputs.version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+      # For actions/attest.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+
+      # Lets users check that the zip was built here: gh attestation verify Sill-<version>.zip -R eai04191/sill
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/Sill-${{ needs.build.outputs.version }}.zip
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Creates the tag on the commit that was built. Fails when the tag exists, for example after a release that
+        # another run made.
+        run: |
+          gh release create "$VERSION" "dist/Sill-$VERSION.zip" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Sill $VERSION" --notes-file dist/notes.md
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.TAP_REPOSITORY }}
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: tap
+
+      - name: Update the cask
+        run: scripts/release/update-tap.sh "$VERSION" tap
