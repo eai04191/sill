@@ -2,7 +2,11 @@ import Foundation
 
 class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     typealias SpaceType = YabaiSpace
-    let executablePath = ConfigManager.shared.config.yabai.path
+    let executablePath: String
+
+    init(executablePath: String) {
+        self.executablePath = executablePath
+    }
 
     private func runYabaiCommand(arguments: [String]) throws -> Data {
         try runSpacesCommand(executablePath: executablePath, arguments: arguments)

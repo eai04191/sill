@@ -12,10 +12,13 @@ class SpacesViewModel: ObservableObject {
     private static let changeNotifications: [Notification.Name] = [
         NSWorkspace.activeSpaceDidChangeNotification,
         NSWorkspace.didActivateApplicationNotification,
-        NSWorkspace.didLaunchApplicationNotification,
-        NSWorkspace.didTerminateApplicationNotification,
         NSWorkspace.didHideApplicationNotification,
         NSWorkspace.didUnhideApplicationNotification,
+    ]
+    /// The window manager may start or quit after Barik, so the provider is picked again when an app launches or quits.
+    private static let appListNotifications: [Notification.Name] = [
+        NSWorkspace.didLaunchApplicationNotification,
+        NSWorkspace.didTerminateApplicationNotification,
     ]
 
     @Published var spaces: [AnySpace] = []
@@ -27,46 +30,85 @@ class SpacesViewModel: ObservableObject {
     private var isFetching = false
     private var fetchesAgain = false
     private var observers: [NSObjectProtocol] = []
+    private var configCancellable: AnyCancellable?
+    /// The window manager and CLI path the provider was made for, or nil when there is no provider.
+    private var providerSource: String?
     /// The last error printed, so a failure that lasts is printed once instead of on every fetch.
     private var lastPrintedError: String?
 
     init() {
-        let runningApps = NSWorkspace.shared.runningApplications.compactMap {
-            $0.localizedName?.lowercased()
+        let center = NSWorkspace.shared.notificationCenter
+        observers =
+            Self.changeNotifications.map { name in
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    self?.requestSpaces()
+                }
+            }
+            + Self.appListNotifications.map { name in
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    self?.updateProvider(config: ConfigManager.shared.config)
+                    self?.requestSpaces()
+                }
+            }
+        // The publisher sends the current config right away, which picks the first provider. It sends before the
+        // config property changes, so the new config is passed along instead of read from the manager.
+        configCancellable = ConfigManager.shared.$config.sink { [weak self] config in
+            self?.updateProvider(config: config)
         }
-        if runningApps.contains("yabai") {
-            provider = AnySpacesProvider(YabaiSpacesProvider())
-        } else if runningApps.contains("aerospace") {
-            provider = AnySpacesProvider(AerospaceSpacesProvider())
-        } else {
-            provider = nil
-        }
-        startMonitoring()
     }
 
     deinit {
-        stopMonitoring()
-    }
-
-    private func startMonitoring() {
-        timer = Timer.scheduledTimer(withTimeInterval: Self.pollInterval, repeats: true) {
-            [weak self] _ in
-            self?.loadSpaces()
-        }
-        let center = NSWorkspace.shared.notificationCenter
-        observers = Self.changeNotifications.map { name in
-            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                self?.requestSpaces()
-            }
-        }
-        loadSpaces()
-    }
-
-    private func stopMonitoring() {
         timer?.invalidate()
-        timer = nil
         observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
-        observers = []
+    }
+
+    /// Makes the provider for the running window manager with the CLI path from `config`, and polls only while there
+    /// is one. A CLI path without an executable is reported once and gives no provider, instead of a failing call on
+    /// every poll.
+    private func updateProvider(config: Config) {
+        let runningApps = NSWorkspace.shared.runningApplications.compactMap {
+            $0.localizedName?.lowercased()
+        }
+        let windowManager: (name: String, path: String)?
+        if runningApps.contains("yabai") {
+            windowManager = ("yabai", config.yabai.path)
+        } else if runningApps.contains("aerospace") {
+            windowManager = ("aerospace", config.aerospace.path)
+        } else {
+            windowManager = nil
+        }
+        let source = windowManager.map { "\($0.name) at \($0.path)" }
+        guard source != providerSource else { return }
+        providerSource = source
+        lastPrintedError = nil
+
+        if let windowManager, !FileManager.default.isExecutableFile(atPath: windowManager.path) {
+            print(
+                "Spaces: \(windowManager.name) is running, but \(windowManager.path) is not an executable. "
+                    + "Set \(windowManager.name).path in the config.")
+            provider = nil
+        } else if let windowManager {
+            provider =
+                windowManager.name == "yabai"
+                ? AnySpacesProvider(YabaiSpacesProvider(executablePath: windowManager.path))
+                : AnySpacesProvider(AerospaceSpacesProvider(executablePath: windowManager.path))
+        } else {
+            provider = nil
+        }
+
+        if provider == nil {
+            timer?.invalidate()
+            timer = nil
+            apply([])
+        } else {
+            if timer == nil {
+                timer = Timer.scheduledTimer(withTimeInterval: Self.pollInterval, repeats: true) {
+                    [weak self] _ in
+                    self?.loadSpaces()
+                }
+            }
+            requestSpaces()
+        }
     }
 
     /// Fetches the spaces now, or once the running fetch ends, since it may have read the state before the change.
@@ -81,34 +123,37 @@ class SpacesViewModel: ObservableObject {
     /// Fetches the spaces unless a fetch is running. Results are applied on the main thread in the order the fetches
     /// ran, and only when they differ from the shown spaces.
     private func loadSpaces() {
-        guard !isFetching else { return }
-        guard let provider else {
-            apply([])
-            return
-        }
+        guard !isFetching, let provider else { return }
         isFetching = true
         fetchQueue.async { [weak self] in
             let result = Result { try provider.getSpacesWithWindows() }
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.isFetching = false
-                switch result {
-                case .success(let spaces):
-                    self.lastPrintedError = nil
-                    self.apply(spaces.sorted { $0.id < $1.id })
-                case .failure(let error):
-                    let message = "\(error)"
-                    if message != self.lastPrintedError {
-                        print("Spaces: \(message)")
-                        self.lastPrintedError = message
-                    }
-                    self.apply([])
+                // A result from a provider that was replaced meanwhile is dropped. The new provider requested a fetch.
+                if provider === self.provider {
+                    self.apply(result)
                 }
                 if self.fetchesAgain {
                     self.fetchesAgain = false
                     self.loadSpaces()
                 }
             }
+        }
+    }
+
+    private func apply(_ result: Result<[AnySpace], Error>) {
+        switch result {
+        case .success(let spaces):
+            lastPrintedError = nil
+            apply(spaces.sorted { $0.id < $1.id })
+        case .failure(let error):
+            let message = "\(error)"
+            if message != lastPrintedError {
+                print("Spaces: \(message)")
+                lastPrintedError = message
+            }
+            apply([])
         }
     }
 

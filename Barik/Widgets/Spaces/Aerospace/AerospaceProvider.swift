@@ -2,7 +2,11 @@ import Foundation
 
 class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     typealias SpaceType = AeroSpace
-    let executablePath = ConfigManager.shared.config.aerospace.path
+    let executablePath: String
+
+    init(executablePath: String) {
+        self.executablePath = executablePath
+    }
 
     func getSpacesWithWindows() throws -> [AeroSpace] {
         var spaces = try fetchSpaces()
