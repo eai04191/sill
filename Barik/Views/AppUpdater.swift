@@ -220,24 +220,30 @@ final class AppUpdater: ObservableObject {
         }
         let newAppURL = URL(fileURLWithPath: downloadedPath)
             .appendingPathComponent("Barik.app")
-        // The installed app is moved aside rather than deleted first, and moved back if the new app cannot be moved
-        // in, so a failed update keeps the old app.
+        // The new app is first moved next to the installed one, which copies it when the temporary directory is on
+        // another volume; a failed copy then leaves the installed app untouched. The installed app is moved aside
+        // rather than deleted first, and moved back if the new app cannot be renamed into place, so a failed update
+        // keeps the old app.
         let script = """
             #!/bin/bash
             pid="$1"
             new_app="$2"
             app="$3"
+            staged="$app.new-$$"
             backup="$app.previous-$$"
             while kill -0 "$pid" 2>/dev/null; do
                 sleep 0.2
             done
-            if mv "$app" "$backup"; then
-                if mv "$new_app" "$app"; then
-                    rm -rf "$backup"
-                else
-                    mv "$backup" "$app"
+            if mv "$new_app" "$staged"; then
+                if mv "$app" "$backup"; then
+                    if mv "$staged" "$app"; then
+                        rm -rf "$backup"
+                    else
+                        mv "$backup" "$app"
+                    fi
                 fi
             fi
+            rm -rf "$staged"
             open "$app"
             rm -- "$0"
             """
