@@ -2,15 +2,13 @@ name: Release
 
 # git-cliff (cliff.toml) picks the version from the conventional commits since the last tag and writes the release
 # notes. The build job signs and zips Sill with that version; the release job attests the zip, tags the commit with a
-# GitHub release that has the zip, updates the cask in the tap, and adds the notes to CHANGELOG.md in a
-# chore(release) commit on main. Nothing happens when no commit needs a release. Run it from main.
+# GitHub release that has the zip, and pushes a chore(release) commit to main that adds the notes to CHANGELOG.md and
+# points Casks/sill.rb at the zip. This repository is the Homebrew tap. Nothing happens when no commit needs a release.
+# Run it from main.
 #
-# What the release needs from outside this repository (RELEASING.md explains how to prepare each one):
-# - Secrets of the release environment, which only main can use:
-#   - SIGNING_CERTIFICATE_P12_BASE64: a base64-encoded .p12 of the self-signed code signing certificate and its key
-#   - SIGNING_CERTIFICATE_PASSWORD: the .p12 password
-#   - TAP_GITHUB_TOKEN: a fine-grained token with Contents: Read and write on TAP_REPOSITORY only
-# - TAP_REPOSITORY below.
+# Secrets of the release environment, which only main can use (RELEASING.md explains how to prepare them):
+# - SIGNING_CERTIFICATE_P12_BASE64: a base64-encoded .p12 of the self-signed code signing certificate and its key
+# - SIGNING_CERTIFICATE_PASSWORD: the .p12 password
 #
 # Each secret is given only to the step that uses it. The build, which runs the Swift packages' code, gets a read-only
 # token; writing to the repository and signing attestations happen in the release job, which runs no project code.
@@ -22,9 +20,6 @@ permissions: {}
 concurrency:
   group: release
   cancel-in-progress: false
-
-env:
-  TAP_REPOSITORY: eai04191/homebrew-tap
 
 defaults:
   run:
@@ -148,14 +143,14 @@ jobs:
     timeout-minutes: 10
     environment: release
     permissions:
-      contents: write # Creates the GitHub release and its tag, and pushes the CHANGELOG.md commit.
+      contents: write # Creates the GitHub release and its tag, and pushes the chore(release) commit.
       id-token: write # actions/attest signs the attestation with the job's OIDC token.
       attestations: write # actions/attest stores the attestation.
       artifact-metadata: write # actions/attest records the zip as an artifact.
     env:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
-      # Keeps the token for pushing the CHANGELOG.md commit to main.
+      # Keeps the token for pushing the chore(release) commit to main.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -177,24 +172,13 @@ jobs:
           gh release create "$VERSION" "dist/Sill-$VERSION.zip" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Sill $VERSION" --notes-file dist/notes.md
 
-      # The tap is public, so it is checked out without the token, which only the push in the next step gets.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ env.TAP_REPOSITORY }}
-          path: tap
-          persist-credentials: false
-
-      - name: Update the cask
-        env:
-          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
-        run: scripts/release/update-tap.sh "$VERSION" tap
-
-      - name: Record the release in CHANGELOG.md
+      - name: Record the release on main
         # git-cliff skips chore commits, so this commit does not make a release of its own. Rebases onto main in case a
         # commit was pushed during the release.
         run: |
           scripts/release/prepend-changelog.sh "$VERSION" dist/notes.md
-          git add CHANGELOG.md
+          scripts/release/write-cask.sh "$VERSION"
+          git add CHANGELOG.md Casks/sill.rb
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "chore(release): $VERSION"
           git pull --rebase origin main

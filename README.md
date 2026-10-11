@@ -19,10 +19,11 @@ Sill is a fork of [barik](https://github.com/mocki-toki/barik) by Simon Butenko,
 1. Install Sill with Homebrew:
 
 ```sh
-brew install --cask eai04191/tap/sill
+brew tap eai04191/sill https://github.com/eai04191/sill
+brew install --cask eai04191/sill/sill
 ```
 
-Update it with `brew upgrade --cask sill`. Sill is not notarized, so the cask removes the quarantine attribute after installing.
+This repository is the tap. Update Sill with `brew upgrade --cask sill`. Sill is not notarized, so the cask removes the quarantine attribute after installing.
 
 Or build Sill and copy it to your Applications folder:
 
