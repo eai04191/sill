@@ -22,6 +22,10 @@ final class ImageCache {
 /// An observable object that asynchronously downloads and caches images.
 final class ImageLoader: ObservableObject {
     @Published var image: NSImage?
+    /// Whether there is no image to show: without a URL, or when loading it failed. It stays as it was while a new URL
+    /// loads, so a placeholder shown for no image stays until the image arrives, and an image that is loading does not
+    /// flash a placeholder.
+    @Published private(set) var isUnavailable = false
     
     private var cancellable: AnyCancellable?
     
@@ -58,12 +62,14 @@ final class ImageLoader: ObservableObject {
         // Without a URL there is no image, rather than the previous URL's.
         guard let url = url, let key = cacheKey else {
             image = nil
+            isUnavailable = true
             return
         }
         
         // Check for cached image.
         if let cachedImage = ImageCache.shared.object(forKey: key) {
             self.image = cachedImage
+            isUnavailable = false
             return
         }
         
@@ -83,6 +89,7 @@ final class ImageLoader: ObservableObject {
                     ImageCache.shared.setObject(downloadedImage, forKey: key)
                 }
                 self?.image = downloadedImage
+                self?.isUnavailable = downloadedImage == nil
             }
     }
     
@@ -132,7 +139,7 @@ extension NSImage {
 
 /// A view that displays a cached image with a rotation and blur animation when the image changes, or replaces it at
 /// once with Reduce Motion, which asks to avoid flipping and blurring (HIG, Motion).
-struct RotateAnimatedCachedImage<RotatingContent: View>: View {
+struct RotateAnimatedCachedImage<RotatingContent: View, Placeholder: View>: View {
     let url: URL?
     let targetSize: CGSize?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -141,21 +148,34 @@ struct RotateAnimatedCachedImage<RotatingContent: View>: View {
     @State private var displayedImage: NSImage?
     @State private var rotation: Double = 1
     let rotatingModifier: (Image) -> RotatingContent
+    /// Shown when there is no image (see `ImageLoader.isUnavailable`).
+    let placeholder: () -> Placeholder
     
-    /// Initializes the view with a URL, optional target size, and a custom rotating modifier.
+    /// Initializes the view with a URL, optional target size, a custom rotating modifier and a placeholder.
     init(
         url: URL?,
         targetSize: CGSize? = nil,
-        @ViewBuilder rotatingModifier: @escaping (Image) -> RotatingContent
+        @ViewBuilder rotatingModifier: @escaping (Image) -> RotatingContent,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
     ) {
         self.url = url
         self.targetSize = targetSize
         _loader = StateObject(wrappedValue: ImageLoader(url: url, targetSize: targetSize))
         self.rotatingModifier = rotatingModifier
+        self.placeholder = placeholder
+    }
+    
+    /// Initializes the view without a placeholder.
+    init(
+        url: URL?,
+        targetSize: CGSize? = nil,
+        @ViewBuilder rotatingModifier: @escaping (Image) -> RotatingContent
+    ) where Placeholder == EmptyView {
+        self.init(url: url, targetSize: targetSize, rotatingModifier: rotatingModifier) { EmptyView() }
     }
     
     /// Convenience initializer when no custom modifier is needed.
-    init(url: URL?, targetSize: CGSize? = nil) where RotatingContent == Image {
+    init(url: URL?, targetSize: CGSize? = nil) where RotatingContent == Image, Placeholder == EmptyView {
         self.init(url: url, targetSize: targetSize) { image in image }
     }
     
@@ -165,6 +185,8 @@ struct RotateAnimatedCachedImage<RotatingContent: View>: View {
                 rotatingModifier(Image(nsImage: image).resizable())
                     .blur(radius: abs(1 - rotation) * 5)
                     .scaleEffect(x: rotation)
+            } else if loader.isUnavailable {
+                placeholder()
             } else {
                 Color.clear
             }
@@ -197,7 +219,7 @@ struct RotateAnimatedCachedImage<RotatingContent: View>: View {
 // MARK: - Fade Animated Cached Image View
 
 /// A view that displays a cached image with a fade transition when the image changes.
-struct FadeAnimatedCachedImage<Content: View>: View {
+struct FadeAnimatedCachedImage<Content: View, Placeholder: View>: View {
     let url: URL?
     let targetSize: CGSize?
     
@@ -206,26 +228,43 @@ struct FadeAnimatedCachedImage<Content: View>: View {
     @State private var nextImage: NSImage?
     @State private var showNextImage: Bool = false
     let content: (Image) -> Content
+    /// Shown when there is no image (see `ImageLoader.isUnavailable`).
+    let placeholder: () -> Placeholder
     
-    /// Initializes the view with a URL, optional target size, and a custom content modifier.
+    /// Initializes the view with a URL, optional target size, a custom content modifier and a placeholder.
     init(
         url: URL?,
         targetSize: CGSize? = nil,
-        @ViewBuilder content: @escaping (Image) -> Content
+        @ViewBuilder content: @escaping (Image) -> Content,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
     ) {
         self.url = url
         self.targetSize = targetSize
         _loader = StateObject(wrappedValue: ImageLoader(url: url, targetSize: targetSize))
         self.content = content
+        self.placeholder = placeholder
+    }
+    
+    /// Initializes the view without a placeholder.
+    init(
+        url: URL?,
+        targetSize: CGSize? = nil,
+        @ViewBuilder content: @escaping (Image) -> Content
+    ) where Placeholder == EmptyView {
+        self.init(url: url, targetSize: targetSize, content: content) { EmptyView() }
     }
     
     /// Convenience initializer when no custom modifier is needed.
-    init(url: URL?, targetSize: CGSize? = nil) where Content == Image {
+    init(url: URL?, targetSize: CGSize? = nil) where Content == Image, Placeholder == EmptyView {
         self.init(url: url, targetSize: targetSize) { image in image }
     }
     
     var body: some View {
         ZStack {
+            if loader.isUnavailable {
+                placeholder()
+            }
+
             if let currentImage = currentImage {
                 content(Image(nsImage: currentImage))
             }

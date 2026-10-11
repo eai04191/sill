@@ -31,6 +31,8 @@ struct NowPlayingPopup: View {
                     targetSize: CGSize(width: 500, height: 500)
                 ) { image in
                     image.clipShape(artworkShape)
+                } placeholder: {
+                    ArtworkPlaceholder(shape: artworkShape)
                 }
                 .frame(width: width - padding * 2, height: width - padding * 2)
 

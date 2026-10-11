@@ -138,7 +138,11 @@ struct AlbumArtView: View {
             FadeAnimatedCachedImage(
                 url: song.albumArtURL,
                 targetSize: CGSize(width: size, height: size)
-            )
+            ) { image in
+                image
+            } placeholder: {
+                ArtworkPlaceholder(shape: RoundedRectangle(cornerRadius: 4))
+            }
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: 4))
             // Reduce Motion asks to avoid scaling; the dimmed artwork and the pause symbol still show the state.
@@ -152,6 +156,28 @@ struct AlbumArtView: View {
             }
         }
         .animation(.smooth(duration: 0.1), value: song.state == .paused)
+    }
+}
+
+// MARK: - Artwork Placeholder
+
+/// Shown in place of the artwork when a song has none or it could not be loaded, like the system's Now Playing: the
+/// artwork's shape with a subtle fill and a music note, rather than an empty space.
+struct ArtworkPlaceholder<S: Shape>: View {
+    let shape: S
+
+    var body: some View {
+        shape
+            .fill(.quaternary)
+            .overlay {
+                GeometryReader { geometry in
+                    Image(systemName: "music.note")
+                        .font(.system(size: min(geometry.size.width, geometry.size.height) * 0.4))
+                        .foregroundStyle(.secondary)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                }
+            }
+            .accessibilityHidden(true)
     }
 }
 
