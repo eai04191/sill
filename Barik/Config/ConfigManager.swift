@@ -106,24 +106,36 @@ final class ConfigManager: ObservableObject {
         try defaultTOML.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
+    /// Watches the config file for changes. Editors that save atomically replace the file, so the watched file is
+    /// deleted or renamed; the new file at the same path is then watched instead, and the config is read again.
     private func startWatchingFile(at path: String) {
-        fileDescriptor = open(path, O_EVTONLY)
-        if fileDescriptor == -1 { return }
-        fileWatchSource = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fileDescriptor, eventMask: .write,
+        let descriptor = open(path, O_EVTONLY)
+        fileDescriptor = descriptor
+        if descriptor == -1 { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor, eventMask: [.write, .delete, .rename],
             queue: DispatchQueue.global())
-        fileWatchSource?.setEventHandler { [weak self] in
-            guard let self = self, let path = self.configFilePath else {
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source, let path = self.configFilePath else {
+                return
+            }
+            if source.data.contains(.delete) || source.data.contains(.rename) {
+                source.cancel()
+                // The replacing file may not exist yet right after the old one goes away.
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
+                    self.startWatchingFile(at: path)
+                    self.parseConfigFile(at: path)
+                }
                 return
             }
             self.parseConfigFile(at: path)
         }
-        fileWatchSource?.setCancelHandler { [weak self] in
-            if let fd = self?.fileDescriptor, fd != -1 {
-                close(fd)
-            }
+        // Close this watcher's own descriptor; fileDescriptor may already belong to the watcher of the new file.
+        source.setCancelHandler {
+            close(descriptor)
         }
-        fileWatchSource?.resume()
+        fileWatchSource = source
+        source.resume()
     }
 
     func updateConfigValue(key: String, newValue: String) {
