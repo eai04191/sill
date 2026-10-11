@@ -137,19 +137,64 @@ final class UsageManager: ObservableObject {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
+        let reader = OutputReader(pipe.fileHandleForReading)
         do {
             try process.run()
         } catch {
+            _ = reader.finish()
             return nil
         }
-        // Terminating the command closes its end of the output and ends the read below. A child process of the command
-        // that still holds the output open keeps the read waiting until it exits; refresh() still never overlaps runs.
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
             if process.isRunning { process.terminate() }
         }
-        let output = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        let output = reader.finish()
         guard process.terminationStatus == 0 else { return nil }
         return try? JSONDecoder().decode(UsageReport.self, from: output)
+    }
+}
+
+/// Reads a command's output as it arrives, and takes what was printed once the command exits.
+///
+/// Reading the output to its end would wait for every process holding it open, including a child process the command
+/// left running, which terminating the command after its timeout does not reach; the run then never ended.
+private final class OutputReader {
+    private let queue = DispatchQueue(label: "UsageManager.OutputReader")
+    private let fileDescriptor: Int32
+    private let source: DispatchSourceRead
+    private var data = Data()
+
+    init(_ handle: FileHandle) {
+        fileDescriptor = handle.fileDescriptor
+        _ = fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK)
+        source = DispatchSource.makeReadSource(fileDescriptor: fileDescriptor, queue: queue)
+        source.setEventHandler { [weak self] in self?.read() }
+        // The handle closes the descriptor when released, which must wait until the source no longer reads it.
+        source.setCancelHandler { _ = handle }
+        source.resume()
+    }
+
+    /// Reads everything available without waiting; stops at the end of the output.
+    private func read() {
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while true {
+            let count = Darwin.read(fileDescriptor, &buffer, buffer.count)
+            guard count > 0 else {
+                if count == 0 { source.cancel() }
+                return
+            }
+            data.append(buffer, count: count)
+        }
+    }
+
+    /// Reads what is left without waiting, stops reading and returns the output.
+    func finish() -> Data {
+        queue.sync {
+            if !source.isCancelled {
+                read()
+                source.cancel()
+            }
+            return data
+        }
     }
 }
