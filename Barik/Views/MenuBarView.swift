@@ -292,7 +292,7 @@ private struct MoreWidgetsWidget<Popup: View>: View {
                 label: "More widgets",
                 value: String(localized: "\(count) hidden", comment: "VoiceOver: the number of widgets not on the bar.")
             ) {
-                MenuBarPopup.show(rect: rect, id: id, content: popup)
+                MenuBarPopup.show(rect: rect, id: id, providesGlassModules: true, content: popup)
             }
             .help("Widgets that do not fit on the bar")
     }
@@ -307,10 +307,9 @@ private struct MoreWidgetsPopup: View {
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
-        // Scrolls when there are more widgets than the screen can hold (see MenuBarPopupView).
+        // Scrolls when there are more widgets than the screen can hold (see MenuBarPopupView). The widgets are glass
+        // buttons, which are the popup's glass modules (see MoreWidgetsWidget).
         list
-        // The widgets are glass buttons, which are the popup's glass modules.
-        .popupProvidesGlassModules()
     }
 
     private var list: some View {

@@ -40,8 +40,10 @@ class MenuBarPopup {
     /// scheduled for an earlier popup never hides or shows a later one.
     private static var pendingStep: DispatchWorkItem?
 
+    /// - Parameter providesGlassModules: The content draws its own glass modules, so the popup adds no glass behind
+    ///   them (glass on glass, which the HIG asks to avoid).
     static func show<Content: View>(
-        rect: CGRect, id: String, @ViewBuilder content: @escaping () -> Content
+        rect: CGRect, id: String, providesGlassModules: Bool = false, @ViewBuilder content: @escaping () -> Content
     ) {
         guard let panel = panel else { return }
 
@@ -63,10 +65,10 @@ class MenuBarPopup {
         if isContentChange {
             NotificationCenter.default.post(name: .willHideWindow, object: nil)
             schedule(after: PopupMotion.hideDuration) {
-                present(in: panel, rect: rect, content: content)
+                present(in: panel, rect: rect, providesGlassModules: providesGlassModules, content: content)
             }
         } else {
-            present(in: panel, rect: rect, content: content)
+            present(in: panel, rect: rect, providesGlassModules: providesGlassModules, content: content)
         }
     }
 
@@ -90,11 +92,11 @@ class MenuBarPopup {
     }
 
     private static func present<Content: View>(
-        in panel: NSPanel, rect: CGRect, @ViewBuilder content: @escaping () -> Content
+        in panel: NSPanel, rect: CGRect, providesGlassModules: Bool, @ViewBuilder content: @escaping () -> Content
     ) {
         panel.contentView = NSHostingView(
             rootView:
-                MenuBarPopupView(anchorX: rect.midX) {
+                MenuBarPopupView(anchorX: rect.midX, providesModules: providesGlassModules) {
                     content()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

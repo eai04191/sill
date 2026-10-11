@@ -30,18 +30,6 @@ extension View {
         glassEffect(enabled ? .regular : .identity, in: shape)
     }
 
-    /// Marks popup content that draws its own glass modules, so the popup does not add glass behind them
-    /// (glass on glass, which the HIG asks to avoid).
-    func popupProvidesGlassModules() -> some View {
-        preference(key: PopupProvidesGlassModulesKey.self, value: true)
-    }
-}
-
-struct PopupProvidesGlassModulesKey: PreferenceKey {
-    static let defaultValue = false
-    static func reduce(value: inout Bool, nextValue: () -> Bool) {
-        value = value || nextValue()
-    }
 }
 
 extension NSWindow {

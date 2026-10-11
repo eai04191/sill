@@ -37,7 +37,7 @@ struct UsageWidget: View {
                         }
                     )
                     .barWidgetButton(label: "Usage", value: accessibilitySummary(services)) {
-                        MenuBarPopup.show(rect: rect, id: "usage") { UsagePopup() }
+                        MenuBarPopup.show(rect: rect, id: "usage", providesGlassModules: true) { UsagePopup() }
                     }
                 }
             }

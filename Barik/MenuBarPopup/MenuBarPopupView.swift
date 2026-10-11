@@ -23,16 +23,19 @@ struct MenuBarPopupView<Content: View>: View {
     /// The content is inserted when the popup is shown and removed when it is hidden, so it appears and disappears
     /// with a transition (see `PopupMotion`).
     @State private var isPresented = false
-    /// Set by content that draws its own glass modules (see `popupProvidesGlassModules()`), so no outer glass is added.
-    @State private var providesModules = false
+    /// The content draws its own glass modules, so no outer glass is added. It is given when the popup opens rather
+    /// than reported by the content through a preference: a preference read into state while the content was inserted
+    /// kept the modules' glass from materializing, so they appeared at once (see `MenuBarPopup.show`).
+    private let providesModules: Bool
 
     private let willShowWindow = NotificationCenter.default.publisher(
         for: .willShowWindow)
     private let willHideWindow = NotificationCenter.default.publisher(
         for: .willHideWindow)
 
-    init(anchorX: CGFloat, @ViewBuilder content: () -> Content) {
+    init(anchorX: CGFloat, providesModules: Bool, @ViewBuilder content: () -> Content) {
         self.anchorX = anchorX
+        self.providesModules = providesModules
         self.content = content()
     }
 
@@ -47,7 +50,6 @@ struct MenuBarPopupView<Content: View>: View {
                     withAnimation(PopupMotion.hideAnimation) { isPresented = false }
                 }
         }
-        .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
         // MenuBarPopup builds a new view for every popup and may post willShowWindow before this view subscribes,
         // so also show the popup when the view appears; otherwise it would stay invisible. Showing it twice animates
         // to the same value and changes nothing.

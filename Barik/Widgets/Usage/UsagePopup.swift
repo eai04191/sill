@@ -24,7 +24,6 @@ struct UsagePopup: View {
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
             }
         }
-        .popupProvidesGlassModules()
     }
 
     private var sections: [(UsageService, ServiceUsage)] {
