@@ -62,7 +62,9 @@ struct BatteryWidget: View {
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .barButton(label: "Battery", value: batteryManager.accessibilityValue) {
-            MenuBarPopup.show(rect: rect, id: "battery") { BatteryPopup(batteryManager: batteryManager) }
+            MenuBarPopup.show(rect: rect, id: "battery") {
+                BatteryPopup(batteryManager: batteryManager, configProvider: configProvider)
+            }
         }
 
     }

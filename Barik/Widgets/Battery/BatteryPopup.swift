@@ -3,6 +3,10 @@ import SwiftUI
 struct BatteryPopup: View {
     /// The widget's manager, so the ring opens at the current level instead of animating up from 0%.
     @ObservedObject var batteryManager: BatteryManager
+    /// The battery widget's config, for the same warning and critical levels as the widget.
+    @ObservedObject var configProvider: ConfigProvider
+    var warningLevel: Int { configProvider.config["warning-level"]?.intValue ?? 20 }
+    var criticalLevel: Int { configProvider.config["critical-level"]?.intValue ?? 10 }
 
     var body: some View {
         ZStack {
@@ -45,9 +49,9 @@ struct BatteryPopup: View {
         if batteryManager.isCharging {
             return .green
         } else {
-            if batteryManager.batteryLevel <= 10 {
+            if batteryManager.batteryLevel <= criticalLevel {
                 return .red
-            } else if batteryManager.batteryLevel <= 20 {
+            } else if batteryManager.batteryLevel <= warningLevel {
                 return .yellow
             } else {
                 return .primary
@@ -58,7 +62,7 @@ struct BatteryPopup: View {
 
 struct BatteryPopup_Previews: PreviewProvider {
     static var previews: some View {
-        BatteryPopup(batteryManager: BatteryManager())
+        BatteryPopup(batteryManager: BatteryManager(), configProvider: ConfigProvider(config: [:]))
             .background(Color.black)
             .previewLayout(.sizeThatFits)
     }
