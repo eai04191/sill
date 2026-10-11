@@ -2,14 +2,12 @@ import SwiftUI
 
 struct MenuBarPopupView<Content: View>: View {
     let content: Content
-    let isPreview: Bool
 
     @ObservedObject var configManager = ConfigManager.shared
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     private var isBottom: Bool { configManager.config.position == .bottom }
     private var usesGlass: Bool { configManager.config.usesLiquidGlass }
 
-    @State private var contentHeight: CGFloat = 0
     @State private var viewFrame: CGRect = .zero
     @State private var animationValue: Double = 0.01
     private var animated: Bool { isShowAnimation || isHideAnimation }
@@ -27,13 +25,8 @@ struct MenuBarPopupView<Content: View>: View {
     private let willChangeContent = NotificationCenter.default.publisher(
         for: .willChangeContent)
 
-    init(isPreview: Bool = false, @ViewBuilder content: () -> Content) {
+    init(@ViewBuilder content: () -> Content) {
         self.content = content()
-        self.isPreview = isPreview
-        if isPreview {
-            _animationValue = State(initialValue: 1.0)
-            _glassVisible = State(initialValue: true)
-        }
     }
 
     var body: some View {
@@ -138,12 +131,10 @@ struct MenuBarPopupView<Content: View>: View {
                     .onAppear {
                         DispatchQueue.main.async {
                             viewFrame = geometry.frame(in: .global)
-                            contentHeight = geometry.size.height
                         }
                     }
                     .onChange(of: geometry.size) { _, __ in
                         viewFrame = geometry.frame(in: .global)
-                        contentHeight = geometry.size.height
                     }
             }
         )
