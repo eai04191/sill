@@ -16,6 +16,7 @@ struct TimeWidget: View {
         calendarConfig?["show-events"]?.boolValue ?? true
     }
 
+    @ObservedObject private var configManager = ConfigManager.shared
     @State private var currentTime = Date()
     let calendarManager: CalendarManager
 
@@ -35,7 +36,8 @@ struct TimeWidget: View {
             }
         }
         .font(.headline)
-        .shadow(color: .foregroundShadowOutside, radius: 3)
+        // The shadow keeps the white text legible on the wallpaper; glass already provides the contrast.
+        .applying(!configManager.config.usesLiquidGlass) { $0.shadow(color: .foregroundShadowOutside, radius: 3) }
         .onReceive(timer) { date in
             currentTime = date
         }
