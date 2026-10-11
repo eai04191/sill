@@ -64,6 +64,7 @@ private struct SpaceView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: foregroundHeight < 30 ? 0 : 8, style: .continuous))
         .shadow(color: .shadow, radius: foregroundHeight < 30 ? 0 : 2)
+        .barHitArea()
         .transition(.blurReplace)
         .onTapGesture {
             viewModel.switchToSpace(space, needWindowFocus: true)
@@ -152,7 +153,7 @@ private struct WindowView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .animation(.smooth, value: isHovered)
         .frame(height: 30)
-        .contentShape(Rectangle())
+        .barHitArea()
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(window.isFocused ? [.isButton, .isSelected] : .isButton)
         // A window without an app name is labeled with its title, which is then not read again as the value.
