@@ -238,8 +238,13 @@ private struct ValueScanner {
             let character = characters[index]
             if let delimiter = multilineDelimiter {
                 if isTriple(delimiter, in: characters, at: index) {
+                    // Up to two quotes of the content may come right before the closing three, as in `""""`.
+                    var run = 3
+                    while run < 5, index + run < characters.count, characters[index + run] == delimiter {
+                        run += 1
+                    }
                     multilineDelimiter = nil
-                    index += 3
+                    index += run
                 } else {
                     index += delimiter == "\"" && character == "\\" ? 2 : 1
                 }
