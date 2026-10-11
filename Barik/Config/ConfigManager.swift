@@ -146,24 +146,27 @@ final class ConfigManager: ObservableObject {
         source.resume()
     }
 
+    /// Writes on the watch queue, where the config is also reloaded, so a reload never reads a half-written file and
+    /// the reload after the write is not overtaken by an older one.
     func updateConfigValue(key: String, newValue: String) {
-        guard let path = configFilePath else {
-            print("Config file path is not set")
-            return
-        }
-        do {
-            let currentText = try String(contentsOfFile: path, encoding: .utf8)
-            let updatedText = try TOMLKeyUpdater.updating(
-                currentText, key: key, to: newValue)
-            // Not atomically: an atomic write replaces the path with a new file, which would turn a symlinked
-            // config into a regular file. Writing in place goes through the symlink to the file it points to.
-            try updatedText.write(
-                toFile: path, atomically: false, encoding: .utf8)
-            DispatchQueue.main.async {
-                self.parseConfigFile(at: path)
+        watchQueue.async { [weak self] in
+            guard let self else { return }
+            guard let path = self.configFilePath else {
+                print("Config file path is not set")
+                return
             }
-        } catch {
-            print("Error updating config:", error)
+            do {
+                let currentText = try String(contentsOfFile: path, encoding: .utf8)
+                let updatedText = try TOMLKeyUpdater.updating(
+                    currentText, key: key, to: newValue)
+                // Not atomically: an atomic write replaces the path with a new file, which would turn a symlinked
+                // config into a regular file. Writing in place goes through the symlink to the file it points to.
+                try updatedText.write(
+                    toFile: path, atomically: false, encoding: .utf8)
+                self.parseConfigFile(at: path)
+            } catch {
+                print("Error updating config:", error)
+            }
         }
     }
 
