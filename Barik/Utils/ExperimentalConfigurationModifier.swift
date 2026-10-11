@@ -19,11 +19,11 @@ private struct ExperimentalConfigurationModifier: ViewModifier {
                     .padding(.horizontal, foregroundHeight < 45 && horizontalPadding != 15 ? 0 :
                                 foregroundHeight < 30 ? 0 : horizontalPadding
                     )
-                    // The bar's white text is meant to sit on the wallpaper; on glass, use the system label color
-                    // so it stays legible in light and dark mode, as the HIG recommends. The `.primary` style
-                    // rendered white on glass even in light mode, while a concrete Color is drawn as given.
+                    // The bar's white text is meant to sit on the wallpaper. On glass, use the system primary color and let
+                    // Liquid Glass adapt it to what is behind (dark over a light background). The hierarchical `.primary`
+                    // style would resolve to the bar's white foreground style instead, so use `Color.primary`.
                     // glassEffect captures the content as styled so far, so this has to come before it.
-                    .foregroundStyle(usesGlass ? AnyShapeStyle(Color(nsColor: .labelColor)) : AnyShapeStyle(Color.foregroundOutside))
+                    .foregroundStyle(usesGlass ? AnyShapeStyle(Color.primary) : AnyShapeStyle(Color.foregroundOutside))
                     .liquidGlassBackground(usesGlass, in: RoundedRectangle(cornerRadius: radius)) {
                         Rectangle().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
                     }

@@ -75,8 +75,8 @@ struct NowPlayingContent: View {
                 }
             }
         }
-        // On glass, use the same system label color as the other widgets (see ExperimentalConfigurationModifier).
-        .foregroundStyle(configManager.config.usesLiquidGlass ? Color(nsColor: .labelColor) : Color.foreground)
+        // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
+        .foregroundStyle(configManager.config.usesLiquidGlass ? Color.primary : Color.foreground)
     }
 }
 
