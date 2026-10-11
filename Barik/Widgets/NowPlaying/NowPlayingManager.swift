@@ -95,7 +95,7 @@ struct MediaControlPayload: Decodable, Equatable {
 
 /// Runs media-control and exposes its now playing stream and playback commands.
 final class MediaControl {
-    /// Homebrew installs media-control in one of these locations, in the same way as yabai and AeroSpace.
+    /// Homebrew installs media-control in one of these locations.
     /// Looked up on every use, so that installing media-control while Barik runs takes effect.
     static var executableURL: URL? {
         ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]

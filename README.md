@@ -20,7 +20,7 @@
   </p>
 </p>
 
-**barik** is a lightweight macOS menu bar replacement. If you use [**yabai**](https://github.com/koekeishiya/yabai) or [**AeroSpace**](https://github.com/nikitabobko/AeroSpace) for tiling WM, you can display the current space in a sleek macOS-style panel with smooth animations. This makes it easy to see which number to press to switch spaces.
+**barik** is a lightweight macOS menu bar replacement.
 
 <br>
 
@@ -53,32 +53,21 @@ brew install --cask mocki-toki/formulae/barik
 
 Or you can download from [Releases](https://github.com/mocki-toki/barik/releases), unzip it, and move it to your Applications folder.
 
-2. _(Optional)_ To display open applications and spaces, install [**yabai**](https://github.com/koekeishiya/yabai) or [**AeroSpace**](https://github.com/nikitabobko/AeroSpace) and set up hotkeys. For **yabai**, you'll need **skhd** or **Raycast scripts**. Don't forget to configure **top padding** — [here's an example for **yabai**](https://github.com/mocki-toki/barik/blob/main/example/.yabairc).
+2. Hide the system menu bar in **System Settings** and uncheck **Desktop & Dock → Show items → On Desktop**.
 
-3. Hide the system menu bar in **System Settings** and uncheck **Desktop & Dock → Show items → On Desktop**.
+3. Launch **barik** from the Applications folder.
 
-4. Launch **barik** from the Applications folder.
-
-5. Add **barik** to your login items for automatic startup.
-
-**That's it!** Try switching spaces and see the panel in action.
+4. Add **barik** to your login items for automatic startup.
 
 ## Configuration
 
 When you launch **barik** for the first time, it will create a `~/.barik-config.toml` file with an example customization for your new menu bar.
 
 ```toml
-# If you installed yabai or aerospace without using Homebrew,
-# manually set the path to the binary. For example:
-#
-# yabai.path = "/run/current-system/sw/bin/yabai"
-# aerospace.path = ...
-
 theme = "system" # system, light, dark
 
 [widgets]
 displayed = [ # widgets on menu bar
-    "default.spaces",
     "spacer",
     "default.nowplaying",
     "default.network",
@@ -87,15 +76,6 @@ displayed = [ # widgets on menu bar
     # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
     "default.time",
 ]
-
-[widgets.default.spaces]
-space.show-key = true        # show space number (or character, if you use AeroSpace)
-window.show-title = true
-window.title.max-length = 50
-
-# A list of applications that will always be displayed by application name.
-# Other applications will show the window title if there is more than one window.
-window.title.always-display-app-name-for = ["Mail", "Chrome", "Arc"]
 
 [widgets.default.battery]
 show-percentage = true

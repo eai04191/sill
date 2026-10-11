@@ -79,17 +79,10 @@ final class ConfigManager: ObservableObject {
 
     private func createDefaultConfig(at path: String) throws {
         let defaultTOML = """
-            # If you installed yabai or aerospace without using Homebrew,
-            # manually set the path to the binary. For example:
-            #
-            # yabai.path = "/run/current-system/sw/bin/yabai"
-            # aerospace.path = ...
-            
             theme = "system" # system, light, dark
 
             [widgets]
             displayed = [ # widgets on menu bar
-                "default.spaces",
                 "spacer",
                 "default.network",
                 "default.battery",
@@ -97,11 +90,6 @@ final class ConfigManager: ObservableObject {
                 # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
                 "default.time"
             ]
-
-            [widgets.default.spaces]
-            space.show-key = true        # show space number (or character, if you use AeroSpace)
-            window.show-title = true
-            window.title.max-length = 50
 
             [widgets.default.battery]
             show-percentage = true
