@@ -8,9 +8,8 @@ struct MenuBarView: View {
         // With the system theme, glass widgets are dark glass with white text like the glass popups and the Control
         // Center. The HIG has small glass elements adapt to the content behind them, but only system components do
         // that; custom glass keeps the window's appearance whatever is behind it. The window appearance decides how
-        // the glass is drawn, so it is set with preferredColorScheme. After turning Liquid Glass off while running,
-        // the bar keeps the dark appearance until Barik restarts, because preferredColorScheme(nil) does not reset
-        // the window appearance; the material bar draws its own colors, so this is left as is.
+        // the glass is drawn, so it is set with preferredColorScheme, which also clears it again when Liquid Glass is
+        // turned off.
         let theme: ColorScheme? =
             switch configManager.config.rootToml.theme {
             case "dark":
