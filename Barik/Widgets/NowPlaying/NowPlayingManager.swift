@@ -93,27 +93,48 @@ struct MediaControlPayload: Decodable, Equatable {
 /// Runs media-control and exposes its now playing stream and playback commands.
 final class MediaControl {
     /// Homebrew installs media-control in one of these locations, in the same way as yabai and AeroSpace.
-    static let executableURL: URL? = ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
-        .first { FileManager.default.isExecutableFile(atPath: $0) }
-        .map { URL(fileURLWithPath: $0) }
+    /// Looked up on every use, so that installing media-control while Barik runs takes effect.
+    static var executableURL: URL? {
+        ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
+            .first { FileManager.default.isExecutableFile(atPath: $0) }
+            .map { URL(fileURLWithPath: $0) }
+    }
+
+    /// Seconds before starting media-control again after it exits or fails to start.
+    private static let restartDelay: TimeInterval = 5
+    /// Seconds between looks for media-control while it is not installed.
+    private static let installCheckInterval: TimeInterval = 30
+    /// Seconds after which `get` is stopped, so a hung media-control does not hold the artwork fetch.
+    private static let getTimeout: TimeInterval = 5
 
     private let onPayload: (MediaControlPayload?) -> Void
     private var process: Process?
     private var buffer = Data()
     private var stopped = false
+    private var reportedMissing = false
 
     /// - Parameter onPayload: Called on the main queue with each update; `nil` means nothing is playing.
     init(onPayload: @escaping (MediaControlPayload?) -> Void) {
         self.onPayload = onPayload
     }
 
-    /// Starts streaming, restarting media-control if it exits unexpectedly.
+    /// Starts streaming, restarting media-control if it exits unexpectedly or fails to start, and waiting for it to be
+    /// installed if it is missing.
     func start() {
+        stopped = false
+        launch()
+    }
+
+    private func launch() {
         guard let executableURL = Self.executableURL else {
-            print("media-control was not found; install it with `brew install media-control`")
+            if !reportedMissing {
+                print("media-control was not found; install it with `brew install media-control`")
+                reportedMissing = true
+            }
+            relaunch(after: Self.installCheckInterval)
             return
         }
-        stopped = false
+        reportedMissing = false
         let process = Process()
         process.executableURL = executableURL
         process.arguments = ["stream", "--no-diff", "--no-artwork", "--micros"]
@@ -126,17 +147,24 @@ final class MediaControl {
         }
         process.terminationHandler = { [weak self] _ in
             pipe.fileHandleForReading.readabilityHandler = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                guard let self, !self.stopped else { return }
-                self.buffer.removeAll()
-                self.start()
-            }
+            DispatchQueue.main.async { self?.relaunch(after: Self.restartDelay) }
         }
         do {
             try process.run()
             self.process = process
         } catch {
             print("Failed to start media-control: \(error)")
+            pipe.fileHandleForReading.readabilityHandler = nil
+            relaunch(after: Self.restartDelay)
+        }
+    }
+
+    private func relaunch(after delay: TimeInterval) {
+        process = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, !self.stopped else { return }
+            self.buffer.removeAll()
+            self.launch()
         }
     }
 
@@ -173,6 +201,10 @@ final class MediaControl {
             try process.run()
         } catch {
             return nil
+        }
+        // Terminating media-control closes its end of the output and ends the read below.
+        DispatchQueue.global().asyncAfter(deadline: .now() + getTimeout) {
+            if process.isRunning { process.terminate() }
         }
         let output = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
