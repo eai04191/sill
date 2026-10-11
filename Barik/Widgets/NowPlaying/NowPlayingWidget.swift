@@ -53,19 +53,30 @@ struct NowPlayingWidget: View {
 struct NowPlayingContent: View {
     let song: NowPlayingSong
     @ObservedObject var configManager = ConfigManager.shared
+    /// A system glass button draws the widget's glass itself (see `BarButtonModifier`).
+    @Environment(\.barButtonUsesSystemGlass) private var usesSystemGlassButton
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     
+    /// A system glass button adds its own margin around the content (see `GlassButtonInset`).
+    private var buttonInset: CGSize {
+        configManager.config.usesLiquidGlass && usesSystemGlassButton ? GlassButtonInset.regular : .zero
+    }
+
     var body: some View {
         // A capsule at every bar height, like the other widgets; it used to lose its background below 38 points.
         HStack(spacing: 8) {
             AlbumArtView(song: song)
             SongTextView(song: song)
         }
-        .padding(.horizontal, foregroundHeight < 45 ? 8 : 12)
-        .frame(height: barWidgetHeight(forBarHeight: foregroundHeight))
-        .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule(), interactive: true) {
-            Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
-                .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
+        .padding(.horizontal, max(0, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width))
+        .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
+        .liquidGlassBackground(
+            configManager.config.usesLiquidGlass && !usesSystemGlassButton, in: Capsule(), interactive: true
+        ) {
+            if !configManager.config.usesLiquidGlass {
+                Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
+                    .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
+            }
         }
         // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
         .foregroundStyle(configManager.config.usesLiquidGlass ? Color.primary : Color.foreground)

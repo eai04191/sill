@@ -120,11 +120,15 @@ struct MenuBarView: View {
         }
     }
 
-    @ViewBuilder
     private func buildView(for item: TomlWidgetItem) -> some View {
         let config = ConfigProvider(
             config: configManager.resolvedWidgetConfig(for: item))
+        return widget(for: item, config: config)
+            .environment(\.barButtonUsesSystemGlass, config.config["button-style"]?.stringValue == "glass")
+    }
 
+    @ViewBuilder
+    private func widget(for item: TomlWidgetItem, config: ConfigProvider) -> some View {
         switch item.id {
         case "default.spaces":
             SpacesWidget().environmentObject(config)
