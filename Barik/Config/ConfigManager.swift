@@ -41,7 +41,7 @@ final class ConfigManager: ObservableObject {
                 try createDefaultConfig(at: path1)
                 chosenPath = path1
             } catch {
-                initError = "Error creating default config: \(error.localizedDescription)"
+                initError = String(localized: "Error creating default config: \(error.localizedDescription)")
                 print("Error when creating default config:", error)
                 return
             }
@@ -69,10 +69,10 @@ final class ConfigManager: ObservableObject {
         } catch {
             print("Error when parsing TOML file:", error)
             if atLaunch {
-                initError = "Error parsing TOML file: \(error.localizedDescription)"
+                initError = String(localized: "Error parsing TOML file: \(error.localizedDescription)")
             } else {
                 // The localized description of a decoding error does not say what is wrong, so show the error itself.
-                let message = "Error parsing \(path): \(error)"
+                let message = String(localized: "Error parsing \(path): \(String(describing: error))")
                 DispatchQueue.main.async {
                     self.reloadError = message
                 }
@@ -161,7 +161,7 @@ final class ConfigManager: ObservableObject {
 
     /// The config file changed between reading it for an update and replacing it, so the update was not saved.
     private struct ConfigFileChanged: LocalizedError {
-        var errorDescription: String? { "The config file changed while the change was being saved." }
+        var errorDescription: String? { String(localized: "The config file changed while the change was being saved.") }
     }
 
     /// Writes on the watch queue, where the config is also reloaded, so a reload never reads a half-written file and
@@ -179,7 +179,9 @@ final class ConfigManager: ObservableObject {
                 self.parseConfigFile(at: path)
             } catch {
                 print("Error updating config:", error)
-                let message = "Could not save \(key) to \(path): \(error.localizedDescription)"
+                let message = String(
+                    localized: "Could not save \(key) to \(path): \(error.localizedDescription)",
+                    comment: "The config key, the config file's path, and the error.")
                 DispatchQueue.main.async { self.updateError = message }
             }
         }

@@ -115,7 +115,7 @@ class MenuBarPopup {
         NSAccessibility.post(
             element: NSApp as Any, notification: .announcementRequested,
             userInfo: [
-                .announcement: "Popup opened. Press Escape to close.",
+                .announcement: String(localized: "Popup opened. Press Escape to close."),
                 .priority: NSAccessibilityPriorityLevel.high.rawValue,
             ])
         NSAccessibility.post(

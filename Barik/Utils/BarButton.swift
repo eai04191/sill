@@ -2,8 +2,10 @@ import SwiftUI
 
 extension View {
     /// Makes a popup control a button, so VoiceOver announces it with a label and value and can press it, while
-    /// keeping its look. Bar widgets use `barWidgetButton(label:value:action:)`.
-    func barButton(label: String, value: String? = nil, action: @escaping () -> Void) -> some View {
+    /// keeping its look. Bar widgets use `barWidgetButton(label:value:action:)`. The label is a localized key so that a
+    /// literal passed here is looked up in the string catalog; a `String` was read out as is. The value is already
+    /// text to read, such as a song title, or a string the caller localized.
+    func barButton(label: LocalizedStringKey, value: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             self.barHitArea()
                 .minimumHitArea()
@@ -15,8 +17,8 @@ extension View {
 
     /// Makes a bar widget a button. It is a system glass button, which draws the widget's glass with the system's
     /// hover and press states, the same at every width; the HIG asks custom buttons for a press state, which the
-    /// widgets' own interactive glass barely showed.
-    func barWidgetButton(label: String, value: String? = nil, action: @escaping () -> Void) -> some View {
+    /// widgets' own interactive glass barely showed. The label is localized like `barButton`'s.
+    func barWidgetButton(label: LocalizedStringKey, value: String? = nil, action: @escaping () -> Void) -> some View {
         modifier(BarWidgetButtonModifier(label: label, value: value, action: action))
     }
 
@@ -41,7 +43,7 @@ extension View {
 }
 
 private struct BarWidgetButtonModifier: ViewModifier {
-    let label: String
+    let label: LocalizedStringKey
     let value: String?
     let action: () -> Void
 

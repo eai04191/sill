@@ -17,9 +17,10 @@ class BatteryManager: ObservableObject {
     /// The level and power state read by VoiceOver.
     var accessibilityValue: String {
         if isCharging {
-            return "\(batteryLevel)%, charging"
+            return String(localized: "\(batteryLevel)%, charging", comment: "VoiceOver value of the battery.")
         } else if isPluggedIn {
-            return "\(batteryLevel)%, plugged in, not charging"
+            return String(
+                localized: "\(batteryLevel)%, plugged in, not charging", comment: "VoiceOver value of the battery.")
         } else {
             return "\(batteryLevel)%"
         }

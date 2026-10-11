@@ -53,7 +53,11 @@ struct UsageWidget: View {
 private func accessibilitySummary(_ services: [(UsageService, ServiceUsage)]) -> String {
     services.map { service, usage in
         let windows = usage.windows.map { window in
-            window.reset.map { "\(window.percentText) resets in \($0)" } ?? window.percentText
+            window.reset.map {
+                String(
+                    localized: "\(window.percentText) resets in \($0)",
+                    comment: "VoiceOver: a rate limit window's usage and the time until it resets, e.g. \"16% resets in 1h\".")
+            } ?? window.percentText
         }
         return "\(service.displayName) \(windows.joined(separator: ", "))"
     }

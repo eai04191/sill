@@ -74,6 +74,7 @@ private struct ServiceUsageSection: View {
                         Text(window.percentText)
                             .monospacedDigit()
                         if let reset = window.reset {
+                            // The reset time is formatted by the usage command, e.g. "2h", and shown as it is.
                             Text("· resets in \(reset)")
                                 .foregroundStyle(.secondary)
                         }

@@ -288,7 +288,10 @@ private struct MoreWidgetsWidget<Popup: View>: View {
                         .onChange(of: geometry.frame(in: .global)) { _, newFrame in rect = newFrame }
                 }
             )
-            .barWidgetButton(label: "More widgets", value: "\(count) hidden") {
+            .barWidgetButton(
+                label: "More widgets",
+                value: String(localized: "\(count) hidden", comment: "VoiceOver: the number of widgets not on the bar.")
+            ) {
                 MenuBarPopup.show(rect: rect, id: id, content: popup)
             }
             .help("Widgets that do not fit on the bar")

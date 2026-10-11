@@ -16,11 +16,14 @@ struct UsageWindow: Decodable, Equatable {
     /// weekly window as primary), so without a length the window is not named by its position.
     var label: String {
         switch mins {
-        case 10080: return "Weekly"
-        case let mins? where mins > 0 && mins % 1440 == 0: return "\(mins / 1440)-day"
-        case let mins? where mins > 0 && mins % 60 == 0: return "\(mins / 60)-hour"
-        case let mins? where mins > 0: return "\(mins)-minute"
-        default: return "Usage"
+        case 10080: return String(localized: "Weekly", comment: "The weekly rate limit window.")
+        case let mins? where mins > 0 && mins % 1440 == 0:
+            return String(localized: "\(mins / 1440)-day", comment: "A rate limit window of this many days.")
+        case let mins? where mins > 0 && mins % 60 == 0:
+            return String(localized: "\(mins / 60)-hour", comment: "A rate limit window of this many hours.")
+        case let mins? where mins > 0:
+            return String(localized: "\(mins)-minute", comment: "A rate limit window of this many minutes.")
+        default: return String(localized: "Usage", comment: "A rate limit window of unknown length.")
         }
     }
 

@@ -36,13 +36,18 @@ struct VolumeWidget: View {
                         }
                 }
             )
-            .barWidgetButton(
-                label: "Volume",
-                value: "\(Int((volume * 100).rounded()))%" + (volumeManager.isMuted ? ", muted" : "")
-            ) {
+            .barWidgetButton(label: "Volume", value: accessibilityValue(volume: volume)) {
                 MenuBarPopup.show(rect: rect, id: "volume") { VolumePopup() }
             }
         }
+    }
+
+    /// The percentage, and whether the output is muted, as VoiceOver reads the widget.
+    private func accessibilityValue(volume: Float) -> String {
+        let percentage = "\(Int((volume * 100).rounded()))%"
+        return volumeManager.isMuted
+            ? String(localized: "\(percentage), muted", comment: "VoiceOver value of the volume widget while muted.")
+            : percentage
     }
 }
 
@@ -96,8 +101,8 @@ struct VolumePopup: View {
                                 .background(Circle().fill(Color.primary.opacity(volumeManager.isMuted ? 0.25 : 0.1)))
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(volumeManager.isMuted ? "Unmute" : "Mute")
-                        .help(volumeManager.isMuted ? "Unmute" : "Mute")
+                        .accessibilityLabel(muteButtonLabel)
+                        .help(muteButtonLabel)
                     }
                 }
             } else {
@@ -107,5 +112,10 @@ struct VolumePopup: View {
         }
         .frame(width: 280, alignment: .leading)
         .padding(24)
+    }
+
+    /// Typed as a localized key: a conditional of two literals was taken as a `String` and shown untranslated.
+    private var muteButtonLabel: LocalizedStringKey {
+        volumeManager.isMuted ? "Unmute" : "Mute"
     }
 }

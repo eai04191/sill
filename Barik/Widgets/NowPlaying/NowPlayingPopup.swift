@@ -113,7 +113,9 @@ private struct PlaybackTimeline: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(String(localized: "Playback position"))
                 .accessibilityValue(
-                    String(localized: "\(timeString(from: position)) of \(timeString(from: duration))"))
+                    String(
+                        localized: "\(timeString(from: position)) of \(timeString(from: duration))",
+                        comment: "VoiceOver value of the playback position: the elapsed time of the song's duration."))
             }
         }
     }

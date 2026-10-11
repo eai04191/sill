@@ -123,10 +123,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func showFatalConfigError(message: String) {
         let alert = NSAlert()
-        alert.messageText = "Configuration Error"
-        alert.informativeText = "\(message)\n\nPlease double check ~/.barik-config.toml and try again."
+        alert.messageText = String(localized: "Configuration Error")
+        alert.informativeText = String(
+            localized: "\(message)\n\nPlease double check ~/.barik-config.toml and try again.",
+            comment: "The error, then what to do about it.")
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "Quit")
+        alert.addButton(withTitle: String(localized: "Quit"))
         
         // Barik is an agent app and is not active at launch, so the alert would open behind other apps.
         NSApp.activate()
