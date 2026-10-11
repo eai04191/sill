@@ -307,7 +307,6 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses location permission for display WiFi network name";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -343,7 +342,6 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app uses location permission for display WiFi network name";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

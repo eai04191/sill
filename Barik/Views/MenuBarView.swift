@@ -120,9 +120,6 @@ struct MenuBarView: View {
             config: configManager.resolvedWidgetConfig(for: item))
 
         switch item.id {
-        case "default.network":
-            NetworkWidget().environmentObject(config)
-
         case "default.battery":
             BatteryWidget().environmentObject(config)
 

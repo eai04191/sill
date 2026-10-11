@@ -70,7 +70,6 @@ theme = "system" # system, light, dark
 displayed = [ # widgets on menu bar
     "spacer",
     "default.nowplaying",
-    "default.network",
     "default.battery",
     "divider",
     # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
