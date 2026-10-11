@@ -100,6 +100,10 @@ private struct NowPlayingVerticalPopup: View {
             .padding(.vertical, 30)
             .frame(width: 300)
             .animation(.easeInOut, value: song.albumArtURL)
+        } else {
+            NothingPlayingView()
+                .padding(30)
+                .frame(width: 300)
         }
     }
 }
@@ -159,7 +163,24 @@ struct NowPlayingHorizontalPopup: View {
             .padding(.vertical, 20)
             .frame(width: 300, height: 180)
             .animation(.easeInOut, value: song.albumArtURL)
+        } else {
+            NothingPlayingView()
+                .frame(width: 300, height: 180)
         }
+    }
+}
+
+/// Shown when playback ends while the popup is open, instead of an empty popup.
+private struct NothingPlayingView: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "music.note")
+                .font(.system(size: 30))
+                .accessibilityHidden(true)
+            Text("Nothing Playing")
+                .font(.headline)
+        }
+        .foregroundStyle(.secondary)
     }
 }
 
