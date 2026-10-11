@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanel: NSPanel?
     private var configCancellable: AnyCancellable?
     private var terminationSignalSource: DispatchSourceSignal?
+    private var fullscreenDetector: FullscreenDetector?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         handleTerminationSignal()
@@ -37,6 +38,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selector: #selector(screenParametersDidChange(_:)),
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil)
+
+        // The bar and its popup step aside while full-screen content is in front, and come back after it.
+        fullscreenDetector = FullscreenDetector { [weak self] fullscreen in
+            self?.updateVisibility(fullscreen: fullscreen)
+        }
+    }
+
+    private func updateVisibility(fullscreen: Bool) {
+        if fullscreen {
+            MenuBarPopup.hide()
+            menuBarPanel?.orderOut(nil)
+        } else {
+            menuBarPanel?.orderFront(nil)
+        }
     }
 
     /// Quits like the Quit command on SIGTERM, which launchd and `pkill` send. By default the signal ends the process
@@ -117,7 +132,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         newPanel.contentView = hostingView
         newPanel.setFrame(frame, display: true)
-        newPanel.orderFront(nil)
+        if fullscreenDetector?.isFullscreen != true {
+            newPanel.orderFront(nil)
+        }
         panel = newPanel
     }
     
