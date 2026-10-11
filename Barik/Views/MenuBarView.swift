@@ -38,6 +38,7 @@ struct MenuBarView: View {
                     fittingRow(sections.leading, dropping: .trailing)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .modifier(HiddenFromAccessibilityWhenOffscreen())
                 LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
                     row(sections.centered)
                 }
@@ -50,6 +51,7 @@ struct MenuBarView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .modifier(HiddenFromAccessibilityWhenOffscreen())
             }
             .modifier(BarFrame(configManager: configManager, theme: theme))
         } else {
@@ -205,8 +207,28 @@ private struct CenteredBarLayout: Layout {
     }
 
     /// Where a side that does not fit is placed so it is not drawn over the centered widgets. A layout cannot remove
-    /// a subview, and clipping does not hide Liquid Glass, so it is moved outside the bar's window instead.
+    /// a subview, and clipping does not hide Liquid Glass, so it is moved outside the bar's window instead, where
+    /// `HiddenFromAccessibilityWhenOffscreen` hides it from VoiceOver.
     private let offscreen = CGPoint(x: -100_000, y: 0)
+}
+
+/// Hides a side that CenteredBarLayout moved outside the bar's window from assistive technologies, which would
+/// otherwise still list widgets that cannot be seen or clicked. The layout cannot change its subviews, so the side
+/// notices from its own frame that it was moved.
+private struct HiddenFromAccessibilityWhenOffscreen: ViewModifier {
+    @State private var isOffscreen = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                GeometryReader { geometry in
+                    Color.clear
+                        .onAppear { isOffscreen = geometry.frame(in: .global).maxX <= 0 }
+                        .onChange(of: geometry.frame(in: .global).maxX <= 0) { _, offscreen in isOffscreen = offscreen }
+                }
+            )
+            .accessibilityHidden(isOffscreen)
+    }
 }
 
 /// The bar's size, padding and color scheme, shared by both layouts.
