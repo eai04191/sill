@@ -31,6 +31,10 @@ class CalendarManager: ObservableObject {
     @Published var nextEvent: EKEvent?
     @Published var todaysEvents: [EKEvent] = []
     @Published var tomorrowsEvents: [EKEvent] = []
+    /// The current day, replaced when the day changes so that the popups move to the new day.
+    @Published private(set) var today = Date()
+    /// True when the user denied access to the calendars, so that the popups do not show this as having no events.
+    @Published private(set) var accessDenied = false
     private let eventStore = EKEventStore()
     private var observers: [NSObjectProtocol] = []
     /// Fetches the events again when one of today's events starts or ends, which changes the next event and today's
@@ -73,18 +77,22 @@ class CalendarManager: ObservableObject {
 
     private func requestAccess() {
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
-            if granted && error == nil {
-                DispatchQueue.main.async { self?.refresh() }
-            } else {
+            if !granted || error != nil {
                 print(
                     "Calendar access not granted: \(String(describing: error))")
             }
+            DispatchQueue.main.async { self?.refresh() }
         }
     }
 
     /// Fetches every list and schedules the next rollover. Called on the main thread.
     private func refresh() {
         let now = Date()
+        if !Calendar.current.isDate(today, inSameDayAs: now) {
+            today = now
+        }
+        let status = EKEventStore.authorizationStatus(for: .event)
+        accessDenied = status == .denied || status == .restricted || status == .writeOnly
         todaysEvents = fetchTodaysEvents(now: now)
         tomorrowsEvents = fetchTomorrowsEvents(now: now)
         nextEvent = fetchNextEvent(now: now)

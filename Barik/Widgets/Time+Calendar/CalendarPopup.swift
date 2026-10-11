@@ -22,7 +22,7 @@ struct CalendarPopup: View {
                     newValue: variant.rawValue
                 )
             },
-            box: { CalendarBoxPopup() },
+            box: { CalendarBoxPopup(calendarManager) },
             vertical: { CalendarVerticalPopup(calendarManager) },
             horizontal: { CalendarHorizontalPopup(calendarManager) }
         )
@@ -48,17 +48,20 @@ struct CalendarPopup: View {
 }
 
 struct CalendarBoxPopup: View {
+    @ObservedObject var calendarManager: CalendarManager
+
+    init(_ calendarManager: CalendarManager) {
+        _calendarManager = ObservedObject(wrappedValue: calendarManager)
+    }
+
     var body: some View {
+        let today = calendarManager.today
         VStack(spacing: 0) {
-            Text(currentMonthYear)
+            Text(monthYear(of: today))
                 .font(.title2)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
-            CalendarDaysView(
-                weeks: weeks,
-                currentYear: currentYear,
-                currentMonth: currentMonth
-            )
+            CalendarDaysView(today: today)
         }
         .padding(30)
         .fontWeight(.semibold)
@@ -73,19 +76,21 @@ struct CalendarVerticalPopup: View {
     }
 
     var body: some View {
+        let today = calendarManager.today
         VStack(spacing: 0) {
-            Text(currentMonthYear)
+            Text(monthYear(of: today))
                 .font(.title2)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
-            CalendarDaysView(
-                weeks: weeks,
-                currentYear: currentYear,
-                currentMonth: currentMonth
-            )
+            CalendarDaysView(today: today)
             
             Group {
-                if calendarManager.todaysEvents.isEmpty && calendarManager.tomorrowsEvents.isEmpty {
+                if calendarManager.accessDenied {
+                    CalendarAccessDeniedText()
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 3)
+                } else if calendarManager.todaysEvents.isEmpty && calendarManager.tomorrowsEvents.isEmpty {
                     Text(NSLocalizedString("EMPTY_EVENTS", comment: ""))
                         .frame(maxWidth: .infinity, alignment: .center)
                         .font(.callout)
@@ -113,22 +118,22 @@ struct CalendarHorizontalPopup: View {
     }
 
     var body: some View {
+        let today = calendarManager.today
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(currentMonthYear)
+                Text(monthYear(of: today))
                     .font(.title2)
                     .padding(.bottom, 25)
                     .fixedSize(horizontal: true, vertical: false)
                 WeekdayHeaderView()
-                CalendarDaysView(
-                    weeks: weeks,
-                    currentYear: currentYear,
-                    currentMonth: currentMonth
-                )
+                CalendarDaysView(today: today)
             }
             
             Group {
-                if calendarManager.todaysEvents.isEmpty && calendarManager.tomorrowsEvents.isEmpty {
+                if calendarManager.accessDenied {
+                    CalendarAccessDeniedText()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if calendarManager.todaysEvents.isEmpty && calendarManager.tomorrowsEvents.isEmpty {
                     Text(NSLocalizedString("EMPTY_EVENTS", comment: ""))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .font(.callout)
@@ -147,23 +152,25 @@ struct CalendarHorizontalPopup: View {
     }
 }
 
-private var currentMonthYear: String {
+/// Shown instead of the events when calendar access is denied, as the event list is then empty for that reason.
+private struct CalendarAccessDeniedText: View {
+    var body: some View {
+        Text("Barik has no access to your calendars. Allow it in System Settings > Privacy & Security > Calendars.")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private func monthYear(of date: Date) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "LLLL yyyy"
-    return formatter.string(from: Date()).capitalized
+    return formatter.string(from: date).capitalized
 }
 
-private var currentMonth: Int {
-    Calendar.current.component(.month, from: Date())
-}
-
-private var currentYear: Int {
-    Calendar.current.component(.year, from: Date())
-}
-
-private var calendarDays: [Int?] {
+/// The days of the month of `date`, preceded by blanks for the weekdays before the first day.
+private func calendarDays(of date: Date) -> [Int?] {
     let calendar = Calendar.current
-    let date = Date()
     guard
         let range = calendar.range(of: .day, in: .month, for: date),
         let firstOfMonth = calendar.date(
@@ -179,8 +186,8 @@ private var calendarDays: [Int?] {
     return days
 }
 
-private var weeks: [[Int?]] {
-    var days = calendarDays
+private func weeks(of date: Date) -> [[Int?]] {
+    var days = calendarDays(of: date)
     let remainder = days.count % 7
     if remainder != 0 {
         days.append(contentsOf: Array(repeating: nil, count: 7 - remainder))
@@ -233,12 +240,14 @@ private struct CalendarDaysView: View {
         if configManager.config.usesLiquidGlass { return .white }
         return colorScheme == .dark ? .black : .white
     }
-    let weeks: [[Int?]]
-    let currentYear: Int
-    let currentMonth: Int
+    /// The day the popup shows; it marks this day in this day's month.
+    let today: Date
 
     var body: some View {
         let calendar = Calendar.current
+        let weeks = weeks(of: today)
+        let currentYear = calendar.component(.year, from: today)
+        let currentMonth = calendar.component(.month, from: today)
         VStack(spacing: 10) {
             ForEach(weeks.indices, id: \.self) { weekIndex in
                 HStack(spacing: 8) {
@@ -252,13 +261,14 @@ private struct CalendarDaysView: View {
                                 )
                             )!
                             let isWeekend = calendar.isDateInWeekend(date)
+                            let isToday = calendar.component(.day, from: today) == day
                             let color =
-                                isToday(day: day)
+                                isToday
                                 ? todayText
                                 : (isWeekend ? Color.secondary : Color.primary)
 
                             ZStack {
-                                if isToday(day: day) {
+                                if isToday {
                                     Circle()
                                         .fill(todayFill)
                                         .frame(width: 30, height: 30)
@@ -274,21 +284,6 @@ private struct CalendarDaysView: View {
                 }
             }
         }.compositingGroup()
-    }
-
-    func isToday(day: Int) -> Bool {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month], from: Date())
-        if let dateFromDay = calendar.date(
-            from: DateComponents(
-                year: components.year,
-                month: components.month,
-                day: day
-            )
-        ) {
-            return calendar.isDateInToday(dateFromDay)
-        }
-        return false
     }
 }
 
@@ -380,7 +375,7 @@ struct CalendarPopup_Previews: PreviewProvider {
         let configProvider = ConfigProvider(config: ConfigData())
         let calendarManager = CalendarManager(configProvider: configProvider)
 
-        CalendarBoxPopup()
+        CalendarBoxPopup(calendarManager)
             .background(Color.black)
             .previewLayout(.sizeThatFits)
             .previewDisplayName("Box")
