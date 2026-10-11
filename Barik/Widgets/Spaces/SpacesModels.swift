@@ -40,9 +40,12 @@ struct AnyWindow: Identifiable, Equatable {
         self.appIcon = window.appIcon
     }
 
+    /// Icons are compared by identity: the icon cache returns the same image for an app, and a window whose icon was
+    /// not found yet differs once it is, so the spaces are published again.
     static func == (lhs: AnyWindow, rhs: AnyWindow) -> Bool {
         return lhs.id == rhs.id && lhs.title == rhs.title
             && lhs.appName == rhs.appName && lhs.isFocused == rhs.isFocused
+            && lhs.appIcon === rhs.appIcon
     }
 }
 
