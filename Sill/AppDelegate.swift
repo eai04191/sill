@@ -15,6 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var fullscreenDetector: FullscreenDetector?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The unit tests run inside Sill (SillTests' TEST_HOST) to reach its code, and would otherwise show a second
+        // bar and start the widgets' helper processes while they run.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            Logger.app.notice("Launched as the host of the unit tests; not showing the bar")
+            return
+        }
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         Logger.app.notice("Launched version \(version, privacy: .public), pid \(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
         handleTerminationSignal()
