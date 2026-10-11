@@ -2,17 +2,37 @@ import EventKit
 import SwiftUI
 
 struct CalendarPopup: View {
-    let calendarManager: CalendarManager
+    /// The time widget the popup was opened from. The bar builds a new ConfigProvider for its widgets whenever the
+    /// config is reloaded, while an open popup kept the provider it was shown with and missed the changes, such as the
+    /// view variant, the calendar filters and the time zone. The popup instead resolves its config from ConfigManager
+    /// on every reload (see `followedItem`).
+    let item: TomlWidgetItem
 
-    @ObservedObject var configProvider: ConfigProvider
+    @ObservedObject private var configManager = ConfigManager.shared
     @State private var selectedVariant: MenuBarPopupVariant = .box
+
+    /// The time widget whose config the popup follows: the only time widget on the bar, so that changes to its inline
+    /// settings, such as `time-zone`, are followed too. With several time widgets the popup cannot tell which one it
+    /// was opened from after their inline settings change, as the items have no identity besides their settings, so it
+    /// keeps the inline settings it was opened with and follows only the global `[widgets.default.time]` table; telling
+    /// them apart would need an identity for each displayed widget throughout the bar's layout.
+    private var followedItem: TomlWidgetItem {
+        let timeWidgets = configManager.config.rootToml.widgets.displayed.filter { $0.id == item.id }
+        return timeWidgets.count == 1 ? timeWidgets[0] : item
+    }
+
+    private var config: ConfigData { configManager.resolvedWidgetConfig(for: followedItem) }
+
+    private var configuredVariant: MenuBarPopupVariant? {
+        config["popup"]?.dictionaryValue?["view-variant"]?.stringValue.flatMap(MenuBarPopupVariant.init(rawValue:))
+    }
 
     var body: some View {
         // The colors of every variant adapt to the appearance; popups are always dark (see MenuBarPopupView).
-        variantView
+        variantView(calendarManager: CalendarManager.shared(for: ConfigProvider(config: config)))
     }
 
-    private var variantView: some View {
+    private func variantView(calendarManager: CalendarManager) -> some View {
         MenuBarPopupVariantView(
             selectedVariant: selectedVariant,
             onVariantSelected: { variant in
@@ -27,20 +47,10 @@ struct CalendarPopup: View {
             horizontal: { CalendarHorizontalPopup(calendarManager) }
         )
         .onAppear {
-            if let variantString = configProvider.config["popup"]?
-                .dictionaryValue?["view-variant"]?.stringValue,
-                let variant = MenuBarPopupVariant(rawValue: variantString)
-            {
-                selectedVariant = variant
-            } else {
-                selectedVariant = .box
-            }
+            selectedVariant = configuredVariant ?? .box
         }
-        .onReceive(configProvider.$config) { newConfig in
-            if let variantString = newConfig["popup"]?.dictionaryValue?[
-                "view-variant"]?.stringValue,
-                let variant = MenuBarPopupVariant(rawValue: variantString)
-            {
+        .onChange(of: configuredVariant) { _, variant in
+            if let variant {
                 selectedVariant = variant
             }
         }

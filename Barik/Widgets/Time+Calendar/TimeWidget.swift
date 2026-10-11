@@ -2,6 +2,8 @@ import EventKit
 import SwiftUI
 
 struct TimeWidget: View {
+    /// The widget's entry in the config, for its popup (see `CalendarPopup.item`).
+    let item: TomlWidgetItem
     @EnvironmentObject var configProvider: ConfigProvider
     var config: ConfigData { configProvider.config }
     var calendarConfig: ConfigData? { config["calendar"]?.dictionaryValue }
@@ -76,9 +78,7 @@ struct TimeWidget: View {
         .monospacedDigit()
         .barWidgetButton(label: "Calendar", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "calendar") {
-                CalendarPopup(
-                    calendarManager: calendarManager,
-                    configProvider: configProvider)
+                CalendarPopup(item: item)
             }
         }
     }
@@ -147,7 +147,7 @@ struct TimeWidget_Previews: PreviewProvider {
         let manager = CalendarManager(configProvider: provider)
 
         ZStack {
-            TimeWidget(calendarManager: manager)
+            TimeWidget(item: TomlWidgetItem(id: "default.time", inlineParams: [:]), calendarManager: manager)
                 .environmentObject(provider)
         }.frame(width: 500, height: 100)
     }
