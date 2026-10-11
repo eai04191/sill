@@ -13,7 +13,7 @@ struct MenuBarPopupVariantView: View {
     @State private var hovered = false
     @FocusState private var focusedVariant: MenuBarPopupVariant?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
-    @State private var animationValue = 0.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var onVariantSelected: ((MenuBarPopupVariant) -> Void)?
 
@@ -41,7 +41,6 @@ struct MenuBarPopupVariantView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             content(for: shownVariant)
-                .blur(radius: animationValue * 30)
                 .transition(.opacity)
         }
         .overlay(alignment: .bottomTrailing) {
@@ -103,21 +102,12 @@ struct MenuBarPopupVariantView: View {
         variant: MenuBarPopupVariant, systemImageName: String, label: LocalizedStringKey
     ) -> some View {
         Button {
-            if shownVariant != variant {
-                withAnimation(.smooth(duration: 0.3)) {
-                    animationValue = 1
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.smooth(duration: 0.3)) {
-                        onVariantSelected?(variant)
-                    }
-                }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.smooth(duration: 0.3)) {
-                        animationValue = 0
-                    }
-                }
+            guard shownVariant != variant else { return }
+            // The layouts cross-fade while the popup resizes, so the switch reads as the same popup changing size
+            // (HIG, Popovers). Blurring the content out and back in is motion Reduce Motion asks to avoid, and with
+            // Reduce Motion the layout switches at once.
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) {
+                onVariantSelected?(variant)
             }
         } label: {
             Image(systemName: systemImageName)
@@ -134,7 +124,6 @@ struct MenuBarPopupVariantView: View {
                 if shownVariant == variant {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.primary.opacity(0.3), lineWidth: 1)
-                        .opacity(1 - animationValue * 10)
                 }
             }
         )
