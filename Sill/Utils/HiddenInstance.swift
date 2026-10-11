@@ -11,8 +11,9 @@ import AppKit
 /// Its popups are not made key, so opening one does not take keyboard focus from the active app. Escape then does not
 /// reach the popup; close it by pressing its widget again.
 ///
-/// Calendar access is not requested when the user has not decided it yet, so a hidden instance whose signature does not
-/// match the installed Sill's fails without showing the permission prompt.
+/// Nothing else of it reaches the maintainer either: it never requests calendar access, so a signature that does
+/// not match the maintainer's Sill fails in the log rather than with a permission prompt; it quits on a config error
+/// without the alert; and its popups are not announced to VoiceOver.
 enum HiddenInstance {
     static let isEnabled = ProcessInfo.processInfo.environment["SILL_HIDDEN_INSTANCE"] != nil
 

@@ -30,6 +30,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if let error = ConfigManager.shared.initError {
             Logger.app.error("Stopping on a config error: \(error, privacy: .public)")
+            // A hidden instance must not put an alert on the maintainer's screen; the log has the error.
+            if HiddenInstance.isEnabled {
+                NSApp.terminate(nil)
+                return
+            }
             showFatalConfigError(message: error)
             return
         }

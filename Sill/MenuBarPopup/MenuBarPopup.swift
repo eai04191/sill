@@ -124,7 +124,10 @@ class MenuBarPopup {
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .willShowWindow, object: nil)
-            announceToAssistiveTechnologies(panel)
+            // A hidden instance's popup is not on the display, so VoiceOver should not interrupt the maintainer for it.
+            if !HiddenInstance.isEnabled {
+                announceToAssistiveTechnologies(panel)
+            }
         }
     }
 

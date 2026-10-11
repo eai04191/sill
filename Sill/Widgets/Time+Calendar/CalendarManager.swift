@@ -90,8 +90,13 @@ class CalendarManager: ObservableObject {
     }
 
     private func requestAccess() {
-        if HiddenInstance.isEnabled, EKEventStore.authorizationStatus(for: .event) == .notDetermined {
-            Logger.calendar.error("Not requesting calendar access in a hidden instance; sign it like the installed Sill")
+        // A hidden instance uses only the access the maintainer's Sill already has: requesting it would show a prompt,
+        // also to upgrade write-only access to full access.
+        if HiddenInstance.isEnabled {
+            let status = EKEventStore.authorizationStatus(for: .event)
+            if status != .fullAccess {
+                Logger.calendar.error("No full calendar access in a hidden instance (status \(status.rawValue, privacy: .public)); sign it like the maintainer's Sill")
+            }
             return
         }
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
