@@ -16,29 +16,10 @@ struct BannerButtonStyle: ButtonStyle {
     }
 }
 
-/// Whether the "What's new" banner is shown: from the first launch of a new version until the banner is dismissed. It
-/// is read from the version file and shared by every banner, so a banner created after launch shows it too, and the
-/// version counts as seen only once the banner is dismissed.
-final class WhatsNewBanner: ObservableObject {
-    static let shared = WhatsNewBanner()
-
-    @Published private(set) var isShown = !VersionChecker.isLatestVersion()
-
-    private init() {}
-
-    func dismiss() {
-        VersionChecker.updateVersionFile()
-        withAnimation {
-            isShown = false
-        }
-    }
-}
-
 struct SystemBannerWidget: View {
     let withLeftPadding: Bool
     
     @ObservedObject private var configManager = ConfigManager.shared
-    @ObservedObject private var whatsNew = WhatsNewBanner.shared
     
     init(withLeftPadding: Bool = false) {
         self.withLeftPadding = withLeftPadding
@@ -51,9 +32,6 @@ struct SystemBannerWidget: View {
             }
             if configManager.reloadError != nil {
                 ConfigErrorBannerWidget()
-            }
-            if whatsNew.isShown {
-                ChangelogBannerWidget()
             }
         }
         .animation(.default, value: configManager.reloadError != nil)
