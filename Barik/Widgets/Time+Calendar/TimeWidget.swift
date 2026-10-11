@@ -1,4 +1,3 @@
-import Combine
 import EventKit
 import SwiftUI
 
@@ -26,8 +25,17 @@ struct TimeWidget: View {
 
     @State private var rect = CGRect()
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common)
-        .autoconnect()
+    /// Seconds between updates of the bar's time: every second only when the shown format has seconds.
+    private var tickInterval: TimeInterval {
+        let showsSeconds =
+            if let fixedFormat {
+                // Quoted text is literal, so its letters are not fields.
+                fixedFormat.replacing(#/'[^']*'?/#, with: "").contains(where: { "sSA".contains($0) })
+            } else {
+                format.contains("s")
+            }
+        return showsSeconds ? 1 : 60
+    }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 0) {
@@ -42,8 +50,17 @@ struct TimeWidget: View {
         .font(.headline)
         // The shadow keeps the white text legible on the wallpaper; glass already provides the contrast.
         .applying(!configManager.config.usesLiquidGlass) { $0.shadow(color: .foregroundShadowOutside, radius: 3) }
-        .onReceive(timer) { date in
-            currentTime = date
+        .task(id: tickInterval) {
+            // Wake at each boundary of the interval, e.g. on the minute, instead of polling every second.
+            currentTime = Date()
+            while !Task.isCancelled {
+                let interval = tickInterval
+                let now = Date().timeIntervalSinceReferenceDate
+                let next = ((now / interval).rounded(.down) + 1) * interval
+                try? await Task.sleep(for: .seconds(next - now))
+                // The sleep can end slightly early; the time shown is then still the new boundary's.
+                currentTime = max(Date(), Date(timeIntervalSinceReferenceDate: next))
+            }
         }
         .background(
             GeometryReader { geometry in
@@ -85,8 +102,21 @@ struct TimeWidget: View {
         return formattedTime(pattern: format, from: currentTime)
     }
 
+    /// Formatters by pattern, time zone and locale, as creating one on every render is costly. Used on the main thread
+    /// only.
+    private static var formatters: [String: DateFormatter] = [:]
+
     // Format the current time. A fixed pattern is used as is; otherwise it is a template localized for the locale.
     private func formattedTime(pattern: String, from time: Date, fixed: Bool = false) -> String {
+        formatter(pattern: pattern, fixed: fixed).string(from: time)
+    }
+
+    private func formatter(pattern: String, fixed: Bool) -> DateFormatter {
+        let timeZone = timeZone.flatMap(TimeZone.init(identifier:)) ?? TimeZone.current
+        let key = "\(fixed)|\(pattern)|\(timeZone.identifier)|\(Locale.current.identifier)"
+        if let formatter = Self.formatters[key] {
+            return formatter
+        }
         let formatter = DateFormatter()
         if fixed {
             // The POSIX locale keeps the pattern as written: with the user's locale, the 12-hour time setting turns
@@ -97,15 +127,9 @@ struct TimeWidget: View {
             formatter.setLocalizedDateFormatFromTemplate(pattern)
         }
 
-        if let timeZone = timeZone,
-            let tz = TimeZone(identifier: timeZone)
-        {
-            formatter.timeZone = tz
-        } else {
-            formatter.timeZone = TimeZone.current
-        }
-
-        return formatter.string(from: time)
+        formatter.timeZone = timeZone
+        Self.formatters[key] = formatter
+        return formatter
     }
 
     // Create text for the calendar event.
