@@ -125,6 +125,10 @@ show-percentage = true
 show-icon = true
 ```
 
+With `theme = "system"` (the default), the bar is dark glass with white text even in Light Mode, so it stays legible on any wallpaper; only `theme = "light"` makes it light. Popups follow `theme`, and with `"system"` the system appearance.
+
+With `position = "bottom"`, the bar does not reserve space on the screen like the Dock does, so maximized windows extend under it.
+
 Currently, you can customize the order of widgets (time, indicators, etc.) and adjust some of their settings. Soon, you’ll also be able to add custom widgets and completely change **barik**'s appearance—making it almost unrecognizable (hello, r/unixporn!).
 
 ## Future Plans
