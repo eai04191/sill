@@ -22,6 +22,12 @@ class HidingPanel: NSPanel, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         MenuBarPopup.hide()
     }
+
+    /// Escape closes the popup, as it does a menu or popover. It reaches here whether the panel or a control in the
+    /// popup has keyboard focus, unless the focused control handles Escape itself.
+    override func cancelOperation(_ sender: Any?) {
+        MenuBarPopup.hide()
+    }
 }
 
 class MenuBarPopup {
@@ -68,8 +74,8 @@ class MenuBarPopup {
         }
     }
 
-    /// Hides the popup: closing it by clicking its widget again, or the panel losing key status. Ordering the panel
-    /// out also makes it lose key status, which then finds the popup already hiding.
+    /// Hides the popup: closing it by clicking its widget again or pressing Escape, or the panel losing key status.
+    /// Ordering the panel out also makes it lose key status, which then finds the popup already hiding.
     static func hide() {
         guard isShown, let panel = panel else { return }
         isShown = false
