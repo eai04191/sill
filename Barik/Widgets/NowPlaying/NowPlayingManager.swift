@@ -327,7 +327,8 @@ final class NowPlayingManager: ObservableObject {
     }
 
     private func publish() {
-        let song = payload?.song(artworkURL: artworkURL)
+        // A new track shows no artwork until its own is fetched, rather than the previous track's.
+        let song = payload?.song(artworkURL: artworkTrackKey == payload?.trackKey ? artworkURL : nil)
         if song != nowPlaying {
             nowPlaying = song
         }
