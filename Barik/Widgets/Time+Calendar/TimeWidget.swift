@@ -89,6 +89,9 @@ struct TimeWidget: View {
     private func formattedTime(pattern: String, from time: Date, fixed: Bool = false) -> String {
         let formatter = DateFormatter()
         if fixed {
+            // The POSIX locale keeps the pattern as written: with the user's locale, the 12-hour time setting turns
+            // "HH:mm" into "午前10:00". Names such as weekdays are then in English.
+            formatter.locale = Locale(identifier: "en_US_POSIX")
             formatter.dateFormat = pattern
         } else {
             formatter.setLocalizedDateFormatFromTemplate(pattern)

@@ -107,7 +107,7 @@ critical-level = 10
 
 [widgets.default.time]
 format = "E d, J:mm"
-# fixed-format = "MM/dd HH:mm" # a fixed pattern used as is instead of the localized format
+# fixed-format = "MM/dd HH:mm" # a fixed pattern used as is (in English) instead of the localized format
 calendar.format = "J:mm"
 
 calendar.show-events = true
