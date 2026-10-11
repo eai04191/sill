@@ -376,7 +376,8 @@ private struct EventRow: View {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate(calendar.isDate(date, inSameDayAs: day) ? "j:mm" : "MMMd j:mm")
         formatter.timeZone = calendar.timeZone
-        return formatter.string(from: date).replacing(":00", with: "")
+        // Not shortened by removing ":00", which turned "15:00" into "15" in 24-hour locales.
+        return formatter.string(from: date)
     }
 }
 
