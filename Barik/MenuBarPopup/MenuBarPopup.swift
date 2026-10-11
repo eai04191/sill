@@ -42,8 +42,12 @@ class MenuBarPopup {
 
     /// - Parameter providesGlassModules: The content draws its own glass modules, so the popup adds no glass behind
     ///   them (glass on glass, which the HIG asks to avoid).
+    /// - Parameter focusesContent: The content puts keyboard focus on one of its controls itself, such as a search
+    ///   field, so the popup does not clear the initial focus (see `clearInitialFocus`), which could otherwise run
+    ///   after the content focused its control and take the focus away again.
     static func show<Content: View>(
-        rect: CGRect, id: String, providesGlassModules: Bool = false, @ViewBuilder content: @escaping () -> Content
+        rect: CGRect, id: String, providesGlassModules: Bool = false, focusesContent: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
     ) {
         guard let panel = panel else { return }
 
@@ -65,10 +69,14 @@ class MenuBarPopup {
         if isContentChange {
             NotificationCenter.default.post(name: .willHideWindow, object: nil)
             schedule(after: PopupMotion.hideDuration) {
-                present(in: panel, rect: rect, providesGlassModules: providesGlassModules, content: content)
+                present(
+                    in: panel, rect: rect, providesGlassModules: providesGlassModules,
+                    focusesContent: focusesContent, content: content)
             }
         } else {
-            present(in: panel, rect: rect, providesGlassModules: providesGlassModules, content: content)
+            present(
+                in: panel, rect: rect, providesGlassModules: providesGlassModules, focusesContent: focusesContent,
+                content: content)
         }
     }
 
@@ -92,7 +100,8 @@ class MenuBarPopup {
     }
 
     private static func present<Content: View>(
-        in panel: NSPanel, rect: CGRect, providesGlassModules: Bool, @ViewBuilder content: @escaping () -> Content
+        in panel: NSPanel, rect: CGRect, providesGlassModules: Bool, focusesContent: Bool,
+        @ViewBuilder content: @escaping () -> Content
     ) {
         panel.contentView = NSHostingView(
             rootView:
@@ -102,7 +111,9 @@ class MenuBarPopup {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
         panel.makeKeyAndOrderFront(nil)
-        clearInitialFocus(of: panel)
+        if !focusesContent {
+            clearInitialFocus(of: panel)
+        }
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .willShowWindow, object: nil)

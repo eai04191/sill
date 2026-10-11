@@ -164,7 +164,7 @@ final class UsageManager: ObservableObject {
     }
 }
 
-/// Stops a command that hangs, for the usage command and media-control.
+/// Stops a command that hangs, for the usage command, media-control and AeroSpace.
 enum ProcessStopper {
     /// Seconds a terminated process has to exit before it is killed.
     static let killGracePeriod: TimeInterval = 2

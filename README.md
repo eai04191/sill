@@ -109,7 +109,7 @@ position = "bottom"   # top (default) or bottom; popups open upward at the botto
 displayed = [
     "default.nowplaying", # now playing from media-control (`brew install media-control`), any player incl. browsers
     "center",             # widgets between two "center" markers stay at the center of the bar
-    "default.frontapp",   # frontmost app icon and name
+    "default.frontapp",   # frontmost app icon and name; click it for the window switcher (needs AeroSpace)
     "center",
     "default.usage",      # Claude Code / Codex usage
     "default.volume",     # output volume with a slider popup
@@ -146,6 +146,12 @@ brew install media-control
 ```
 
 Barik looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up within 30 seconds of installing it, without a restart. If a player is still not shown, check that it appears in Control Center's Now Playing and that `media-control get` prints it.
+
+## Window Switcher
+
+Clicking the front app widget opens a window switcher, a replacement for Mission Control: a menu of the windows on every workspace, grouped by app, with the workspace of each window. Type to filter the windows by title, app or workspace, move with the Up and Down keys, and press Return or click to focus a window; Escape closes it.
+
+The switcher lists and focuses windows through the [AeroSpace](https://github.com/nikitabobko/AeroSpace) CLI, so it needs AeroSpace running, and no extra permission for Barik. Barik looks for `aerospace` in `/opt/homebrew/bin` and `/usr/local/bin`, and the switcher says so when it is not available.
 
 ## Where Are the Menu Items?
 

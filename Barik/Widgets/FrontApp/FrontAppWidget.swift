@@ -48,7 +48,8 @@ final class FrontAppManager: ObservableObject {
     }
 }
 
-/// Shows the frontmost application's icon and name, like the bold app menu of the macOS menu bar.
+/// Shows the frontmost application's icon and name, like the bold app menu of the macOS menu bar. Clicking it opens the
+/// window switcher (see `WindowSwitcherPopup`).
 ///
 /// Config (`[widgets.default.frontapp]`):
 /// - `show-icon`: show the application icon (default `true`).
@@ -56,6 +57,8 @@ struct FrontAppWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     @ObservedObject private var frontAppManager = FrontAppManager.shared
     var showIcon: Bool { configProvider.config["show-icon"]?.boolValue ?? true }
+
+    @State private var rect: CGRect = .zero
 
     var body: some View {
         if let app = frontAppManager.app, let name = app.localizedName {
@@ -73,7 +76,22 @@ struct FrontAppWidget: View {
             }
             .experimentalConfiguration()
             .frame(maxHeight: .infinity)
+            .background(.black.opacity(0.001))
+            .background(
+                GeometryReader { geometry in
+                    Color.clear
+                        .onAppear { rect = geometry.frame(in: .global) }
+                        .onChange(of: geometry.frame(in: .global)) { _, newFrame in
+                            rect = newFrame
+                        }
+                }
+            )
             .animation(.smooth(duration: 0.15), value: name)
+            .barWidgetButton(label: "Windows", value: name) {
+                MenuBarPopup.show(rect: rect, id: "windowswitcher", focusesContent: true) {
+                    WindowSwitcherPopup()
+                }
+            }
         }
     }
 }

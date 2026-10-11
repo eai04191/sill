@@ -47,6 +47,17 @@
         }
       }
     },
+    "%@, %@, workspace %@" : {
+      "comment" : "VoiceOver label of a window in the window switcher: the window title, app and workspace.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@、%2$@、ワークスペース%3$@"
+          }
+        }
+      }
+    },
     "%@, muted" : {
       "comment" : "VoiceOver value of the volume widget while muted.",
       "localizations" : {
@@ -136,6 +147,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Barikで行った変更を設定ファイルに保存できなかったため、ファイルは変更されていません。"
+          }
+        }
+      }
+    },
+    "AeroSpace is not available" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AeroSpaceが見つかりません"
           }
         }
       }
@@ -321,6 +342,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定エラー"
+          }
+        }
+      }
+    },
+    "Could not get the windows from AeroSpace" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AeroSpaceからウィンドウを取得できませんでした"
           }
         }
       }
@@ -531,6 +562,26 @@
         }
       }
     },
+    "No matching windows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致するウィンドウはありません"
+          }
+        }
+      }
+    },
+    "No windows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィンドウはありません"
+          }
+        }
+      }
+    },
     "Nothing Playing" : {
       "localizations" : {
         "ja" : {
@@ -637,6 +688,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "終了"
+          }
+        }
+      }
+    },
+    "Search windows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィンドウを検索"
           }
         }
       }
@@ -1008,6 +1069,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "バーに収まらないウィジェット"
+          }
+        }
+      }
+    },
+    "Windows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィンドウ"
           }
         }
       }
