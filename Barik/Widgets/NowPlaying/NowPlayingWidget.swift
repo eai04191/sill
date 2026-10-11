@@ -5,6 +5,7 @@ import SwiftUI
 struct NowPlayingWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     @ObservedObject var playingManager = NowPlayingManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var widgetFrame: CGRect = .zero
     @State private var animatedWidth: CGFloat = 0
@@ -17,7 +18,8 @@ struct NowPlayingWidget: View {
                     if animatedWidth == 0 {
                         animatedWidth = measuredWidth
                     } else if animatedWidth != measuredWidth {
-                        withAnimation(.smooth) {
+                        // With Reduce Motion the widget takes its new width at once instead of stretching to it.
+                        withAnimation(reduceMotion ? nil : .smooth) {
                             animatedWidth = measuredWidth
                         }
                     }
@@ -115,7 +117,7 @@ struct VisibleNowPlayingContent: View {
         NowPlayingContent(song: song)
             .frame(width: width, height: usesSystemGlassButton ? nil : 38)
             .animation(.smooth(duration: 0.1), value: song)
-            .transition(.blurReplace)
+            .blurReplaceTransition()
     }
 }
 
@@ -125,6 +127,7 @@ struct VisibleNowPlayingContent: View {
 struct AlbumArtView: View {
     let song: NowPlayingSong
     @ObservedObject var configManager = ConfigManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 20 points, or smaller on a bar too low for it inside the widget.
     private var size: CGFloat {
         min(20, barWidgetHeight(forBarHeight: configManager.config.experimental.foreground.resolveHeight()) - 4)
@@ -138,13 +141,14 @@ struct AlbumArtView: View {
             )
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: 4))
-            .scaleEffect(song.state == .paused ? 0.9 : 1)
+            // Reduce Motion asks to avoid scaling; the dimmed artwork and the pause symbol still show the state.
+            .scaleEffect(song.state == .paused && !reduceMotion ? 0.9 : 1)
             .brightness(song.state == .paused ? -0.3 : 0)
 
             if song.state == .paused {
                 Image(systemName: "pause.fill")
                     .foregroundColor(.icon)
-                    .transition(.blurReplace)
+                    .blurReplaceTransition()
             }
         }
         .animation(.smooth(duration: 0.1), value: song.state == .paused)

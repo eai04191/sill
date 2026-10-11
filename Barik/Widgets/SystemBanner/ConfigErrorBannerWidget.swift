@@ -26,7 +26,7 @@ struct ConfigErrorBannerWidget: View {
         )
         // White text on this red has a contrast ratio of about 6:1.
         .buttonStyle(BannerButtonStyle(color: Color(red: 0.75, green: 0.1, blue: 0.1)))
-        .transition(.blurReplace)
+        .blurReplaceTransition()
     }
 }
 

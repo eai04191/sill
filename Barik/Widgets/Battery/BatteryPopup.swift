@@ -35,7 +35,7 @@ struct BatteryPopup: View {
                 .offset(y: -30)
                 .shadow(color: Color.black, radius: 2, x: 0, y: 0)
                 .shadow(color: Color.black, radius: 2, x: 0, y: 0)
-                .transition(.blurReplace)
+                .blurReplaceTransition()
             }
         }
         .frame(width: 60, height: 60)

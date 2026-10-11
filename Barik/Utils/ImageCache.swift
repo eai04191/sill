@@ -130,10 +130,12 @@ extension NSImage {
 
 // MARK: - Rotate Animated Cached Image View
 
-/// A view that displays a cached image with a rotation and blur animation when the image changes.
+/// A view that displays a cached image with a rotation and blur animation when the image changes, or replaces it at
+/// once with Reduce Motion, which asks to avoid flipping and blurring (HIG, Motion).
 struct RotateAnimatedCachedImage<RotatingContent: View>: View {
     let url: URL?
     let targetSize: CGSize?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
     @StateObject private var loader: ImageLoader
     @State private var displayedImage: NSImage?
@@ -174,7 +176,7 @@ struct RotateAnimatedCachedImage<RotatingContent: View>: View {
                 return
             }
             // If image is loading for the first time.
-            if displayedImage == nil {
+            if displayedImage == nil || reduceMotion {
                 displayedImage = newImage
             } else if displayedImage != newImage {
                 // Animate the transition.

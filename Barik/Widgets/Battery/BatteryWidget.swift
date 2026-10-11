@@ -107,7 +107,7 @@ private struct BatteryText: View {
             if showPercentage {
                 Text("\(level)")
                     .font(.system(size: 12))
-                    .transition(.blurReplace)
+                    .blurReplaceTransition()
             }
 
             if isCharging && level != 100 {
@@ -122,7 +122,7 @@ private struct BatteryText: View {
             }
         }
         .fontWeight(.semibold)
-        .transition(.blurReplace)
+        .blurReplaceTransition()
         .animation(.smooth, value: isCharging)
         .frame(width: 26, height: 15)
     }
