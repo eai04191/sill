@@ -25,9 +25,7 @@ class CalendarManager: ObservableObject {
     }
 
     private static func calendars(in config: ConfigData?, for key: String) -> [String] {
-        Array(
-            (config?[key]?.arrayValue?.map { $0.stringValue ?? "" }
-                .drop(while: { $0 == "" })) ?? [])
+        config?[key]?.arrayValue?.compactMap(\.stringValue).filter { !$0.isEmpty } ?? []
     }
 
     @Published var nextEvent: EKEvent?
