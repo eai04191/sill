@@ -1,0 +1,55 @@
+name: Lint
+
+# Checks the workflows with jactionlint's strictest profile, including the shell scripts in run: with shellcheck.
+# Renovate waits for this check before it automerges an update.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+  pull_request:
+    paths:
+      - ".github/**"
+
+permissions: {}
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # bash -eo pipefail, so a failing command in a pipeline fails the step.
+    shell: bash
+
+jobs:
+  workflows:
+    name: Workflows
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read # Checks out the repository.
+    env:
+      # The linux_amd64 archive of jactionlint, checked against this SHA-256.
+      # renovate: datasource=github-release-attachments depName=jdx/jactionlint
+      JACTIONLINT_VERSION: v2.1.0
+      JACTIONLINT_SHA256: baebfc5792135438fb3bb5ea266c3bf2538a089753616f1988ef618e4c0c3cb1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install jactionlint
+        run: |
+          archive="jactionlint_${JACTIONLINT_VERSION#v}_linux_amd64.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --output "$archive" \
+            "https://github.com/jdx/jactionlint/releases/download/$JACTIONLINT_VERSION/$archive"
+          echo "$JACTIONLINT_SHA256  $archive" | sha256sum -c
+          mkdir jactionlint
+          tar -xzf "$archive" -C jactionlint
+          echo "$RUNNER_TEMP/jactionlint" >> "$GITHUB_PATH"
+
+      - name: Lint
+        run: jactionlint --profile=pedantic --format=github
