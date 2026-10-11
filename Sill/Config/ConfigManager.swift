@@ -23,36 +23,55 @@ final class ConfigManager: ObservableObject {
     private let watchQueue = DispatchQueue(label: "Sill.ConfigManager.watch")
     private var configFilePath: String?
 
+    /// The config file: `$XDG_CONFIG_HOME/sill/config.toml`, or `~/.config/sill/config.toml` when XDG_CONFIG_HOME is
+    /// unset or not an absolute path, as the XDG Base Directory Specification says. Sill started from launchd or the
+    /// Finder sees XDG_CONFIG_HOME only when it is set for them, not only in a shell's startup files.
+    static let configPath: String = {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        var configHome = "\(home)/.config"
+        if let xdgConfigHome = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"], xdgConfigHome.hasPrefix("/") {
+            configHome = xdgConfigHome
+        }
+        return "\(configHome)/sill/config.toml"
+    }()
+
+    /// Where Sill used to keep the config, in the home folder. It is no longer read: a config there stops Sill with
+    /// an error that says where to move it, rather than Sill starting with a new default config.
+    private static let homeConfigPath = "\(FileManager.default.homeDirectoryForCurrentUser.path)/.sill-config.toml"
+
     private init() {
         loadOrCreateConfigIfNeeded()
     }
 
     private func loadOrCreateConfigIfNeeded() {
-        let homePath = FileManager.default.homeDirectoryForCurrentUser.path
-        let path1 = "\(homePath)/.sill-config.toml"
-        let path2 = "\(homePath)/.config/sill/config.toml"
-        var chosenPath: String?
+        let path = Self.configPath
+        let fileManager = FileManager.default
 
-        if FileManager.default.fileExists(atPath: path1) {
-            chosenPath = path1
-        } else if FileManager.default.fileExists(atPath: path2) {
-            chosenPath = path2
-        } else {
-            do {
-                try createDefaultConfig(at: path1)
-                chosenPath = path1
-            } catch {
-                initError = String(localized: "Error creating default config: \(error.localizedDescription)")
-                Logger.config.error("Could not create the default config at \(path1, privacy: .public): \(String(describing: error), privacy: .public)")
+        if !fileManager.fileExists(atPath: path) {
+            if fileManager.fileExists(atPath: Self.homeConfigPath) {
+                let homeConfigPath = (Self.homeConfigPath as NSString).abbreviatingWithTildeInPath
+                let configPath = (path as NSString).abbreviatingWithTildeInPath
+                initError = String(
+                    localized: "Move \(homeConfigPath) to \(configPath). Sill no longer reads a config in the home folder.",
+                    comment: "The old config file, then where it goes now.")
+                Logger.config.error("The config is at \(Self.homeConfigPath, privacy: .public), which is no longer read, instead of \(path, privacy: .public)")
                 return
             }
+            do {
+                try fileManager.createDirectory(
+                    atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+                try createDefaultConfig(at: path)
+            } catch {
+                initError = String(localized: "Error creating default config: \(error.localizedDescription)")
+                Logger.config.error("Could not create the default config at \(path, privacy: .public): \(String(describing: error), privacy: .public)")
+                return
+            }
+            Logger.config.notice("Created the default config at \(path, privacy: .public)")
         }
 
-        if let path = chosenPath {
-            configFilePath = path
-            parseConfigFile(at: path, atLaunch: true)
-            startWatchingFile(at: path)
-        }
+        configFilePath = path
+        parseConfigFile(at: path, atLaunch: true)
+        startWatchingFile(at: path)
     }
 
     /// Reads the config file. An error at launch is kept in `initError`; an error later is published in

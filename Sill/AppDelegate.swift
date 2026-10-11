@@ -154,9 +154,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showFatalConfigError(message: String) {
         let alert = NSAlert()
         alert.messageText = String(localized: "Configuration Error")
+        let configPath = (ConfigManager.configPath as NSString).abbreviatingWithTildeInPath
         alert.informativeText = String(
-            localized: "\(message)\n\nPlease double check ~/.sill-config.toml and try again.",
-            comment: "The error, then what to do about it.")
+            localized: "\(message)\n\nPlease double check \(configPath) and try again.",
+            comment: "The error, then what to do about it, with the path of the config file.")
         alert.alertStyle = .critical
         alert.addButton(withTitle: String(localized: "Quit"))
         

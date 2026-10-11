@@ -40,7 +40,7 @@ ditto build/Build/Products/Release/Sill.app ~/Applications/Sill.app
 
 ## Configuration
 
-When you launch **Sill** for the first time, it will create a `~/.sill-config.toml` file with an example customization for your new menu bar.
+When you launch **Sill** for the first time, it will create `~/.config/sill/config.toml` (`$XDG_CONFIG_HOME/sill/config.toml` when `XDG_CONFIG_HOME` is set) with an example customization for your new menu bar. Sill no longer reads `~/.sill-config.toml`; move it there if you have one.
 
 ```toml
 theme = "system" # system, light, dark

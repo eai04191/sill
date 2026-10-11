@@ -14,13 +14,13 @@
         }
       }
     },
-    "%@\n\nPlease double check ~/.sill-config.toml and try again." : {
-      "comment" : "The error, then what to do about it.",
+    "%@\n\nPlease double check %@ and try again." : {
+      "comment" : "The error, then what to do about it, with the path of the config file.",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@\n\n~/.sill-config.tomlを確認してから、もう一度お試しください。"
+            "value" : "%1$@\n\n%2$@を確認してから、もう一度お試しください。"
           }
         }
       }
@@ -548,6 +548,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "その他のウィジェット"
+          }
+        }
+      }
+    },
+    "Move %@ to %@. Sill no longer reads a config in the home folder." : {
+      "comment" : "The old config file, then where it goes now.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を%2$@に移動してください。Sillはホームフォルダの設定を読まなくなりました。"
           }
         }
       }
