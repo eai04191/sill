@@ -3,18 +3,30 @@ import EventKit
 import Foundation
 
 class CalendarManager: ObservableObject {
+    private static let inUse = SharedWhileInUse<CalendarManager>()
+
+    /// One manager, with its event store and timer, for all time widgets with the same calendar filter, instead of a
+    /// new one on every evaluation of the bar's body.
+    static func shared(for configProvider: ConfigProvider) -> CalendarManager {
+        let config = configProvider.config["calendar"]?.dictionaryValue
+        let filter = [calendars(in: config, for: "allow-list"), calendars(in: config, for: "deny-list")]
+        return inUse.instance(for: filter.description) { CalendarManager(configProvider: configProvider) }
+    }
+
     let configProvider: ConfigProvider
     var config: ConfigData? {
         configProvider.config["calendar"]?.dictionaryValue
     }
     var allowList: [String] {
-        Array(
-            (config?["allow-list"]?.arrayValue?.map { $0.stringValue ?? "" }
-                .drop(while: { $0 == "" })) ?? [])
+        Self.calendars(in: config, for: "allow-list")
     }
     var denyList: [String] {
+        Self.calendars(in: config, for: "deny-list")
+    }
+
+    private static func calendars(in config: ConfigData?, for key: String) -> [String] {
         Array(
-            (config?["deny-list"]?.arrayValue?.map { $0.stringValue ?? "" }
+            (config?[key]?.arrayValue?.map { $0.stringValue ?? "" }
                 .drop(while: { $0 == "" })) ?? [])
     }
 

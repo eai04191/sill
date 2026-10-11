@@ -23,6 +23,8 @@ enum WifiSignalStrength: String {
 final class NetworkStatusViewModel: NSObject, ObservableObject,
     CLLocationManagerDelegate
 {
+    /// One view model, with its path monitor and Wi-Fi polling, for all network widgets on the bar.
+    static let inUse = SharedWhileInUse<NetworkStatusViewModel>()
 
     // States for Wi‑Fi and Ethernet obtained via NWPathMonitor.
     @Published var wifiState: NetworkState = .disconnected

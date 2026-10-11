@@ -3,6 +3,9 @@ import Combine
 import Foundation
 
 class SpacesViewModel: ObservableObject {
+    /// One view model, polling every 0.1 seconds, for all spaces widgets on the bar.
+    static let inUse = SharedWhileInUse<SpacesViewModel>()
+
     @Published var spaces: [AnySpace] = []
     private var timer: Timer?
     private var provider: AnySpacesProvider?

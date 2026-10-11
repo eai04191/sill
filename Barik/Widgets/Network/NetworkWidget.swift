@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Widget for the menu, displaying Wi‑Fi and Ethernet icons.
 struct NetworkWidget: View {
-    @StateObject private var viewModel = NetworkStatusViewModel()
+    @StateObject private var viewModel = NetworkStatusViewModel.inUse.instance { NetworkStatusViewModel() }
     @State private var rect: CGRect = .zero
 
     var body: some View {
