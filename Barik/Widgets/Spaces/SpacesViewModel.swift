@@ -9,6 +9,12 @@ class SpacesViewModel: ObservableObject {
     @Published var spaces: [AnySpace] = []
     private var timer: Timer?
     private var provider: AnySpacesProvider?
+    /// Runs one fetch at a time, so the CLI calls of a slow fetch do not pile up behind each other.
+    private let fetchQueue = DispatchQueue(label: "Barik.SpacesViewModel.fetch", qos: .utility)
+    /// Whether a fetch is running. Read and written on the main thread.
+    private var isFetching = false
+    /// The last error printed, so a failure that lasts is printed once instead of on every fetch.
+    private var lastPrintedError: String?
 
     init() {
         let runningApps = NSWorkspace.shared.runningApplications.compactMap {
@@ -41,28 +47,39 @@ class SpacesViewModel: ObservableObject {
         timer = nil
     }
 
+    /// Fetches the spaces unless a fetch is running. Results are applied on the main thread in the order the fetches
+    /// ran, and only when they differ from the shown spaces.
     private func loadSpaces() {
-        DispatchQueue.global(qos: .background).async {
-            guard let provider = self.provider else {
-                DispatchQueue.main.async {
-                    self.spaces = []
-                }
-                return
-            }
-            let spaces: [AnySpace]
-            do {
-                spaces = try provider.getSpacesWithWindows()
-            } catch {
-                print("Spaces: \(error)")
-                DispatchQueue.main.async {
-                    self.spaces = []
-                }
-                return
-            }
-            let sortedSpaces = spaces.sorted { $0.id < $1.id }
+        guard !isFetching else { return }
+        guard let provider else {
+            apply([])
+            return
+        }
+        isFetching = true
+        fetchQueue.async { [weak self] in
+            let result = Result { try provider.getSpacesWithWindows() }
             DispatchQueue.main.async {
-                self.spaces = sortedSpaces
+                guard let self else { return }
+                self.isFetching = false
+                switch result {
+                case .success(let spaces):
+                    self.lastPrintedError = nil
+                    self.apply(spaces.sorted { $0.id < $1.id })
+                case .failure(let error):
+                    let message = "\(error)"
+                    if message != self.lastPrintedError {
+                        print("Spaces: \(message)")
+                        self.lastPrintedError = message
+                    }
+                    self.apply([])
+                }
             }
+        }
+    }
+
+    private func apply(_ spaces: [AnySpace]) {
+        if spaces != self.spaces {
+            self.spaces = spaces
         }
     }
 
