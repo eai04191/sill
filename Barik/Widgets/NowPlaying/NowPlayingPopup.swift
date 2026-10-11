@@ -132,14 +132,18 @@ struct NowPlayingHorizontalPopup: View {
                     )
                     .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
 
+                    // The popup has a fixed height, so the text is limited to the artwork's height of three lines
+                    // to keep the timeline and controls inside it.
                     VStack(alignment: .leading, spacing: 0) {
                         Text(song.title)
                             .font(.headline)
                             .fontWeight(.medium)
+                            .lineLimit(2)
                         Text(song.artist)
                             .opacity(0.6)
                             .font(.headline)
                             .fontWeight(.light)
+                            .lineLimit(1)
                     }
                     .padding(.trailing, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
