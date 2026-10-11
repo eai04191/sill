@@ -22,7 +22,7 @@ Sill is a macOS 26 menu bar replacement in SwiftUI, a fork of [barik](https://gi
 ## Build and check
 
 - Build: `xcodebuild -project Sill.xcodeproj -scheme Sill -configuration Release -derivedDataPath build build`.
-- The maintainer installs it with `make install-sill` from the dotfiles repository (eai04191/dotfiles), which signs it with a local self-signed certificate so permissions such as calendar access survive rebuilds.
+- The maintainer installs it with `make install-sill-dev` from the dotfiles repository (eai04191/dotfiles), which signs it with a local self-signed certificate so permissions such as calendar access survive rebuilds.
 - Check UI changes on the real machine, not only by building. The scripts in scripts/verify synthesize input and list windows; build one with `swiftc -o <output> scripts/verify/<name>.swift`. Use `move` to hover rather than `click` at guessed coordinates, which can click into other apps. Record the screen with `screencapture -v` and measure transitions frame by frame, for example with ffmpeg's `signalstats` filter.
 - The maintainer uses the Mac while Sill is checked, and moving the pointer takes it from them: ask before using `move`, `click`, `press` or `scroll`. Open popups with `axpress` and scroll them with `axscroll`, which go through the accessibility API and leave the pointer alone. Glass reacts to hover only under the real pointer (a move sent only to Sill with `CGEvent.postToPid` did not light it), so hover needs the pointer.
 - `nowplaying` publishes a now playing item, with a long title or as a live stream without a duration, and `backdrop` puts dense text behind the bar to show what the glass lets through.

@@ -4,7 +4,7 @@ Running [.github/workflows/release.yml](.github/workflows/release.yml) from `mai
 
 Then the workflow:
 
-1. builds Sill with that version with Xcode 27.0 on the `xcode-27` runner (Apple silicon) with the same signing settings as `make install-sill` in eai04191/dotfiles ([scripts/release/build.sh](scripts/release/build.sh)),
+1. builds Sill with that version with Xcode 27.0 on the `xcode-27` runner (Apple silicon) with the same signing settings as `make install-sill-dev` in eai04191/dotfiles ([scripts/release/build.sh](scripts/release/build.sh)),
 2. attests the zip with [actions/attest](https://github.com/actions/attest), so `gh attestation verify Sill-<version>.zip -R eai04191/sill` checks that the workflow built it,
 3. creates a GitHub release with `Sill-<version>.zip` and the notes from git-cliff, which tags the commit with the version (barik's format, without a `v`),
 4. pushes a `chore(release): <version>` commit to `main`, which does not count toward the next release. It adds the notes to the top of [CHANGELOG.md](CHANGELOG.md) ([scripts/release/prepend-changelog.sh](scripts/release/prepend-changelog.sh)) and points `Casks/sill.rb` at the zip ([scripts/release/write-cask.sh](scripts/release/write-cask.sh)).
