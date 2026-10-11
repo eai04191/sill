@@ -153,8 +153,10 @@ final class ConfigManager: ObservableObject {
         }
         do {
             let currentText = try String(contentsOfFile: path, encoding: .utf8)
-            let updatedText = updatedTOMLString(
-                original: currentText, key: key, newValue: newValue)
+            let updatedText = try TOMLKeyUpdater.updating(
+                currentText, key: key, to: newValue)
+            // Not atomically: an atomic write replaces the path with a new file, which would turn a symlinked
+            // config into a regular file. Writing in place goes through the symlink to the file it points to.
             try updatedText.write(
                 toFile: path, atomically: false, encoding: .utf8)
             DispatchQueue.main.async {
@@ -162,92 +164,6 @@ final class ConfigManager: ObservableObject {
             }
         } catch {
             print("Error updating config:", error)
-        }
-    }
-
-    private func updatedTOMLString(
-        original: String, key: String, newValue: String
-    ) -> String {
-        if key.contains(".") {
-            let components = key.split(separator: ".").map(String.init)
-            guard components.count >= 2 else {
-                return original
-            }
-
-            let tablePath = components.dropLast().joined(separator: ".")
-            let actualKey = components.last!
-
-            let tableHeader = "[\(tablePath)]"
-            let lines = original.components(separatedBy: "\n")
-            var newLines: [String] = []
-            var insideTargetTable = false
-            var updatedKey = false
-            var foundTable = false
-
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
-                    if insideTargetTable && !updatedKey {
-                        newLines.append("\(actualKey) = \"\(newValue)\"")
-                        updatedKey = true
-                    }
-                    if trimmed == tableHeader {
-                        foundTable = true
-                        insideTargetTable = true
-                    } else {
-                        insideTargetTable = false
-                    }
-                    newLines.append(line)
-                } else {
-                    if insideTargetTable && !updatedKey {
-                        let pattern =
-                            "^\(NSRegularExpression.escapedPattern(for: actualKey))\\s*="
-                        if line.range(of: pattern, options: .regularExpression)
-                            != nil
-                        {
-                            newLines.append("\(actualKey) = \"\(newValue)\"")
-                            updatedKey = true
-                            continue
-                        }
-                    }
-                    newLines.append(line)
-                }
-            }
-
-            if foundTable && insideTargetTable && !updatedKey {
-                newLines.append("\(actualKey) = \"\(newValue)\"")
-            }
-
-            if !foundTable {
-                newLines.append("")
-                newLines.append("[\(tablePath)]")
-                newLines.append("\(actualKey) = \"\(newValue)\"")
-            }
-            return newLines.joined(separator: "\n")
-        } else {
-            let lines = original.components(separatedBy: "\n")
-            var newLines: [String] = []
-            var updatedAtLeastOnce = false
-
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if !trimmed.hasPrefix("#") {
-                    let pattern =
-                        "^\(NSRegularExpression.escapedPattern(for: key))\\s*="
-                    if line.range(of: pattern, options: .regularExpression)
-                        != nil
-                    {
-                        newLines.append("\(key) = \"\(newValue)\"")
-                        updatedAtLeastOnce = true
-                        continue
-                    }
-                }
-                newLines.append(line)
-            }
-            if !updatedAtLeastOnce {
-                newLines.append("\(key) = \"\(newValue)\"")
-            }
-            return newLines.joined(separator: "\n")
         }
     }
 
