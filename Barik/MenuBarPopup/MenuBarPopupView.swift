@@ -63,16 +63,30 @@ struct MenuBarPopupView<Content: View>: View {
     /// screen recording).
     private var presentation: AnyTransition { .opacity }
 
+    /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
+    private var maxHeight: CGFloat {
+        let screenHeight = NSScreen.barScreen?.visibleFrame.height ?? 800
+        return max(screenHeight - foregroundHeight - 80, 100)
+    }
+
     /// The popup content on one glass module, unless the content draws its own modules.
     private var popupBody: some View {
         LiquidGlassContainer(spacing: Constants.popupModuleSpacing) {
             // The glass is inserted and removed inside its container so that it materializes in and out.
             if isPresented {
-                content
-                    .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                    .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                    .liquidGlassMaterializes()
-                    .transition(presentation)
+                // Every popup scrolls only when it would be taller than the screen, such as the calendar on a day with
+                // many events.
+                HeightLimit(maxHeight: maxHeight) {
+                    ViewThatFits(in: .vertical) {
+                        content
+                        ScrollView { content }
+                            .scrollIndicators(.automatic)
+                    }
+                }
+                .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                .liquidGlassMaterializes()
+                .transition(presentation)
             }
         }
     }
@@ -110,3 +124,20 @@ extension Notification.Name {
     static let willHideWindow = Notification.Name("willHideWindow")
 }
 
+/// Offers its content at most `maxHeight` and takes the content's size. A `frame(maxHeight:)` instead grows to the
+/// height it is offered up to its maximum, which made the popup as tall as the screen.
+private struct HeightLimit: Layout {
+    let maxHeight: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(limited(proposal)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
+    }
+
+    private func limited(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        ProposedViewSize(width: proposal.width, height: min(proposal.height ?? maxHeight, maxHeight))
+    }
+}

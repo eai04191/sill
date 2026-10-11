@@ -14,25 +14,13 @@ struct NowPlayingPopup: View {
 
     var body: some View {
         if let song = playingManager.nowPlaying {
-            // Scrolls only when a very long title or artist would make the popup taller than the screen.
-            HeightLimit(maxHeight: maxHeight) {
-                ViewThatFits(in: .vertical) {
-                    content(song)
-                    ScrollView { content(song) }
-                        .scrollIndicators(.automatic)
-                }
-            }
+            // A very long title or artist scrolls with the popup (see MenuBarPopupView).
+            content(song)
         } else {
             NothingPlayingView()
                 .padding(30)
                 .frame(width: width)
         }
-    }
-
-    /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
-    private var maxHeight: CGFloat {
-        let screenHeight = NSScreen.barScreen?.visibleFrame.height ?? 800
-        return max(screenHeight - ConfigManager.shared.config.experimental.foreground.resolveHeight() - 80, 100)
     }
 
     private func content(_ song: NowPlayingSong) -> some View {
@@ -213,23 +201,5 @@ private struct PlayingApp {
 
     func open() {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-    }
-}
-
-/// Offers its content at most `maxHeight` and takes the content's size. A `frame(maxHeight:)` instead grows to the
-/// height it is offered up to its maximum, which made the popup as tall as the screen.
-private struct HeightLimit: Layout {
-    let maxHeight: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        subviews.first?.sizeThatFits(limited(proposal)) ?? .zero
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
-    }
-
-    private func limited(_ proposal: ProposedViewSize) -> ProposedViewSize {
-        ProposedViewSize(width: proposal.width, height: min(proposal.height ?? maxHeight, maxHeight))
     }
 }

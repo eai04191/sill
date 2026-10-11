@@ -304,13 +304,8 @@ private struct MoreWidgetsPopup: View {
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
-        // Scrolls when there are more widgets than the screen can hold.
-        ViewThatFits(in: .vertical) {
-            list
-            ScrollView { list }
-                .scrollIndicators(.automatic)
-        }
-        .frame(maxHeight: maxHeight)
+        // Scrolls when there are more widgets than the screen can hold (see MenuBarPopupView).
+        list
         // The widgets are glass buttons, which are the popup's glass modules.
         .popupProvidesGlassModules()
     }
@@ -322,11 +317,5 @@ private struct MoreWidgetsPopup: View {
                     .frame(height: configManager.config.experimental.foreground.resolveHeight())
             }
         }
-    }
-
-    /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
-    private var maxHeight: CGFloat {
-        let screenHeight = NSScreen.barScreen?.visibleFrame.height ?? 800
-        return max(screenHeight - configManager.config.experimental.foreground.resolveHeight() - 80, 100)
     }
 }
