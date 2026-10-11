@@ -36,17 +36,20 @@ struct MediaControlPayload: Decodable, Equatable {
     let artist: String?
     let album: String?
     let playing: Bool?
-    let elapsedTime: Double?
-    let duration: Double?
-    let timestamp: String?
     let playbackRate: Double?
     let bundleIdentifier: String?
+    // Read with `--micros`: the default `timestamp` is an ISO 8601 date with whole seconds, which made the estimated
+    // position drift by up to a second.
+    let elapsedTimeMicros: Double?
+    let durationMicros: Double?
+    let timestampEpochMicros: Double?
 
-    private static let timestampFormatter = ISO8601DateFormatter()
+    var elapsedTime: Double? { elapsedTimeMicros.map { $0 / 1_000_000 } }
+    var duration: Double? { durationMicros.map { $0 / 1_000_000 } }
 
     /// The moment `elapsedTime` was measured.
     var timestampDate: Date? {
-        timestamp.flatMap { Self.timestampFormatter.date(from: $0) }
+        timestampEpochMicros.map { Date(timeIntervalSince1970: $0 / 1_000_000) }
     }
 
     /// Identifies the track, so the artwork is fetched again only when it changes.
@@ -113,7 +116,7 @@ final class MediaControl {
         stopped = false
         let process = Process()
         process.executableURL = executableURL
-        process.arguments = ["stream", "--no-diff", "--no-artwork"]
+        process.arguments = ["stream", "--no-diff", "--no-artwork", "--micros"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
