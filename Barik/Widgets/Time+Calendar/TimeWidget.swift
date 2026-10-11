@@ -57,13 +57,20 @@ struct TimeWidget: View {
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .monospacedDigit()
-        .barButton(label: "Calendar", value: formattedTime(pattern: format, from: currentTime)) {
+        .barButton(label: "Calendar", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "calendar") {
                 CalendarPopup(
                     calendarManager: calendarManager,
                     configProvider: configProvider)
             }
         }
+    }
+
+    /// The time and, when shown on the bar, the next event, so VoiceOver reads what is displayed.
+    private var accessibilityValue: String {
+        let time = formattedTime(pattern: format, from: currentTime)
+        guard let event = calendarManager.nextEvent, calendarShowEvents else { return time }
+        return "\(time), \(eventText(for: event))"
     }
 
     // Format the current time.
