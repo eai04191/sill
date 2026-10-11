@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Window displaying detailed network status information.
 struct NetworkPopup: View {
-    @StateObject private var viewModel = NetworkStatusViewModel()
+    /// The widget's view model, so the popup opens with the current state instead of starting over.
+    @StateObject private var viewModel = NetworkStatusViewModel.inUse.instance { NetworkStatusViewModel() }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
