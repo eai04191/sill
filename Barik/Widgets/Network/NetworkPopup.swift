@@ -83,26 +83,31 @@ struct NetworkPopup: View {
                 .padding(8)
                 .background(Color.blue.opacity(0.8))
                 .clipShape(Circle())
+                .foregroundStyle(.white)
         case .connectedWithoutInternet:
             return Image(systemName: "network")
                 .padding(8)
                 .background(Color.yellow.opacity(0.8))
                 .clipShape(Circle())
+                .foregroundStyle(.white)
         case .disconnected:
             return Image(systemName: "network.slash")
                 .padding(8)
                 .background(Color.gray.opacity(0.8))
                 .clipShape(Circle())
+                .foregroundStyle(.white)
         case .disabled:
             return Image(systemName: "network.slash")
                 .padding(8)
                 .background(Color.red.opacity(0.8))
                 .clipShape(Circle())
+                .foregroundStyle(.white)
         case .notSupported:
             return Image(systemName: "questionmark.circle")
                 .padding(8)
                 .background(Color.gray.opacity(0.8))
                 .clipShape(Circle())
+                .foregroundStyle(.white)
         }
     }
 }

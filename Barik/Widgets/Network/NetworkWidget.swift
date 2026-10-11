@@ -44,39 +44,40 @@ struct NetworkWidget: View {
         return parts.joined(separator: ", ")
     }
 
+    // A connected icon takes the bar's foreground style, which differs between the plain bar and Liquid Glass.
+    @ViewBuilder
     private var wifiIcon: some View {
         switch viewModel.wifiState {
         case .connected:
-            return Image(systemName: "wifi")
-                .foregroundColor(.foregroundOutside)
+            Image(systemName: "wifi")
         case .connectedWithoutInternet:
-            return Image(systemName: "wifi.exclamationmark")
+            Image(systemName: "wifi.exclamationmark")
                 .foregroundColor(.yellow)
         case .disconnected:
-            return Image(systemName: "wifi.slash")
+            Image(systemName: "wifi.slash")
                 .foregroundColor(.gray)
         case .disabled:
-            return Image(systemName: "wifi.slash")
+            Image(systemName: "wifi.slash")
                 .foregroundColor(.red)
         case .notSupported:
-            return Image(systemName: "wifi.exclamationmark")
+            Image(systemName: "wifi.exclamationmark")
                 .foregroundColor(.gray)
         }
     }
 
+    @ViewBuilder
     private var ethernetIcon: some View {
         switch viewModel.ethernetState {
         case .connected:
-            return Image(systemName: "network")
-                .foregroundColor(.primary)
+            Image(systemName: "network")
         case .connectedWithoutInternet:
-            return Image(systemName: "network")
+            Image(systemName: "network")
                 .foregroundColor(.yellow)
         case .disconnected:
-            return Image(systemName: "network.slash")
-                .foregroundColor(.red)
+            Image(systemName: "network.slash")
+                .foregroundColor(.gray)
         case .disabled, .notSupported:
-            return Image(systemName: "questionmark.circle")
+            Image(systemName: "questionmark.circle")
                 .foregroundColor(.gray)
         }
     }
