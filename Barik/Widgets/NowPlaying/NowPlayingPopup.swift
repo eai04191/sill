@@ -14,57 +14,74 @@ struct NowPlayingPopup: View {
 
     var body: some View {
         if let song = playingManager.nowPlaying {
-            VStack(spacing: 15) {
-                VStack(alignment: .leading, spacing: 15) {
-                    RotateAnimatedCachedImage(
-                        url: song.albumArtURL,
-                        targetSize: CGSize(width: 500, height: 500)
-                    ) { image in
-                        image.clipShape(artworkShape)
-                    }
-                    .frame(width: width - padding * 2, height: width - padding * 2)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(song.title)
-                            .font(.headline)
-                            .fixedSize(horizontal: false, vertical: true)
-                        // Some players, such as Firefox, report an empty artist.
-                        if !song.artist.isEmpty {
-                            Text(song.artist)
-                                .font(.headline)
-                                .fontWeight(.regular)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            // Scrolls only when a very long title or artist would make the popup taller than the screen.
+            HeightLimit(maxHeight: maxHeight) {
+                ViewThatFits(in: .vertical) {
+                    content(song)
+                    ScrollView { content(song) }
+                        .scrollIndicators(.automatic)
                 }
-                .opensPlayingApp(song)
-
-                PlaybackTimeline(song: song)
-
-                HStack(spacing: 40) {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 20))
-                        .barButton(label: "Previous Track") { playingManager.previousTrack() }
-                    Image(systemName: song.state == .paused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 30))
-                        .barButton(label: song.state == .paused ? "Play" : "Pause") { playingManager.togglePlayPause() }
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 20))
-                        .barButton(label: "Next Track") { playingManager.nextTrack() }
-                }
-
-                AirPlayButton()
             }
-            .padding(padding)
-            .frame(width: width)
-            .animation(.easeInOut, value: song.albumArtURL)
         } else {
             NothingPlayingView()
                 .padding(30)
                 .frame(width: width)
         }
+    }
+
+    /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
+    private var maxHeight: CGFloat {
+        let screenHeight = NSScreen.barScreen?.visibleFrame.height ?? 800
+        return max(screenHeight - ConfigManager.shared.config.experimental.foreground.resolveHeight() - 80, 100)
+    }
+
+    private func content(_ song: NowPlayingSong) -> some View {
+        VStack(spacing: 15) {
+            VStack(alignment: .leading, spacing: 15) {
+                RotateAnimatedCachedImage(
+                    url: song.albumArtURL,
+                    targetSize: CGSize(width: 500, height: 500)
+                ) { image in
+                    image.clipShape(artworkShape)
+                }
+                .frame(width: width - padding * 2, height: width - padding * 2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(song.title)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                    // Some players, such as Firefox, report an empty artist.
+                    if !song.artist.isEmpty {
+                        Text(song.artist)
+                            .font(.headline)
+                            .fontWeight(.regular)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .opensPlayingApp(song)
+
+            PlaybackTimeline(song: song)
+
+            HStack(spacing: 40) {
+                Image(systemName: "backward.fill")
+                    .font(.system(size: 20))
+                    .barButton(label: "Previous Track") { playingManager.previousTrack() }
+                Image(systemName: song.state == .paused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 30))
+                    .barButton(label: song.state == .paused ? "Play" : "Pause") { playingManager.togglePlayPause() }
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 20))
+                    .barButton(label: "Next Track") { playingManager.nextTrack() }
+            }
+
+            AirPlayButton()
+        }
+        .padding(padding)
+        .frame(width: width)
+        .animation(.easeInOut, value: song.albumArtURL)
     }
 }
 
@@ -145,8 +162,10 @@ private struct AirPlayButton: NSViewRepresentable {
 
     func updateNSView(_ picker: AVRoutePickerView, context: Context) {}
 
+    /// The picker's own size: it draws its icon centered in that size, so a smaller frame moved the icon off center
+    /// and a larger one stretched it.
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: AVRoutePickerView, context: Context) -> CGSize? {
-        CGSize(width: 24, height: 24)
+        nsView.intrinsicContentSize
     }
 }
 
@@ -183,5 +202,23 @@ private struct PlayingApp {
 
     func open() {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+}
+
+/// Offers its content at most `maxHeight` and takes the content's size. A `frame(maxHeight:)` instead grows to the
+/// height it is offered up to its maximum, which made the popup as tall as the screen.
+private struct HeightLimit: Layout {
+    let maxHeight: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        subviews.first?.sizeThatFits(limited(proposal)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
+    }
+
+    private func limited(_ proposal: ProposedViewSize) -> ProposedViewSize {
+        ProposedViewSize(width: proposal.width, height: min(proposal.height ?? maxHeight, maxHeight))
     }
 }
