@@ -98,6 +98,9 @@ final class UsageManager: ObservableObject {
     private var isRunning = false
     /// A command that hangs is stopped after this many seconds.
     private static let timeout: TimeInterval = 10
+    /// A usage report is a few hundred bytes, so a command printing more than this is stopped rather than read into
+    /// memory without a limit.
+    private static let outputLimit = 1_000_000
 
     init() {
         // The command's data changes by the minute and the widget shows minutes, so a 30-second interval keeps it
@@ -141,20 +144,38 @@ final class UsageManager: ObservableObject {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
-        let reader = OutputReader(pipe.fileHandleForReading)
+        let reader = OutputReader(pipe.fileHandleForReading, limit: outputLimit) {
+            ProcessStopper.stop(process)
+        }
         do {
             try process.run()
         } catch {
             _ = reader.finish()
             return nil
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-            if process.isRunning { process.terminate() }
-        }
+        ProcessStopper.stop(process, after: timeout)
         process.waitUntilExit()
         let output = reader.finish()
-        guard process.terminationStatus == 0 else { return nil }
+        guard process.terminationStatus == 0, !reader.exceededLimit else { return nil }
         return try? JSONDecoder().decode(UsageReport.self, from: output)
+    }
+}
+
+/// Stops a command that hangs, for the usage command and media-control.
+enum ProcessStopper {
+    /// Seconds a terminated process has to exit before it is killed.
+    static let killGracePeriod: TimeInterval = 2
+
+    /// Terminates the process if it still runs after `delay` seconds, and kills it if it still runs
+    /// `killGracePeriod` seconds later, as a process that ignores SIGTERM would otherwise be waited for forever.
+    static func stop(_ process: Process, after delay: TimeInterval = 0) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+            guard process.isRunning else { return }
+            process.terminate()
+            DispatchQueue.global().asyncAfter(deadline: .now() + killGracePeriod) {
+                if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+            }
+        }
     }
 }
 
@@ -162,14 +183,22 @@ final class UsageManager: ObservableObject {
 ///
 /// Reading the output to its end would wait for every process holding it open, including a child process the command
 /// left running, which terminating the command after its timeout does not reach; the run then never ended.
-private final class OutputReader {
-    private let queue = DispatchQueue(label: "UsageManager.OutputReader")
+final class OutputReader {
+    private let queue = DispatchQueue(label: "OutputReader")
     private let fileDescriptor: Int32
     private let source: DispatchSourceRead
+    private let limit: Int?
+    private let onLimitExceeded: () -> Void
     private var data = Data()
+    private var _exceededLimit = false
 
-    init(_ handle: FileHandle) {
+    /// - Parameters:
+    ///   - limit: The most bytes kept. Reading stops at the first byte beyond it and `onLimitExceeded` is called once,
+    ///     where the caller stops the command, which could otherwise fill memory with its output.
+    init(_ handle: FileHandle, limit: Int? = nil, onLimitExceeded: @escaping () -> Void = {}) {
         fileDescriptor = handle.fileDescriptor
+        self.limit = limit
+        self.onLimitExceeded = onLimitExceeded
         _ = fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK)
         source = DispatchSource.makeReadSource(fileDescriptor: fileDescriptor, queue: queue)
         source.setEventHandler { [weak self] in self?.read() }
@@ -178,7 +207,10 @@ private final class OutputReader {
         source.resume()
     }
 
-    /// Reads everything available without waiting; stops at the end of the output.
+    /// Whether the output went beyond the limit, in which case it is incomplete.
+    var exceededLimit: Bool { queue.sync { _exceededLimit } }
+
+    /// Reads everything available without waiting; stops at the end of the output or beyond the limit.
     private func read() {
         var buffer = [UInt8](repeating: 0, count: 4096)
         while true {
@@ -188,6 +220,12 @@ private final class OutputReader {
                 return
             }
             data.append(buffer, count: count)
+            if let limit, data.count > limit {
+                _exceededLimit = true
+                source.cancel()
+                onLimitExceeded()
+                return
+            }
         }
     }
 

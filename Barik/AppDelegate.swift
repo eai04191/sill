@@ -10,8 +10,11 @@ extension NSScreen {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarPanel: NSPanel?
     private var configCancellable: AnyCancellable?
+    private var terminationSignalSource: DispatchSourceSignal?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        handleTerminationSignal()
+
         if let error = ConfigManager.shared.initError {
             showFatalConfigError(message: error)
             return
@@ -34,6 +37,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selector: #selector(screenParametersDidChange(_:)),
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil)
+    }
+
+    /// Quits like the Quit command on SIGTERM, which launchd and `pkill` send. By default the signal ends the process
+    /// at once, so `willTerminateNotification` was not posted and the media-control stream the now playing widget
+    /// started was left running.
+    private func handleTerminationSignal() {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { NSApp.terminate(nil) }
+        source.resume()
+        terminationSignalSource = source
     }
 
     @objc private func screenParametersDidChange(_ notification: Notification) {

@@ -109,6 +109,9 @@ final class MediaControl {
     private static let installCheckInterval: TimeInterval = 30
     /// Seconds after which `get` is stopped, so a hung media-control does not hold the artwork fetch.
     private static let getTimeout: TimeInterval = 5
+    /// The stream prints one line per update of a few hundred bytes, so a longer line is not an update, and is not
+    /// kept in memory without a limit.
+    private static let lineLimit = 1_000_000
 
     private let onPayload: (MediaControlPayload?) -> Void
     private var process: Process?
@@ -144,13 +147,26 @@ final class MediaControl {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
-        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+        pipe.fileHandleForReading.readabilityHandler = { [weak self, weak process] handle in
             let data = handle.availableData
-            DispatchQueue.main.async { self?.receive(data) }
+            // At the end of the output the handler is called again and again with no data until it is removed.
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            DispatchQueue.main.async {
+                // A media-control replaced by `restart()` may still print, which must not mix with the new stream.
+                guard let self, let process, self.process === process else { return }
+                self.receive(data)
+            }
         }
-        process.terminationHandler = { [weak self] _ in
+        process.terminationHandler = { [weak self] exited in
             pipe.fileHandleForReading.readabilityHandler = nil
-            DispatchQueue.main.async { self?.relaunch(after: Self.restartDelay) }
+            DispatchQueue.main.async {
+                // A media-control replaced by `restart()` or stopped by `stop()` is not started again.
+                guard let self, self.process === exited else { return }
+                self.relaunch(after: Self.restartDelay)
+            }
         }
         do {
             try process.run()
@@ -177,6 +193,16 @@ final class MediaControl {
         process = nil
     }
 
+    /// Starts media-control again now, as its stream can stop reporting after the Mac sleeps without exiting, which
+    /// left the song from before the sleep shown. Waiting for a restart is left to the one already scheduled.
+    func restart() {
+        guard !stopped, let process else { return }
+        self.process = nil
+        ProcessStopper.stop(process)
+        buffer.removeAll()
+        launch()
+    }
+
     private func receive(_ data: Data) {
         buffer.append(data)
         while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
@@ -184,6 +210,13 @@ final class MediaControl {
             buffer.removeSubrange(buffer.startIndex...newline)
             guard let message = try? JSONDecoder().decode(StreamMessage.self, from: line) else { continue }
             onPayload(message.payload.title == nil ? nil : message.payload)
+        }
+        if buffer.count > Self.lineLimit {
+            print("media-control printed more than \(Self.lineLimit) bytes without a line break; restarting it")
+            let overflowing = process
+            // Clears the process first, so its remaining output and its exit are ignored.
+            relaunch(after: Self.restartDelay)
+            if let overflowing { ProcessStopper.stop(overflowing) }
         }
     }
 
@@ -201,17 +234,18 @@ final class MediaControl {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
+        // Read as it arrives rather than to the end of the output, which a process left running by media-control
+        // could hold open after media-control is stopped (see `OutputReader`).
+        let reader = OutputReader(pipe.fileHandleForReading)
         do {
             try process.run()
         } catch {
+            _ = reader.finish()
             return nil
         }
-        // Terminating media-control closes its end of the output and ends the read below.
-        DispatchQueue.global().asyncAfter(deadline: .now() + getTimeout) {
-            if process.isRunning { process.terminate() }
-        }
-        let output = pipe.fileHandleForReading.readDataToEndOfFile()
+        ProcessStopper.stop(process, after: getTimeout)
         process.waitUntilExit()
+        let output = reader.finish()
         guard let payload = try? JSONDecoder().decode(MediaControlPayload.self, from: output),
             let json = try? JSONSerialization.jsonObject(with: output) as? [String: Any]
         else {
@@ -253,6 +287,7 @@ final class NowPlayingManager: ObservableObject {
     /// A track is fetched at most this many times, as some players, such as browsers, may never report an artwork.
     private static let maxArtworkFetches = 3
     private var terminateObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
 
     /// Album art is written to this directory so the existing URL-based image views can load it.
     private let artworkDirectory = FileManager.default.temporaryDirectory
@@ -271,6 +306,13 @@ final class NowPlayingManager: ObservableObject {
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
             self?.mediaControl?.stop()
+        }
+
+        // The stream can stop reporting after sleep without exiting, so it is started again on wake.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.mediaControl?.restart()
         }
     }
 
