@@ -2,8 +2,6 @@ import MarkdownUI
 import SwiftUI
 
 struct ChangelogPopup: View {
-    @State private var changelogText: String = "Loading..."
-
     private var bundleVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             ?? "0.0.0"
@@ -17,7 +15,7 @@ struct ChangelogPopup: View {
                 .fontWeight(.medium)
             Rectangle().fill(Color.primary).opacity(0.2).frame(height: 0.5)
             ScrollView {
-                Markdown(changelogText)
+                Markdown(Self.changelogText)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 20)
                     .padding(.trailing, 15)
@@ -28,51 +26,23 @@ struct ChangelogPopup: View {
         .scrollIndicators(.hidden)
         .frame(width: 500)
         .frame(maxHeight: 600)
-        .task {
-            await loadChangelog()
-        }
     }
 
-    // Asynchronously loads the changelog from the remote URL
-    private func loadChangelog() async {
-        guard
-            let url = URL(
-                string:
-                    "https://raw.githubusercontent.com/mocki-toki/barik/main/CHANGELOG.md"
-            )
+    /// The section of this version in the CHANGELOG.md bundled with the app, read once per launch. The bundled file
+    /// is the changelog of the source the app was built from, so it has this build's own changes and needs no network.
+    private static let changelogText: String = {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        guard let url = Bundle.main.url(forResource: "CHANGELOG", withExtension: "md"),
+            let fullChangelog = try? String(contentsOf: url, encoding: .utf8)
         else {
-            return
+            return "Failed to load CHANGELOG."
         }
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            guard let fullChangelog = String(data: data, encoding: .utf8) else {
-                updateChangelogText("Failed to load CHANGELOG.")
-                return
-            }
-
-            let extractedSection = extractSection(
-                forVersion: bundleVersion, from: fullChangelog)
-            let displayText =
-                extractedSection.isEmpty
-                ? "Changelog for v\(bundleVersion) not found"
-                : extractedSection
-
-            updateChangelogText(displayText)
-        } catch {
-            updateChangelogText("Failed to load CHANGELOG.")
-        }
-    }
-
-    // Updates the changelog text on the main thread
-    private func updateChangelogText(_ text: String) {
-        DispatchQueue.main.async {
-            self.changelogText = text
-        }
-    }
+        let extractedSection = extractSection(forVersion: version, from: fullChangelog)
+        return extractedSection.isEmpty ? "Changelog for v\(version) not found" : extractedSection
+    }()
 
     // Extracts the section corresponding to the specified version from the changelog
-    private func extractSection(
+    private static func extractSection(
         forVersion version: String, from changelog: String
     ) -> String {
         let lines = changelog.components(separatedBy: .newlines)
