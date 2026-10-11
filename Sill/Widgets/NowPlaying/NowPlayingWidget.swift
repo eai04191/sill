@@ -9,11 +9,33 @@ struct NowPlayingWidget: View {
 
     @State private var widgetFrame: CGRect = .zero
     @State private var animatedWidth: CGFloat = 0
+    /// The content's width when the bar has less room than the whole song text (see `TruncatingWidgetWidth`).
+    @State private var availableWidth: CGFloat = .infinity
+
+    /// The narrowest the content gets by truncating the song text: the artwork and about ten characters of the title.
+    /// A title cut shorter than that can hardly be recognized, so the widget then moves into the "more" widget.
+    private let minimumWidth: CGFloat = 136
 
     var body: some View {
         ZStack(alignment: .trailing) {
             if let song = playingManager.nowPlaying {
-                // Hidden view for measuring the intrinsic width.
+                // Visible content with the animated width, truncating its text when the bar has less room.
+                VisibleNowPlayingContent(song: song, width: min(animatedWidth, availableWidth))
+                    .barWidgetButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
+                        MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
+                            NowPlayingPopup()
+                        }
+                    }
+                    .modifier(
+                        TruncatingWidgetWidth(
+                            fullWidth: animatedWidth, minimumWidth: minimumWidth, alignment: .leading,
+                            availableWidth: $availableWidth))
+            }
+        }
+        .background(alignment: .trailing) {
+            if let song = playingManager.nowPlaying {
+                // Hidden view measuring the full width. It is a background, so it does not widen the widget, and it
+                // keeps its full width when the widget is narrower.
                 MeasurableNowPlayingContent(song: song) { measuredWidth in
                     if animatedWidth == 0 {
                         animatedWidth = measuredWidth
@@ -24,17 +46,10 @@ struct NowPlayingWidget: View {
                         }
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
                 // Measured like the visible content, which is in a system glass button (see `barWidgetButton`).
                 .environment(\.widgetGlassIsButton, true)
                 .hidden()
-
-                // Visible content with fixed animated width.
-                VisibleNowPlayingContent(song: song, width: animatedWidth)
-                    .barWidgetButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
-                        MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
-                            NowPlayingPopup()
-                        }
-                    }
             }
         }
         .background(
@@ -106,7 +121,8 @@ struct MeasurableNowPlayingContent: View {
 
 // MARK: - Visible Now Playing Content
 
-/// A view that displays now playing content with a fixed, animated width and transition.
+/// A view that displays now playing content with a fixed, animated width and transition. Narrower than the content,
+/// it truncates the song text.
 struct VisibleNowPlayingContent: View {
     let song: NowPlayingSong
     let width: CGFloat
