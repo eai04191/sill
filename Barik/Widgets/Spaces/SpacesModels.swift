@@ -16,12 +16,12 @@ protocol WindowModel: Identifiable, Equatable, Codable {
 
 protocol SpacesProvider {
     associatedtype SpaceType: SpaceModel
-    func getSpacesWithWindows() -> [SpaceType]?
+    func getSpacesWithWindows() throws -> [SpaceType]
 }
 
 protocol SwitchableSpacesProvider: SpacesProvider {
-    func focusSpace(spaceId: String, needWindowFocus: Bool)
-    func focusWindow(windowId: String)
+    func focusSpace(spaceId: String, needWindowFocus: Bool) throws
+    func focusWindow(windowId: String) throws
 }
 
 struct AnyWindow: Identifiable, Equatable {
@@ -69,21 +69,21 @@ struct AnySpace: Identifiable, Equatable {
 }
 
 class AnySpacesProvider {
-    private let _getSpacesWithWindows: () -> [AnySpace]?
-    private let _focusSpace: ((String, Bool) -> Void)?
-    private let _focusWindow: ((String) -> Void)?
+    private let _getSpacesWithWindows: () throws -> [AnySpace]
+    private let _focusSpace: ((String, Bool) throws -> Void)?
+    private let _focusWindow: ((String) throws -> Void)?
 
     init<P: SpacesProvider>(_ provider: P) {
         _getSpacesWithWindows = {
-            provider.getSpacesWithWindows()?.map { AnySpace($0) }
+            try provider.getSpacesWithWindows().map { AnySpace($0) }
         }
         if let switchable = provider as? any SwitchableSpacesProvider {
             _focusSpace = { spaceId, needWindowFocus in
-                switchable.focusSpace(
+                try switchable.focusSpace(
                     spaceId: spaceId, needWindowFocus: needWindowFocus)
             }
             _focusWindow = { windowId in
-                switchable.focusWindow(windowId: windowId)
+                try switchable.focusWindow(windowId: windowId)
             }
         } else {
             _focusSpace = nil
@@ -91,15 +91,15 @@ class AnySpacesProvider {
         }
     }
 
-    func getSpacesWithWindows() -> [AnySpace]? {
-        _getSpacesWithWindows()
+    func getSpacesWithWindows() throws -> [AnySpace] {
+        try _getSpacesWithWindows()
     }
 
-    func focusSpace(spaceId: String, needWindowFocus: Bool) {
-        _focusSpace?(spaceId, needWindowFocus)
+    func focusSpace(spaceId: String, needWindowFocus: Bool) throws {
+        try _focusSpace?(spaceId, needWindowFocus)
     }
 
-    func focusWindow(windowId: String) {
-        _focusWindow?(windowId)
+    func focusWindow(windowId: String) throws {
+        try _focusWindow?(windowId)
     }
 }

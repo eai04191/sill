@@ -43,9 +43,17 @@ class SpacesViewModel: ObservableObject {
 
     private func loadSpaces() {
         DispatchQueue.global(qos: .background).async {
-            guard let provider = self.provider,
-                let spaces = provider.getSpacesWithWindows()
-            else {
+            guard let provider = self.provider else {
+                DispatchQueue.main.async {
+                    self.spaces = []
+                }
+                return
+            }
+            let spaces: [AnySpace]
+            do {
+                spaces = try provider.getSpacesWithWindows()
+            } catch {
+                print("Spaces: \(error)")
                 DispatchQueue.main.async {
                     self.spaces = []
                 }
@@ -60,14 +68,22 @@ class SpacesViewModel: ObservableObject {
 
     func switchToSpace(_ space: AnySpace, needWindowFocus: Bool = false) {
         DispatchQueue.global(qos: .userInitiated).async {
-            self.provider?.focusSpace(
-                spaceId: space.id, needWindowFocus: needWindowFocus)
+            do {
+                try self.provider?.focusSpace(
+                    spaceId: space.id, needWindowFocus: needWindowFocus)
+            } catch {
+                print("Spaces: \(error)")
+            }
         }
     }
 
     func switchToWindow(_ window: AnyWindow) {
         DispatchQueue.global(qos: .userInitiated).async {
-            self.provider?.focusWindow(windowId: String(window.id))
+            do {
+                try self.provider?.focusWindow(windowId: String(window.id))
+            } catch {
+                print("Spaces: \(error)")
+            }
         }
     }
 }
