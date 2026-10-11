@@ -54,14 +54,14 @@ private struct NowPlayingVerticalPopup: View {
                     url: song.albumArtURL,
                     targetSize: CGSize(width: 200, height: 200)
                 ) { image in
-                    image.clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    image.clipShape(artworkShape)
                 }
                 .frame(width: 200, height: 200)
                 .scaleEffect(song.state == .paused ? 0.9 : 1)
                 .overlay(
                     song.state == .paused ?
                     Color.black.opacity(0.3)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(artworkShape)
                     : nil
                 )
                 .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
@@ -84,11 +84,11 @@ private struct NowPlayingVerticalPopup: View {
                             .font(.caption)
                         ProgressView(value: position, total: duration)
                             .progressViewStyle(LinearProgressViewStyle())
-                            .tint(.white)
+                            .tint(Color.primary)
                         Text("-" + timeString(from: duration - position))
                             .font(.caption)
                     }
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.secondary)
                     .monospacedDigit()
                 }
 
@@ -124,14 +124,14 @@ struct NowPlayingHorizontalPopup: View {
                         url: song.albumArtURL,
                         targetSize: CGSize(width: 200, height: 200)
                     ) { image in
-                        image.clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        image.clipShape(artworkShape)
                     }
                     .frame(width: 60, height: 60)
                     .scaleEffect(song.state == .paused ? 0.9 : 1)
                     .overlay(
                         song.state == .paused ?
                         Color.black.opacity(0.3)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(artworkShape)
                         : nil
                     )
                     .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
@@ -156,11 +156,11 @@ struct NowPlayingHorizontalPopup: View {
                             .font(.caption)
                         ProgressView(value: position, total: duration)
                             .progressViewStyle(LinearProgressViewStyle())
-                            .tint(.white)
+                            .tint(Color.primary)
                         Text("-" + timeString(from: duration - position))
                             .font(.caption)
                     }
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.secondary)
                     .monospacedDigit()
                 }
 
@@ -208,4 +208,13 @@ struct NowPlayingPopup_Previews: PreviewProvider {
                 .previewDisplayName("Horizontal")
         }
     }
+}
+
+/// The artwork's corners: concentric with the glass popup's corners on Liquid Glass, as the HIG asks for nested
+/// rounded shapes, with the previous 10pt radius as the minimum and as the shape without glass.
+private var artworkShape: AnyShape {
+    if ConfigManager.shared.config.usesLiquidGlass, #available(macOS 26.0, *) {
+        return AnyShape(ConcentricRectangle(corners: .concentric(minimum: 10), isUniform: true))
+    }
+    return AnyShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 }

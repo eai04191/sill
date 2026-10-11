@@ -57,7 +57,6 @@ struct CalendarBoxPopup: View {
         }
         .padding(30)
         .fontWeight(.semibold)
-        .foregroundStyle(.white)
     }
 }
 
@@ -98,7 +97,6 @@ struct CalendarVerticalPopup: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 30)
         .fontWeight(.semibold)
-        .foregroundStyle(.white)
     }
 }
 
@@ -141,7 +139,6 @@ struct CalendarHorizontalPopup: View {
         .padding(.horizontal, 30)
         .padding(.vertical, 30)
         .fontWeight(.semibold)
-        .foregroundStyle(.white)
     }
 }
 
@@ -210,7 +207,7 @@ private struct WeekdayHeaderView: View {
                 let isWeekend = calendar.isDateInWeekend(
                     referenceDays[originalIndex]
                 )
-                let color = isWeekend ? Color.gray : Color.white
+                let color = isWeekend ? Color.secondary : Color.primary
 
                 Text(reordered[i])
                     .frame(width: 30)
@@ -222,6 +219,15 @@ private struct WeekdayHeaderView: View {
 }
 
 private struct CalendarDaysView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var configManager = ConfigManager.shared
+    /// On Liquid Glass, a primary-colored circle takes on the glass's vibrancy and fades, so today uses the system
+    /// red like the macOS Calendar, as the color that marks the one emphasized day.
+    private var todayFill: Color { configManager.config.usesLiquidGlass ? .red : .primary }
+    private var todayText: Color {
+        if configManager.config.usesLiquidGlass { return .white }
+        return colorScheme == .dark ? .black : .white
+    }
     let weeks: [[Int?]]
     let currentYear: Int
     let currentMonth: Int
@@ -243,13 +249,13 @@ private struct CalendarDaysView: View {
                             let isWeekend = calendar.isDateInWeekend(date)
                             let color =
                                 isToday(day: day)
-                                ? Color.black
-                                : (isWeekend ? Color.gray : Color.white)
+                                ? todayText
+                                : (isWeekend ? Color.secondary : Color.primary)
 
                             ZStack {
                                 if isToday(day: day) {
                                     Circle()
-                                        .fill(Color.white)
+                                        .fill(todayFill)
                                         .frame(width: 30, height: 30)
                                 }
                                 Text("\(day)")
@@ -304,7 +310,7 @@ private struct EventListView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.subheadline)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(.secondary)
                 ForEach(events, id: \.eventIdentifier) { event in
                     EventRow(event: event)
                 }

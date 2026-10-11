@@ -3,22 +3,54 @@ import SwiftUI
 /// Details of the rate limit usage: each window's progress and reset time, with a link to the usage page.
 struct UsagePopup: View {
     @ObservedObject private var usageManager = UsageManager.shared
+    @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            if let report = usageManager.report {
-                ForEach(UsageService.allCases) { service in
-                    if let usage = service.usage(in: report), !usage.windows.isEmpty {
-                        ServiceUsageSection(service: service, usage: usage)
-                    }
+        if configManager.config.usesLiquidGlass {
+            // Like the Control Center, each service is its own glass module instead of sharing one glass panel.
+            VStack(spacing: Constants.popupModuleSpacing) {
+                ForEach(sections, id: \.0) { service, usage in
+                    ServiceUsageSection(service: service, usage: usage)
+                        .frame(width: 260, alignment: .leading)
+                        .padding(20)
+                        .liquidGlassBackground(true, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius)) {
+                            EmptyView()
+                        }
                 }
-            } else {
-                Text("Usage is not available")
-                    .foregroundStyle(.secondary)
+                if sections.isEmpty {
+                    unavailable
+                        .frame(width: 260, alignment: .leading)
+                        .padding(20)
+                        .liquidGlassBackground(true, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius)) {
+                            EmptyView()
+                        }
+                }
             }
+            .popupProvidesGlassModules()
+        } else {
+            VStack(alignment: .leading, spacing: 18) {
+                ForEach(sections, id: \.0) { service, usage in
+                    ServiceUsageSection(service: service, usage: usage)
+                }
+                if sections.isEmpty {
+                    unavailable
+                }
+            }
+            .frame(width: 260, alignment: .leading)
+            .padding(24)
         }
-        .frame(width: 260, alignment: .leading)
-        .padding(24)
+    }
+
+    private var sections: [(UsageService, ServiceUsage)] {
+        guard let report = usageManager.report else { return [] }
+        return UsageService.allCases.compactMap { service in
+            service.usage(in: report).flatMap { $0.windows.isEmpty ? nil : (service, $0) }
+        }
+    }
+
+    private var unavailable: some View {
+        Text("Usage is not available")
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -63,7 +95,6 @@ private struct ServiceUsageSection: View {
                 }
             }
         }
-        .foregroundStyle(.white)
     }
 
     /// With two windows the first is the session (5-hour) limit and the second the weekly one;

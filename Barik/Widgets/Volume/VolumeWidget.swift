@@ -55,7 +55,8 @@ enum VolumeSymbol {
     }
 }
 
-/// A Control Center style popup with a native slider and a mute button.
+/// A Control Center style popup: a native slider with the minimum and maximum speaker icons at its ends, as the HIG
+/// suggests for sliders, and a round mute button. The button is a fill rather than glass to avoid glass on glass.
 struct VolumePopup: View {
     @ObservedObject private var volumeManager = VolumeManager.shared
 
@@ -65,37 +66,39 @@ struct VolumePopup: View {
                 .font(.headline)
             if let volume = volumeManager.volume {
                 HStack(spacing: 10) {
-                    Button {
-                        volumeManager.setMuted(!volumeManager.isMuted)
-                    } label: {
-                        Image(systemName: VolumeSymbol.name(volume: volume, muted: volumeManager.isMuted))
-                            .frame(width: 20)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                    .buttonStyle(.plain)
-                    .help(volumeManager.isMuted ? "Unmute" : "Mute")
-
+                    Image(systemName: "speaker.fill")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                     Slider(
                         value: Binding(
                             get: { Double(volume) },
                             set: { volumeManager.setVolume(Float($0)) }),
                         in: 0...1
                     )
-                    .controlSize(.small)
-                    .tint(.white)
+                    .tint(Color.primary)
+                    .accessibilityLabel("Volume")
+                    Image(systemName: "speaker.wave.3.fill")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
 
-                    Text("\(Int((volume * 100).rounded()))%")
-                        .font(.system(size: 11))
-                        .monospacedDigit()
-                        .frame(width: 34, alignment: .trailing)
+                    Button {
+                        volumeManager.setMuted(!volumeManager.isMuted)
+                    } label: {
+                        Image(systemName: volumeManager.isMuted ? "speaker.slash.fill" : "speaker.fill")
+                            .contentTransition(.symbolEffect(.replace))
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.primary.opacity(volumeManager.isMuted ? 0.25 : 0.1)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(volumeManager.isMuted ? "Unmute" : "Mute")
+                    .help(volumeManager.isMuted ? "Unmute" : "Mute")
                 }
             } else {
                 Text("This output device has no volume control")
                     .foregroundStyle(.secondary)
             }
         }
-        .foregroundStyle(.white)
-        .frame(width: 240, alignment: .leading)
+        .frame(width: 280, alignment: .leading)
         .padding(24)
     }
 }

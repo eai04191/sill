@@ -29,6 +29,30 @@ extension View {
             self.background(fallback())
         }
     }
+
+    /// Makes the glass in this view materialize in and out, the system transition for Liquid Glass appearing,
+    /// when the view is inserted or removed inside a `LiquidGlassContainer`.
+    @ViewBuilder
+    func liquidGlassMaterializes() -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffectTransition(.materialize)
+        } else {
+            self
+        }
+    }
+
+    /// Marks popup content that draws its own glass modules, so the popup does not add glass behind them
+    /// (glass on glass, which the HIG asks to avoid).
+    func popupProvidesGlassModules() -> some View {
+        preference(key: PopupProvidesGlassModulesKey.self, value: true)
+    }
+}
+
+struct PopupProvidesGlassModulesKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
 }
 
 extension View {

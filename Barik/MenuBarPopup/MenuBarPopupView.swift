@@ -15,6 +15,10 @@ struct MenuBarPopupView<Content: View>: View {
     private var animated: Bool { isShowAnimation || isHideAnimation }
     @State private var isShowAnimation = false
     @State private var isHideAnimation = false
+    /// Liquid Glass popups materialize instead of scaling, so their content is shown and hidden with this flag.
+    @State private var glassVisible = false
+    /// Set by content that draws its own glass modules (see `popupProvidesGlassModules()`), so no outer glass is added.
+    @State private var providesModules = false
 
     private let willShowWindow = NotificationCenter.default.publisher(
         for: .willShowWindow)
@@ -28,31 +32,30 @@ struct MenuBarPopupView<Content: View>: View {
         self.isPreview = isPreview
         if isPreview {
             _animationValue = State(initialValue: 1.0)
+            _glassVisible = State(initialValue: true)
         }
     }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            content
-                .liquidGlassBackground(usesGlass, in: RoundedRectangle(cornerRadius: 40)) {
-                    Color.black
-                }
-                .applying(!usesGlass) { $0.cornerRadius(((1.0 - animationValue) * 1) + 40) }
+            popupBody
                 .padding(isBottom ? .bottom : .top, foregroundHeight + 5)
                 .offset(x: computedOffset, y: computedYOffset)
-                // Glass popups animate with scale and opacity only; see `applying(_:_:)`.
+                // Liquid Glass materializes on its own; the scale, blur and shadow are for the material look only.
+                // See `applying(_:_:)` for why they are left out around glass.
                 .applying(!usesGlass) {
                     $0.shadow(radius: 30)
                         .blur(radius: (1.0 - (0.1 + 0.9 * animationValue)) * 20)
+                        .scaleEffect(x: 0.2 + 0.8 * animationValue, y: animationValue)
+                        .opacity(animationValue)
                 }
-                .scaleEffect(x: 0.2 + 0.8 * animationValue, y: animationValue)
-                .opacity(animationValue)
                 .transaction { transaction in
                     if isHideAnimation {
                         transaction.animation = .linear(duration: 0.1)
                     }
                 }
                 .onReceive(willShowWindow) { _ in
+                    withAnimation(.smooth) { glassVisible = true }
                     isShowAnimation = true
                     withAnimation(
                         .smooth(
@@ -74,6 +77,7 @@ struct MenuBarPopupView<Content: View>: View {
                     }
                 }
                 .onReceive(willHideWindow) { _ in
+                    withAnimation(.smooth) { glassVisible = false }
                     isHideAnimation = true
                     withAnimation(
                         .interactiveSpring(
@@ -95,6 +99,7 @@ struct MenuBarPopupView<Content: View>: View {
                     }
                 }
                 .onReceive(willChangeContent) { _ in
+                    withAnimation(.smooth) { glassVisible = false }
                     isHideAnimation = true
                     withAnimation(
                         .spring(
@@ -138,8 +143,44 @@ struct MenuBarPopupView<Content: View>: View {
                     }
             }
         )
-        .foregroundStyle(.white)
-        .preferredColorScheme(.dark)
+        // The material popup is always dark. Glass follows the system appearance like other system popovers and
+        // the Control Center, and its content uses semantic colors that Liquid Glass keeps legible.
+        .foregroundStyle(usesGlass ? Color.primary : Color.white)
+        .applying(!usesGlass) { $0.preferredColorScheme(.dark) }
+        .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
+        // MenuBarPopup builds a new view for every popup and may post willShowWindow before this view subscribes,
+        // so also materialize the glass when the view appears.
+        .onAppear {
+            guard usesGlass else { return }
+            withAnimation(.smooth) { glassVisible = true }
+        }
+    }
+
+    /// The popup content on its background: one glass module unless the content draws its own modules, or the
+    /// black material background without Liquid Glass.
+    @ViewBuilder
+    private var popupBody: some View {
+        if usesGlass {
+            LiquidGlassContainer(enabled: true, spacing: Constants.popupModuleSpacing) {
+                let styled = content
+                    .applying(!providesModules) {
+                        $0.liquidGlassBackground(true, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius)) {
+                            EmptyView()
+                        }
+                    }
+                    .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                if glassVisible {
+                    styled.liquidGlassMaterializes()
+                } else {
+                    // Keep the size while hidden, so the popup is positioned before it materializes.
+                    styled.hidden()
+                }
+            }
+        } else {
+            content
+                .background(Color.black)
+                .cornerRadius(((1.0 - animationValue) * 1) + 40)
+        }
     }
 
     var computedOffset: CGFloat {
