@@ -31,7 +31,7 @@ struct NowPlayingPopup: View {
     private func loadVariant() {
         if let variantString = configProvider.config["popup"]?
             .dictionaryValue?["view-variant"]?.stringValue,
-           let variant = MenuBarPopupVariant(rawValue: variantString) {
+           let variant = MenuBarPopupVariant(rawValue: variantString), variant != .box {
             selectedVariant = variant
         } else {
             // This popup has no box variant, so falling back to .box rendered an empty popup.
@@ -39,10 +39,10 @@ struct NowPlayingPopup: View {
         }
     }
     
-    /// Updates the view variant when configuration changes.
+    /// Updates the view variant when configuration changes. There is no box variant to switch to.
     private func updateVariant(newConfig: ConfigData) {
         if let variantString = newConfig["popup"]?.dictionaryValue?["view-variant"]?.stringValue,
-           let variant = MenuBarPopupVariant(rawValue: variantString) {
+           let variant = MenuBarPopupVariant(rawValue: variantString), variant != .box {
             selectedVariant = variant
         }
     }

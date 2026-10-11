@@ -38,7 +38,7 @@ struct MenuBarPopupVariantView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            content(for: selectedVariant)
+            content(for: shownVariant)
                 .blur(radius: animationValue * 30)
                 .transition(.opacity)
         }
@@ -71,6 +71,15 @@ struct MenuBarPopupVariantView: View {
         }
     }
 
+    /// The variant shown: the selected one, or the first one this popup has when it has no view for the selected one,
+    /// such as `view-variant = "box"` for a popup without a box layout, which would otherwise be empty.
+    private var shownVariant: MenuBarPopupVariant {
+        let available = [(MenuBarPopupVariant.box, box), (.vertical, vertical), (.horizontal, horizontal)]
+            .filter { $0.1 != nil }
+            .map(\.0)
+        return available.contains(selectedVariant) ? selectedVariant : available.first ?? selectedVariant
+    }
+
     @ViewBuilder
     private func content(for variant: MenuBarPopupVariant) -> some View {
         switch variant {
@@ -87,7 +96,7 @@ struct MenuBarPopupVariantView: View {
         variant: MenuBarPopupVariant, systemImageName: String
     ) -> some View {
         Button {
-            if selectedVariant != variant {
+            if shownVariant != variant {
                 withAnimation(.smooth(duration: 0.3)) {
                     animationValue = 1
                 }
@@ -111,7 +120,7 @@ struct MenuBarPopupVariantView: View {
         .buttonStyle(HoverButtonStyle())
         .overlay(
             Group {
-                if selectedVariant == variant {
+                if shownVariant == variant {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.primary.opacity(0.3), lineWidth: 1)
                         .opacity(1 - animationValue * 10)
