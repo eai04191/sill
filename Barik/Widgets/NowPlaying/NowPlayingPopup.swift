@@ -169,8 +169,9 @@ private struct PlaybackTimeline: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { context in
-            // Live streams report no duration or position; keep the song and its controls without the timeline.
-            if let duration = song.duration, let position = song.position(at: context.date) {
+            // Live streams report no duration or position, or a duration of 0; keep the song and its controls without
+            // the timeline.
+            if let duration = song.duration, duration > 0, let position = song.position(at: context.date) {
                 HStack {
                     Text(timeString(from: position))
                         .font(.caption)
@@ -187,11 +188,15 @@ private struct PlaybackTimeline: View {
     }
 }
 
-/// Converts a time interval in seconds to a formatted string (minutes:seconds).
+/// Converts a time interval in seconds to a formatted string (minutes:seconds, or hours:minutes:seconds from an hour).
 private func timeString(from seconds: Double) -> String {
     let intSeconds = Int(seconds)
-    let minutes = intSeconds / 60
+    let hours = intSeconds / 3600
+    let minutes = intSeconds / 60 % 60
     let remainingSeconds = intSeconds % 60
+    if hours > 0 {
+        return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
     return String(format: "%d:%02d", minutes, remainingSeconds)
 }
 
