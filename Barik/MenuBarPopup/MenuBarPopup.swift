@@ -149,6 +149,8 @@ class MenuBarPopup {
     static func setup(frame: CGRect) {
         if let panel {
             panel.setFrame(frame, display: true)
+            // Also called when the config is reloaded, so an open popup takes on a changed theme.
+            applyAppearance(to: panel)
             return
         }
 
