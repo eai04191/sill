@@ -2,167 +2,44 @@ import AVKit
 import EventKit
 import SwiftUI
 
+/// The now playing popup, laid out like the Now Playing screen of Music on iPhone: the artwork across the popup's
+/// width, the full title and artist, the timeline, the playback controls, and AirPlay. The title and artist wrap
+/// instead of being cut off, so the popup never shows less of them than the bar; the artwork stays as it is while
+/// paused, as the controls already show the state.
 struct NowPlayingPopup: View {
-    @ObservedObject var configProvider: ConfigProvider
-    @State private var selectedVariant: MenuBarPopupVariant = .horizontal
-
-    var body: some View {
-        // The colors of every variant adapt to the appearance; popups are always dark (see MenuBarPopupView).
-        variantView
-    }
-
-    private var variantView: some View {
-        MenuBarPopupVariantView(
-            selectedVariant: selectedVariant,
-            onVariantSelected: { variant in
-                selectedVariant = variant
-                ConfigManager.shared.updateConfigValue(
-                    key: "widgets.default.nowplaying.popup.view-variant",
-                    newValue: variant.rawValue
-                )
-            },
-            vertical: { NowPlayingVerticalPopup() },
-            horizontal: { NowPlayingHorizontalPopup() }
-        )
-        .onAppear(perform: loadVariant)
-        .onReceive(configProvider.$config, perform: updateVariant)
-    }
-    
-    /// Loads the initial view variant from configuration.
-    private func loadVariant() {
-        if let variantString = configProvider.config["popup"]?
-            .dictionaryValue?["view-variant"]?.stringValue,
-           let variant = MenuBarPopupVariant(rawValue: variantString), variant != .box {
-            selectedVariant = variant
-        } else {
-            // This popup has no box variant, so falling back to .box rendered an empty popup.
-            selectedVariant = .horizontal
-        }
-    }
-    
-    /// Updates the view variant when configuration changes. There is no box variant to switch to.
-    private func updateVariant(newConfig: ConfigData) {
-        if let variantString = newConfig["popup"]?.dictionaryValue?["view-variant"]?.stringValue,
-           let variant = MenuBarPopupVariant(rawValue: variantString), variant != .box {
-            selectedVariant = variant
-        }
-    }
-}
-
-/// A vertical layout for the now playing popup.
-private struct NowPlayingVerticalPopup: View {
     @ObservedObject private var playingManager = NowPlayingManager.shared
+
+    private let width: CGFloat = 300
+    private let padding: CGFloat = 25
 
     var body: some View {
         if let song = playingManager.nowPlaying {
             VStack(spacing: 15) {
-                VStack(spacing: 15) {
+                VStack(alignment: .leading, spacing: 15) {
                     RotateAnimatedCachedImage(
                         url: song.albumArtURL,
-                        targetSize: CGSize(width: 200, height: 200)
+                        targetSize: CGSize(width: 500, height: 500)
                     ) { image in
                         image.clipShape(artworkShape)
                     }
-                    .frame(width: 200, height: 200)
-                    .scaleEffect(song.state == .paused ? 0.9 : 1)
-                    .overlay(
-                        song.state == .paused ?
-                        Color.black.opacity(0.3)
-                            .clipShape(artworkShape)
-                        : nil
-                    )
-                    .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
+                    .frame(width: width - padding * 2, height: width - padding * 2)
 
-                    VStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(song.title)
-                            .multilineTextAlignment(.center)
-                            .font(.system(size: 15))
-                            .fontWeight(.medium)
+                            .font(.headline)
+                            .fixedSize(horizontal: false, vertical: true)
                         // Some players, such as Firefox, report an empty artist.
                         if !song.artist.isEmpty {
                             Text(song.artist)
-                                .opacity(0.6)
-                                .font(.system(size: 15))
-                                .fontWeight(.light)
-                        }
-                    }
-                }
-                .opensPlayingApp(song)
-
-                PlaybackTimeline(song: song)
-
-                HStack(spacing: 40) {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 20))
-                        .barButton(label: "Previous Track") { playingManager.previousTrack() }
-                    Image(systemName: song.state == .paused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 30))
-                        .barButton(label: song.state == .paused ? "Play" : "Pause") { playingManager.togglePlayPause() }
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 20))
-                        .barButton(label: "Next Track") { playingManager.nextTrack() }
-                }
-            }
-            .padding(.horizontal, 25)
-            .padding(.vertical, 30)
-            .frame(width: 300)
-            .overlay(alignment: .topTrailing) {
-                AirPlayButton().padding(12)
-            }
-            .animation(.easeInOut, value: song.albumArtURL)
-        } else {
-            NothingPlayingView()
-                .padding(30)
-                .frame(width: 300)
-        }
-    }
-}
-
-/// A horizontal layout for the now playing popup.
-struct NowPlayingHorizontalPopup: View {
-    @ObservedObject private var playingManager = NowPlayingManager.shared
-
-    var body: some View {
-        if let song = playingManager.nowPlaying {
-            VStack(spacing: 15) {
-                HStack(alignment: .top, spacing: 8) {
-                HStack(spacing: 15) {
-                    RotateAnimatedCachedImage(
-                        url: song.albumArtURL,
-                        targetSize: CGSize(width: 200, height: 200)
-                    ) { image in
-                        image.clipShape(artworkShape)
-                    }
-                    .frame(width: 60, height: 60)
-                    .scaleEffect(song.state == .paused ? 0.9 : 1)
-                    .overlay(
-                        song.state == .paused ?
-                        Color.black.opacity(0.3)
-                            .clipShape(artworkShape)
-                        : nil
-                    )
-                    .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
-
-                    // The popup has a fixed height, so the text is limited to the artwork's height of three lines
-                    // to keep the timeline and controls inside it.
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(song.title)
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .lineLimit(2)
-                        if !song.artist.isEmpty {
-                            Text(song.artist)
-                                .opacity(0.6)
                                 .font(.headline)
-                                .fontWeight(.light)
-                                .lineLimit(1)
+                                .fontWeight(.regular)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .opensPlayingApp(song)
-                AirPlayButton()
-                }
 
                 PlaybackTimeline(song: song)
 
@@ -177,14 +54,16 @@ struct NowPlayingHorizontalPopup: View {
                         .font(.system(size: 20))
                         .barButton(label: "Next Track") { playingManager.nextTrack() }
                 }
+
+                AirPlayButton()
             }
-            .padding(.horizontal, 25)
-            .padding(.vertical, 20)
-            .frame(width: 300, height: 180)
+            .padding(padding)
+            .frame(width: width)
             .animation(.easeInOut, value: song.albumArtURL)
         } else {
             NothingPlayingView()
-                .frame(width: 300, height: 180)
+                .padding(30)
+                .frame(width: width)
         }
     }
 }
@@ -244,17 +123,9 @@ private func timeString(from seconds: Double) -> String {
 
 struct NowPlayingPopup_Previews: PreviewProvider {
     static var previews: some View {
-        Group {
-            NowPlayingVerticalPopup()
-                .background(Color.black)
-                .frame(height: 600)
-                .previewDisplayName("Vertical")
-            
-            NowPlayingHorizontalPopup()
-                .background(Color.black)
-                .previewLayout(.sizeThatFits)
-                .previewDisplayName("Horizontal")
-        }
+        NowPlayingPopup()
+            .background(Color.black)
+            .previewLayout(.sizeThatFits)
     }
 }
 

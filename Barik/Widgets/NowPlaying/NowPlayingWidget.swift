@@ -32,7 +32,7 @@ struct NowPlayingWidget: View {
                 VisibleNowPlayingContent(song: song, width: animatedWidth)
                     .barWidgetButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
                         MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
-                            NowPlayingPopup(configProvider: configProvider)
+                            NowPlayingPopup()
                         }
                     }
             }

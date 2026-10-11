@@ -97,9 +97,6 @@ window.title.max-length = 50
 # Other applications will show the window title if there is more than one window.
 window.title.always-display-app-name-for = ["Mail", "Chrome", "Arc"]
 
-[widgets.default.nowplaying.popup]
-view-variant = "horizontal"
-
 [widgets.default.battery]
 show-percentage = true
 warning-level = 30
