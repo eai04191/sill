@@ -242,6 +242,13 @@ final class NowPlayingManager: ObservableObject {
     private var payload: MediaControlPayload?
     private var artworkURL: URL?
     private var artworkTrackKey: String?
+    /// The track artwork was last fetched for, and how many times.
+    private var fetchTrackKey: String?
+    private var fetchCount = 0
+    /// Set while get runs, so stream updates do not start more fetches at once.
+    private var isFetchingArtwork = false
+    /// A track is fetched at most this many times, as some players, such as browsers, may never report an artwork.
+    private static let maxArtworkFetches = 3
     private var terminateObserver: NSObjectProtocol?
 
     /// Album art is written to this directory so the existing URL-based image views can load it.
@@ -268,24 +275,41 @@ final class NowPlayingManager: ObservableObject {
         self.payload = payload
         guard let payload else {
             setArtwork(nil, for: nil)
+            fetchTrackKey = nil
             publish()
             return
         }
-        // The artwork sometimes arrives after the title, so retry on later updates until one is found.
-        if payload.trackKey != artworkTrackKey || artworkURL == nil {
-            let trackKey = payload.trackKey
-            DispatchQueue.global(qos: .utility).async { [weak self] in
-                let fetched = MediaControl.fetchArtwork()
-                DispatchQueue.main.async {
-                    // The artwork is stored only for the track get reported it for, which is still the current one.
-                    guard let self, let fetched, fetched.trackKey == trackKey, self.payload?.trackKey == trackKey
-                    else { return }
+        fetchArtworkIfNeeded(for: payload.trackKey)
+        publish()
+    }
+
+    /// The artwork sometimes arrives after the title, so a track without one is fetched again on later updates, up to
+    /// `maxArtworkFetches` times.
+    private func fetchArtworkIfNeeded(for trackKey: String) {
+        if trackKey != fetchTrackKey {
+            fetchTrackKey = trackKey
+            fetchCount = 0
+        }
+        let hasArtwork = artworkTrackKey == trackKey && artworkURL != nil
+        guard !hasArtwork, !isFetchingArtwork, fetchCount < Self.maxArtworkFetches else { return }
+        isFetchingArtwork = true
+        fetchCount += 1
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let fetched = MediaControl.fetchArtwork()
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isFetchingArtwork = false
+                // The artwork is stored only for the track get reported it for, which is still the current one.
+                if let fetched, fetched.trackKey == trackKey, self.payload?.trackKey == trackKey {
                     self.setArtwork(fetched.artwork, for: trackKey)
                     self.publish()
                 }
+                // An update for another track during the fetch did not start one for that track.
+                if let current = self.payload?.trackKey, current != trackKey {
+                    self.fetchArtworkIfNeeded(for: current)
+                }
             }
         }
-        publish()
     }
 
     /// Writes each artwork to a new file, because the image cache is keyed by URL.
