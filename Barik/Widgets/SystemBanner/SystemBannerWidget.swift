@@ -19,6 +19,7 @@ struct BannerButtonStyle: ButtonStyle {
 struct SystemBannerWidget: View {
     let withLeftPadding: Bool
     
+    @ObservedObject private var configManager = ConfigManager.shared
     @State private var showWhatsNew: Bool = false
     
     init(withLeftPadding: Bool = false) {
@@ -30,11 +31,16 @@ struct SystemBannerWidget: View {
             if withLeftPadding {
                 Color.clear.frame(width: 0)
             }
+            if configManager.reloadError != nil {
+                ConfigErrorBannerWidget()
+            }
             UpdateBannerWidget()
             if showWhatsNew {
                 ChangelogBannerWidget()
             }
-        }.onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
+        }
+        .animation(.default, value: configManager.reloadError != nil)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowWhatsNewBanner"))) { _ in
             withAnimation {
                 showWhatsNew = true
             }

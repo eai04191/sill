@@ -6,7 +6,11 @@ final class ConfigManager: ObservableObject {
     static let shared = ConfigManager()
 
     @Published private(set) var config = Config()
-    @Published private(set) var initError: String?
+    /// Why the config could not be read at launch; Barik then stops with this error. Set during `init`.
+    private(set) var initError: String?
+    /// Why the config file could not be read again after launch, while the config read before stays in use. Cleared
+    /// once the file is read. Set on the main thread.
+    @Published private(set) var reloadError: String?
     /// Whether `config` holds the config file rather than the defaults it starts with. Read on the main thread.
     private(set) var hasLoadedConfigFile = false
     
@@ -42,12 +46,14 @@ final class ConfigManager: ObservableObject {
 
         if let path = chosenPath {
             configFilePath = path
-            parseConfigFile(at: path)
+            parseConfigFile(at: path, atLaunch: true)
             startWatchingFile(at: path)
         }
     }
 
-    private func parseConfigFile(at path: String) {
+    /// Reads the config file. An error at launch is kept in `initError`; an error later is published in
+    /// `reloadError`, and the config read before stays in use.
+    private func parseConfigFile(at path: String, atLaunch: Bool = false) {
         do {
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let decoder = TOMLDecoder()
@@ -55,10 +61,19 @@ final class ConfigManager: ObservableObject {
             DispatchQueue.main.async {
                 self.hasLoadedConfigFile = true
                 self.config = Config(rootToml: rootToml)
+                self.reloadError = nil
             }
         } catch {
-            initError = "Error parsing TOML file: \(error.localizedDescription)"
             print("Error when parsing TOML file:", error)
+            if atLaunch {
+                initError = "Error parsing TOML file: \(error.localizedDescription)"
+            } else {
+                // The localized description of a decoding error does not say what is wrong, so show the error itself.
+                let message = "Error parsing \(path): \(error)"
+                DispatchQueue.main.async {
+                    self.reloadError = message
+                }
+            }
         }
     }
 
