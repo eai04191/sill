@@ -11,6 +11,8 @@ struct MenuBarPopupVariantView: View {
 
     var selectedVariant: MenuBarPopupVariant
     @State private var hovered = false
+    @FocusState private var focusedVariant: MenuBarPopupVariant?
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var animationValue = 0.0
 
     var onVariantSelected: ((MenuBarPopupVariant) -> Void)?
@@ -46,23 +48,28 @@ struct MenuBarPopupVariantView: View {
             HStack(spacing: 3) {
                 if box != nil {
                     variantButton(
-                        variant: .box, systemImageName: "square.inset.filled")
+                        variant: .box, systemImageName: "square.inset.filled",
+                        label: "Box layout")
                 }
                 if vertical != nil {
                     variantButton(
                         variant: .vertical,
-                        systemImageName: "rectangle.portrait.inset.filled")
+                        systemImageName: "rectangle.portrait.inset.filled",
+                        label: "Vertical layout")
                 }
                 if horizontal != nil {
                     variantButton(
                         variant: .horizontal,
-                        systemImageName: "rectangle.inset.filled")
+                        systemImageName: "rectangle.inset.filled",
+                        label: "Horizontal layout")
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 5)
             .contentShape(Rectangle())
-            .opacity(hovered ? 1 : 0.0)
+            // The buttons appear on hover. Show them also while one has keyboard focus and while VoiceOver runs, as
+            // a hidden button cannot be seen when focused and is left out by VoiceOver.
+            .opacity(hovered || focusedVariant != nil || voiceOverEnabled ? 1 : 0.0)
             .onHover { value in
                 withAnimation(.easeIn(duration: 0.3)) {
                     hovered = value
@@ -93,7 +100,7 @@ struct MenuBarPopupVariantView: View {
     }
 
     private func variantButton(
-        variant: MenuBarPopupVariant, systemImageName: String
+        variant: MenuBarPopupVariant, systemImageName: String, label: LocalizedStringKey
     ) -> some View {
         Button {
             if shownVariant != variant {
@@ -118,6 +125,10 @@ struct MenuBarPopupVariantView: View {
                 .frame(width: 13, height: 10)
         }
         .buttonStyle(HoverButtonStyle())
+        .focused($focusedVariant, equals: variant)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(shownVariant == variant ? .isSelected : [])
+        .help(label)
         .overlay(
             Group {
                 if shownVariant == variant {
