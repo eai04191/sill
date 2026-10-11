@@ -3,7 +3,8 @@ import SwiftUI
 /// How every popup appears and disappears, modeled on the system popover (NSPopover) in macOS 26: it grows out of
 /// the bar while fading in and shrinks back while fading out, quickly and without bouncing or blurring. Measured on
 /// screen, a popover takes about 0.17 seconds to open and 0.1 seconds to close. With Reduce Motion the popup only
-/// fades, as the HIG asks in place of scaling. Liquid Glass popups also materialize, the system transition for glass.
+/// fades, as the HIG asks in place of scaling. Liquid Glass popups materialize, the system transition for glass, and
+/// fade instead of scaling (see `MenuBarPopupView.presentation`).
 enum PopupMotion {
     static let showDuration = 0.18
     static let hideDuration = 0.1
@@ -66,9 +67,11 @@ struct MenuBarPopupView<Content: View>: View {
         withAnimation(PopupMotion.showAnimation) { isPresented = true }
     }
 
-    /// Grows out of the bar edge and fades, or only fades with Reduce Motion.
+    /// Grows out of the bar edge and fades, or only fades with Reduce Motion. Glass only fades while it
+    /// materializes: scaling glass inside its container did not grow it but slid it at full size from below and to
+    /// the side of its frame, with its content apart from the glass (seen frame by frame in a screen recording).
     private var presentation: AnyTransition {
-        guard !reduceMotion else { return .opacity }
+        guard !reduceMotion, !usesGlass else { return .opacity }
         return .scale(scale: PopupMotion.initialScale, anchor: isBottom ? .bottom : .top)
             .combined(with: .opacity)
     }
