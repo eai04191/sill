@@ -5,15 +5,24 @@ import Foundation
 class CalendarManager: ObservableObject {
     private static let inUse = SharedWhileInUse<CalendarManager>()
 
-    /// One manager, with its event store and timer, for all time widgets with the same calendar filter, instead of a
-    /// new one on every evaluation of the bar's body.
+    /// One manager, with its event store and timer, for all time widgets with the same calendar filter and time zone,
+    /// instead of a new one on every evaluation of the bar's body.
     static func shared(for configProvider: ConfigProvider) -> CalendarManager {
         let config = configProvider.config["calendar"]?.dictionaryValue
         let filter = [calendars(in: config, for: "allow-list"), calendars(in: config, for: "deny-list")]
-        return inUse.instance(for: filter.description) { CalendarManager(configProvider: configProvider) }
+        let key = "\(filter)|\(timeZone(in: configProvider.config).identifier)"
+        return inUse.instance(for: key) { CalendarManager(configProvider: configProvider) }
+    }
+
+    /// The time widget's `time-zone`, or the system time zone. The bar's time, the popup's days and times and the
+    /// fetched day ranges all use it, so they agree on what today is.
+    private static func timeZone(in config: ConfigData) -> TimeZone {
+        config["time-zone"]?.stringValue.flatMap(TimeZone.init(identifier:)) ?? .current
     }
 
     let configProvider: ConfigProvider
+    /// The calendar in the configured time zone.
+    let calendar: Calendar
     var config: ConfigData? {
         configProvider.config["calendar"]?.dictionaryValue
     }
@@ -38,11 +47,15 @@ class CalendarManager: ObservableObject {
     private let eventStore = EKEventStore()
     private var observers: [NSObjectProtocol] = []
     /// Fetches the events again when one of today's events starts or ends, which changes the next event and today's
-    /// events without a change to the store.
+    /// events without a change to the store, and when the day changes in the configured time zone, which the system's
+    /// day change notification does not follow.
     private var rolloverTimer: Timer?
 
     init(configProvider: ConfigProvider) {
         self.configProvider = configProvider
+        var calendar = Calendar.current
+        calendar.timeZone = Self.timeZone(in: configProvider.config)
+        self.calendar = calendar
         requestAccess()
         startMonitoring()
     }
@@ -88,7 +101,7 @@ class CalendarManager: ObservableObject {
     /// Fetches every list and schedules the next rollover. Called on the main thread.
     private func refresh() {
         let now = Date()
-        if !Calendar.current.isDate(today, inSameDayAs: now) {
+        if !calendar.isDate(today, inSameDayAs: now) {
             today = now
         }
         let status = EKEventStore.authorizationStatus(for: .event)
@@ -102,7 +115,8 @@ class CalendarManager: ObservableObject {
     private func scheduleRollover(after now: Date) {
         rolloverTimer?.invalidate()
         rolloverTimer = nil
-        let boundaries = todaysEvents.flatMap { [$0.startDate, $0.endDate] }.compactMap { $0 }
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+        let boundaries = (todaysEvents.flatMap { [$0.startDate, $0.endDate] } + [startOfTomorrow]).compactMap { $0 }
         guard let boundary = boundaries.filter({ $0 > now }).min() else { return }
         // A second after the boundary, so that an event ending then is no longer fetched as ongoing.
         let timer = Timer(fire: boundary.addingTimeInterval(1), interval: 0, repeats: false) { [weak self] _ in
@@ -125,7 +139,6 @@ class CalendarManager: ObservableObject {
 
     private func fetchNextEvent(now: Date) -> EKEvent? {
         let calendars = eventStore.calendars(for: .event)
-        let calendar = Calendar.current
         guard
             let endOfDay = calendar.date(
                 bySettingHour: 23, minute: 59, second: 59, of: now)
@@ -153,7 +166,6 @@ class CalendarManager: ObservableObject {
 
     private func fetchTodaysEvents(now: Date) -> [EKEvent] {
         let calendars = eventStore.calendars(for: .event)
-        let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: now)
         guard
             let endOfDay = calendar.date(
@@ -172,7 +184,6 @@ class CalendarManager: ObservableObject {
 
     private func fetchTomorrowsEvents(now: Date) -> [EKEvent] {
         let calendars = eventStore.calendars(for: .event)
-        let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: now)
         guard
             let startOfTomorrow = calendar.date(

@@ -57,11 +57,11 @@ struct CalendarBoxPopup: View {
     var body: some View {
         let today = calendarManager.today
         VStack(spacing: 0) {
-            Text(monthYear(of: today))
+            Text(monthYear(of: today, in: calendarManager.calendar))
                 .font(.title2)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
-            CalendarDaysView(today: today)
+            CalendarDaysView(today: today, calendar: calendarManager.calendar)
         }
         .padding(30)
         .fontWeight(.semibold)
@@ -78,11 +78,11 @@ struct CalendarVerticalPopup: View {
     var body: some View {
         let today = calendarManager.today
         VStack(spacing: 0) {
-            Text(monthYear(of: today))
+            Text(monthYear(of: today, in: calendarManager.calendar))
                 .font(.title2)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
-            CalendarDaysView(today: today)
+            CalendarDaysView(today: today, calendar: calendarManager.calendar)
             
             Group {
                 if calendarManager.accessDenied {
@@ -97,6 +97,8 @@ struct CalendarVerticalPopup: View {
                         .padding(.top, 3)
                 }
                 EventListView(
+                    today: today,
+                    calendar: calendarManager.calendar,
                     todaysEvents: calendarManager.todaysEvents,
                     tomorrowsEvents: calendarManager.tomorrowsEvents
                 )
@@ -121,12 +123,12 @@ struct CalendarHorizontalPopup: View {
         let today = calendarManager.today
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(monthYear(of: today))
+                Text(monthYear(of: today, in: calendarManager.calendar))
                     .font(.title2)
                     .padding(.bottom, 25)
                     .fixedSize(horizontal: true, vertical: false)
                 WeekdayHeaderView()
-                CalendarDaysView(today: today)
+                CalendarDaysView(today: today, calendar: calendarManager.calendar)
             }
             
             Group {
@@ -139,6 +141,8 @@ struct CalendarHorizontalPopup: View {
                         .font(.callout)
                 }
                 EventListView(
+                    today: today,
+                    calendar: calendarManager.calendar,
                     todaysEvents: calendarManager.todaysEvents,
                     tomorrowsEvents: calendarManager.tomorrowsEvents
                 )
@@ -162,15 +166,15 @@ private struct CalendarAccessDeniedText: View {
     }
 }
 
-private func monthYear(of date: Date) -> String {
+private func monthYear(of date: Date, in calendar: Calendar) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "LLLL yyyy"
+    formatter.timeZone = calendar.timeZone
     return formatter.string(from: date).capitalized
 }
 
 /// The days of the month of `date`, preceded by blanks for the weekdays before the first day.
-private func calendarDays(of date: Date) -> [Int?] {
-    let calendar = Calendar.current
+private func calendarDays(of date: Date, in calendar: Calendar) -> [Int?] {
     guard
         let range = calendar.range(of: .day, in: .month, for: date),
         let firstOfMonth = calendar.date(
@@ -186,8 +190,8 @@ private func calendarDays(of date: Date) -> [Int?] {
     return days
 }
 
-private func weeks(of date: Date) -> [[Int?]] {
-    var days = calendarDays(of: date)
+private func weeks(of date: Date, in calendar: Calendar) -> [[Int?]] {
+    var days = calendarDays(of: date, in: calendar)
     let remainder = days.count % 7
     if remainder != 0 {
         days.append(contentsOf: Array(repeating: nil, count: 7 - remainder))
@@ -242,10 +246,11 @@ private struct CalendarDaysView: View {
     }
     /// The day the popup shows; it marks this day in this day's month.
     let today: Date
+    /// The calendar in the configured time zone, in which `today` is the current day.
+    let calendar: Calendar
 
     var body: some View {
-        let calendar = Calendar.current
-        let weeks = weeks(of: today)
+        let weeks = weeks(of: today, in: calendar)
         let currentYear = calendar.component(.year, from: today)
         let currentMonth = calendar.component(.month, from: today)
         VStack(spacing: 10) {
@@ -288,6 +293,8 @@ private struct CalendarDaysView: View {
 }
 
 private struct EventListView: View {
+    let today: Date
+    let calendar: Calendar
     let todaysEvents: [EKEvent]
     let tomorrowsEvents: [EKEvent]
 
@@ -296,23 +303,24 @@ private struct EventListView: View {
             VStack(spacing: 10) {
                 eventSection(
                     title: NSLocalizedString("TODAY", comment: "").uppercased(),
-                    events: todaysEvents)
+                    day: today, events: todaysEvents)
                 eventSection(
                     title: NSLocalizedString("TOMORROW", comment: "")
-                        .uppercased(), events: tomorrowsEvents)
+                        .uppercased(),
+                    day: calendar.date(byAdding: .day, value: 1, to: today) ?? today, events: tomorrowsEvents)
             }
         }
     }
 
     @ViewBuilder
-    func eventSection(title: String, events: [EKEvent]) -> some View {
+    func eventSection(title: String, day: Date, events: [EKEvent]) -> some View {
         if !events.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 ForEach(events, id: \.eventIdentifier) { event in
-                    EventRow(event: event)
+                    EventRow(event: event, day: day, calendar: calendar)
                 }
             }
         }
@@ -321,6 +329,9 @@ private struct EventListView: View {
 
 private struct EventRow: View {
     let event: EKEvent
+    /// The day of the section showing the event.
+    let day: Date
+    let calendar: Calendar
 
     var body: some View {
         let eventTime = getEventTime(event)
@@ -351,15 +362,21 @@ private struct EventRow: View {
     func getEventTime(_ event: EKEvent) -> String {
         var text = ""
         if !event.isAllDay {
-            let formatter = DateFormatter()
-            formatter.setLocalizedDateFormatFromTemplate("j:mm")
-            text += formatter.string(from: event.startDate).replacing(":00", with: "")
+            text += time(event.startDate)
             text += " — "
-            text += formatter.string(from: event.endDate).replacing(":00", with: "")
+            text += time(event.endDate)
         } else {
             return NSLocalizedString("ALL_DAY", comment: "")
         }
         return text
+    }
+
+    /// The time, with the date when it is not on the section's day, as for an event spanning several days.
+    private func time(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate(calendar.isDate(date, inSameDayAs: day) ? "j:mm" : "MMMd j:mm")
+        formatter.timeZone = calendar.timeZone
+        return formatter.string(from: date).replacing(":00", with: "")
     }
 }
 
