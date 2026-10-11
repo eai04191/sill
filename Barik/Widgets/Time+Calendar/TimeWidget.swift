@@ -77,7 +77,7 @@ struct TimeWidget: View {
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .monospacedDigit()
-        .barButton(label: "Calendar", value: accessibilityValue) {
+        .barWidgetButton(label: "Calendar", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "calendar") {
                 CalendarPopup(
                     calendarManager: calendarManager,

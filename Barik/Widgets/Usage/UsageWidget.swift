@@ -36,7 +36,7 @@ struct UsageWidget: View {
                                 }
                         }
                     )
-                    .barButton(label: "Usage", value: accessibilitySummary(services)) {
+                    .barWidgetButton(label: "Usage", value: accessibilitySummary(services)) {
                         MenuBarPopup.show(rect: rect, id: "usage") { UsagePopup() }
                     }
                 }

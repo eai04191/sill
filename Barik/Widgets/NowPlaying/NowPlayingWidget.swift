@@ -5,6 +5,7 @@ import SwiftUI
 struct NowPlayingWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     @ObservedObject var playingManager = NowPlayingManager.shared
+    @ObservedObject var configManager = ConfigManager.shared
 
     @State private var widgetFrame: CGRect = .zero
     @State private var animatedWidth: CGFloat = 0
@@ -22,11 +23,13 @@ struct NowPlayingWidget: View {
                         }
                     }
                 }
+                // Measured like the visible content, which is in a system glass button with Liquid Glass.
+                .environment(\.widgetGlassIsButton, configManager.config.usesLiquidGlass)
                 .hidden()
 
                 // Visible content with fixed animated width.
                 VisibleNowPlayingContent(song: song, width: animatedWidth)
-                    .barButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
+                    .barWidgetButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
                         MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
                             NowPlayingPopup(configProvider: configProvider)
                         }
@@ -53,8 +56,8 @@ struct NowPlayingWidget: View {
 struct NowPlayingContent: View {
     let song: NowPlayingSong
     @ObservedObject var configManager = ConfigManager.shared
-    /// A system glass button draws the widget's glass itself (see `BarButtonModifier`).
-    @Environment(\.barButtonUsesSystemGlass) private var usesSystemGlassButton
+    /// A system glass button draws the widget's glass itself (see `barWidgetButton`).
+    @Environment(\.widgetGlassIsButton) private var usesSystemGlassButton
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     
     /// A system glass button adds its own margin around the content (see `GlassButtonInset`).
@@ -114,7 +117,7 @@ struct VisibleNowPlayingContent: View {
     let song: NowPlayingSong
     let width: CGFloat
     /// A system glass button wraps this frame in its glass, so it keeps the widget's own height there.
-    @Environment(\.barButtonUsesSystemGlass) private var usesSystemGlassButton
+    @Environment(\.widgetGlassIsButton) private var usesSystemGlassButton
 
     var body: some View {
         NowPlayingContent(song: song)

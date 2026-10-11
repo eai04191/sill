@@ -28,7 +28,7 @@ struct NetworkWidget: View {
         .experimentalConfiguration(cornerRadius: 15)
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
-        .barButton(label: "Network", value: accessibilityValue) {
+        .barWidgetButton(label: "Network", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "network") { NetworkPopup() }
         }
     }

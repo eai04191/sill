@@ -36,7 +36,7 @@ struct VolumeWidget: View {
                         }
                 }
             )
-            .barButton(
+            .barWidgetButton(
                 label: "Volume",
                 value: "\(Int((volume * 100).rounded()))%" + (volumeManager.isMuted ? ", muted" : "")
             ) {

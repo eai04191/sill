@@ -12,8 +12,8 @@ private struct ExperimentalConfigurationModifier: ViewModifier {
     
     let horizontalPadding: CGFloat
     let cornerRadius: CGFloat
-    /// A system glass button draws the widget's glass itself (see `BarButtonModifier`).
-    @Environment(\.barButtonUsesSystemGlass) private var usesSystemGlassButton
+    /// A system glass button draws the widget's glass itself (see `barWidgetButton`).
+    @Environment(\.widgetGlassIsButton) private var usesSystemGlassButton
     
     func body(content: Content) -> some View {
         Group {
