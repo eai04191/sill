@@ -11,6 +11,9 @@ final class ConfigManager: ObservableObject {
     /// Why the config file could not be read again after launch, while the config read before stays in use. Cleared
     /// once the file is read. Set on the main thread.
     @Published private(set) var reloadError: String?
+    /// Why a change made in Barik, such as the calendar layout, could not be saved to the config file, which was then
+    /// left as it was. Cleared once a later change is saved. Set on the main thread.
+    @Published private(set) var updateError: String?
     /// Whether `config` holds the config file rather than the defaults it starts with. Read on the main thread.
     private(set) var hasLoadedConfigFile = false
     
@@ -156,8 +159,13 @@ final class ConfigManager: ObservableObject {
         }
     }
 
+    /// The config file changed between reading it for an update and replacing it, so the update was not saved.
+    private struct ConfigFileChanged: LocalizedError {
+        var errorDescription: String? { "The config file changed while the change was being saved." }
+    }
+
     /// Writes on the watch queue, where the config is also reloaded, so a reload never reads a half-written file and
-    /// the reload after the write is not overtaken by an older one.
+    /// the reload after the write is not overtaken by an older one. A failure is published in `updateError`.
     func updateConfigValue(key: String, newValue: String) {
         watchQueue.async { [weak self] in
             guard let self else { return }
@@ -166,17 +174,48 @@ final class ConfigManager: ObservableObject {
                 return
             }
             do {
-                let currentText = try String(contentsOfFile: path, encoding: .utf8)
-                let updatedText = try TOMLKeyUpdater.updating(
-                    currentText, key: key, to: newValue)
-                // Not atomically: an atomic write replaces the path with a new file, which would turn a symlinked
-                // config into a regular file. Writing in place goes through the symlink to the file it points to.
-                try updatedText.write(
-                    toFile: path, atomically: false, encoding: .utf8)
+                try Self.replaceValue(key: key, newValue: newValue, inFileAt: path)
+                DispatchQueue.main.async { self.updateError = nil }
                 self.parseConfigFile(at: path)
             } catch {
                 print("Error updating config:", error)
+                let message = "Could not save \(key) to \(path): \(error.localizedDescription)"
+                DispatchQueue.main.async { self.updateError = message }
             }
+        }
+    }
+
+    /// Replaces the file the path leads to with a copy that has the new value, so a write that fails partway leaves
+    /// the file as it was instead of cut off. The copy is written next to the file a symlink points to, such as a
+    /// config kept in a dotfiles repository, and renamed over it, so the symlink stays. The file watcher sees the old
+    /// file deleted and watches the new one (see `startWatchingFile`).
+    ///
+    /// The file is not replaced when its contents changed since they were read, as by an editor saving it meanwhile,
+    /// whose edit would otherwise be lost. A change between that check and the rename is still overwritten; the window
+    /// is a single system call, and closing it would need a lock that editors do not take.
+    private static func replaceValue(key: String, newValue: String, inFileAt path: String) throws {
+        let fileURL = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        let original = try Data(contentsOf: fileURL)
+        guard let currentText = String(data: original, encoding: .utf8) else {
+            throw CocoaError(.fileReadInapplicableStringEncoding)
+        }
+        let updatedText = try TOMLKeyUpdater.updating(currentText, key: key, to: newValue)
+        let temporaryURL = fileURL.deletingLastPathComponent()
+            .appendingPathComponent(".\(fileURL.lastPathComponent).barik-\(UUID().uuidString)")
+        do {
+            try Data(updatedText.utf8).write(to: temporaryURL)
+            // The new file keeps the permissions of the file it replaces.
+            let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+            if let permissions = attributes[.posixPermissions] {
+                try FileManager.default.setAttributes([.posixPermissions: permissions], ofItemAtPath: temporaryURL.path)
+            }
+            guard try Data(contentsOf: fileURL) == original else { throw ConfigFileChanged() }
+            guard rename(temporaryURL.path, fileURL.path) == 0 else {
+                throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            throw error
         }
     }
 

@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Shown while the config file cannot be read after launch. Barik keeps the config it read before, so without this
-/// banner an edit with a mistake would seem to be ignored.
+/// banner an edit with a mistake would seem to be ignored. Also shown when a change made in Barik, such as the calendar
+/// layout, could not be saved to the file, which would otherwise be lost at the next launch without notice.
 struct ConfigErrorBannerWidget: View {
     @State private var rect: CGRect = .zero
 
@@ -38,18 +39,30 @@ private struct ConfigErrorPopup: View {
             Text("Config error")
                 .font(.system(size: 14))
                 .fontWeight(.medium)
-            Text("The config file could not be read, so the config read before is still in use. Fix the file and save it to apply it.")
-                .fixedSize(horizontal: false, vertical: true)
-            if let error = configManager.reloadError {
-                Text(error)
-                    .font(.system(size: 12, design: .monospaced))
-                    .textSelection(.enabled)
+            // Without either error, as once the file is fixed while the popup is open, it says the file has been read.
+            if configManager.reloadError != nil || configManager.updateError == nil {
+                Text("The config file could not be read, so the config read before is still in use. Fix the file and save it to apply it.")
                     .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("The config file has been read.")
+                if let error = configManager.reloadError {
+                    errorText(error)
+                } else {
+                    Text("The config file has been read.")
+                }
+            }
+            if let error = configManager.updateError {
+                Text("A change made in Barik could not be saved to the config file, which was left as it was.")
+                    .fixedSize(horizontal: false, vertical: true)
+                errorText(error)
             }
         }
         .padding(15)
         .frame(width: 420, alignment: .leading)
+    }
+
+    private func errorText(_ error: String) -> some View {
+        Text(error)
+            .font(.system(size: 12, design: .monospaced))
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

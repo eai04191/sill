@@ -30,11 +30,16 @@ struct SystemBannerWidget: View {
             if withLeftPadding {
                 Color.clear.frame(width: 0)
             }
-            if configManager.reloadError != nil {
+            if hasConfigError {
                 ConfigErrorBannerWidget()
             }
         }
-        .animation(.default, value: configManager.reloadError != nil)
+        .animation(.default, value: hasConfigError)
+    }
+
+    /// The config file could not be read, or a change made in Barik could not be saved to it.
+    private var hasConfigError: Bool {
+        configManager.reloadError != nil || configManager.updateError != nil
     }
 }
 
