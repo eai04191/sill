@@ -1,67 +1,37 @@
-**NOTICE**: Unfortunately, I don’t have much free time to actively maintain this project. If you like the project but are not satisfied with its current state, you can explore the many forks or create your own. Even if you’re unfamiliar with **Swift**, tools like **Claude Code** and **Codex** can effectively help implement projects like this. This is a great opportunity to tailor **barik** to your needs and make it exactly the way you’d like.
+> [!WARNING]
+> Sill is heavily vibe-coded. For now, I make it for my own use, so I don’t accept feature requests. **Claude Code** handles a project like this well, so if you need something Sill doesn’t do, fork it and make it yourself.
 
 ----
 
-<p align="center" dir="auto">
-  <img src="resources/header-image.png" alt="Barik"">
-  <p align="center" dir="auto">
-    <a href="LICENSE">
-      <img alt="License Badge" src="https://img.shields.io/github/license/mocki-toki/barik.svg?color=green" style="max-width: 100%;">
-    </a>
-    <a href="https://github.com/mocki-toki/barik/issues">
-      <img alt="Issues Badge" src="https://img.shields.io/github/issues/mocki-toki/barik.svg?color=green" style="max-width: 100%;">
-    </a>
-    <a href="CHANGELOG.md">
-      <img alt="Changelog Badge" src="https://img.shields.io/badge/view-changelog-green.svg" style="max-width: 100%;">
-    </a>
-    <a href="https://github.com/mocki-toki/barik/releases">
-      <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/mocki-toki/barik/total">
-    </a>
-  </p>
-</p>
+# Sill
 
-**barik** is a lightweight macOS menu bar replacement.
+**Sill** is a lightweight macOS menu bar replacement with Liquid Glass, built for macOS 26. It sits at the top or bottom of the screen.
 
-<br>
-
-<div align="center">
-  <h3>Screenshots</h3>
-  <img src="resources/preview-image-light.png" alt="Barik Light Theme">
-  <img src="resources/preview-image-dark.png" alt="Barik Dark Theme">
-</div>
-<br>
-<div align="center">
-  <h3>Video</h3>
-  <video src="https://github.com/user-attachments/assets/33cfd2c2-e961-4d04-8012-664db0113d4f">
-</div>
-    
-https://github.com/user-attachments/assets/d3799e24-c077-4c6a-a7da-a1f2eee1a07f
-
-<br>
+Sill is a fork of [barik](https://github.com/mocki-toki/barik) by Simon Butenko, reworked to follow the Human Interface Guidelines and Liquid Glass, with a window switcher, a Now Playing widget for any player, and fewer features to maintain. It does not read barik's config file.
 
 ## Requirements
 
 - macOS 26+
+- Xcode, to build it
 
 ## Quick Start
 
-1. Install **barik** via [Homebrew](https://brew.sh/)
+1. Build Sill and copy it to your Applications folder:
 
 ```sh
-brew install --cask mocki-toki/formulae/barik
+xcodebuild -project Sill.xcodeproj -scheme Sill -configuration Release -derivedDataPath build build
+ditto build/Build/Products/Release/Sill.app ~/Applications/Sill.app
 ```
-
-Or you can download from [Releases](https://github.com/mocki-toki/barik/releases), unzip it, and move it to your Applications folder.
 
 2. Hide the system menu bar in **System Settings** and uncheck **Desktop & Dock → Show items → On Desktop**.
 
-3. Launch **barik** from the Applications folder.
+3. Launch **Sill** from the Applications folder.
 
-4. Add **barik** to your login items for automatic startup.
+4. Add **Sill** to your login items for automatic startup.
 
 ## Configuration
 
-When you launch **barik** for the first time, it will create a `~/.barik-config.toml` file with an example customization for your new menu bar.
+When you launch **Sill** for the first time, it will create a `~/.sill-config.toml` file with an example customization for your new menu bar.
 
 ```toml
 theme = "system" # system, light, dark
@@ -100,7 +70,7 @@ horizontal-padding = 25   # padding on the left and right corners
 spacing = 15              # spacing between widgets
 ```
 
-### Additional options in this fork
+### More options
 
 ```toml
 position = "bottom"   # top (default) or bottom; popups open upward at the bottom
@@ -129,14 +99,6 @@ With `theme = "system"` (the default), the bar is dark glass with white text eve
 
 With `position = "bottom"`, the bar does not reserve space on the screen like the Dock does, so maximized windows extend under it.
 
-Currently, you can customize the order of widgets (time, indicators, etc.) and adjust some of their settings. Soon, you’ll also be able to add custom widgets and completely change **barik**'s appearance—making it almost unrecognizable (hello, r/unixporn!).
-
-## Future Plans
-
-I'm not planning to stick to minimal functionality—exciting new features are coming soon! The roadmap includes full style customization, the ability to create custom widgets or extend existing ones, and a public **Store** where you can share your styles and widgets.
-
-Soon, you'll also be able to place widgets not just at the top, but at the bottom, left, and right as well. This means you can replace not only the menu bar but also the Dock! 🚀
-
 ## What to do if the currently playing song is not displayed in the Now Playing widget?
 
 The Now Playing widget reads the system-wide now playing session through [media-control](https://github.com/ungive/media-control), so it shows any player that reports to Now Playing in Control Center, including browsers such as Firefox. Install it with Homebrew:
@@ -145,36 +107,26 @@ The Now Playing widget reads the system-wide now playing session through [media-
 brew install media-control
 ```
 
-Barik looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up within 30 seconds of installing it, without a restart. If a player is still not shown, check that it appears in Control Center's Now Playing and that `media-control get` prints it.
+Sill looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up within 30 seconds of installing it, without a restart. If a player is still not shown, check that it appears in Control Center's Now Playing and that `media-control get` prints it.
 
 ## Window Switcher
 
 Clicking the front app widget opens a window switcher, a replacement for Mission Control: a menu of the windows on every workspace, grouped by app, with the workspace of each window. Type to filter the windows by title, app or workspace, move with the Up and Down keys, and press Return or click to focus a window; Escape closes it.
 
-The switcher lists and focuses windows through the [AeroSpace](https://github.com/nikitabobko/AeroSpace) CLI, so it needs AeroSpace running, and no extra permission for Barik. Barik looks for `aerospace` in `/opt/homebrew/bin` and `/usr/local/bin`, and the switcher says so when it is not available.
+The switcher lists and focuses windows through the [AeroSpace](https://github.com/nikitabobko/AeroSpace) CLI, so it needs AeroSpace running, and no extra permission for Sill. Sill looks for `aerospace` in `/opt/homebrew/bin` and `/usr/local/bin`, and the switcher says so when it is not available.
 
 ## Where Are the Menu Items?
 
-[#5](https://github.com/mocki-toki/barik/issues/5), [#1](https://github.com/mocki-toki/barik/issues/1)
-
-Menu items (such as File, Edit, View, etc.) are not currently supported, but they are planned for future releases. However, you can use [Raycast](https://www.raycast.com/), which supports menu items through an interface similar to Spotlight. I personally use it with the `option + tab` shortcut, and it works very well.
+Menu items (such as File, Edit, View, etc.) are not supported. You can use [Raycast](https://www.raycast.com/), which supports menu items through an interface similar to Spotlight. barik's author uses it with the `option + tab` shortcut, and it works very well.
 
 If you’re accustomed to using menu items from the system menu bar, simply move your mouse to the top of the screen to reveal the system menu bar, where they will be available.
 
 <img src="resources/raycast-menu-items.jpeg" alt="Raycast Menu Items">
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a PR.
-
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Sill keeps barik's copyright notice, as the license asks.
 
 ## Trademarks
 
 Apple and macOS are trademarks of Apple Inc. This project is not connected to Apple Inc. and does not have their approval or support.
-
-## Stars
-
-[![Stargazers over time](https://starchart.cc/mocki-toki/barik.svg?variant=adaptive)](https://starchart.cc/mocki-toki/barik)
