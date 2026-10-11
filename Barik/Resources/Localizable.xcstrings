@@ -4,8 +4,141 @@
     "?%@?" : {
       "shouldTranslate" : false
     },
+    "· resets in %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· リセットまで%@"
+          }
+        }
+      }
+    },
+    "%@\n\nPlease double check ~/.barik-config.toml and try again." : {
+      "comment" : "The error, then what to do about it.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@\n\n~/.barik-config.tomlを確認してから、もう一度お試しください。"
+          }
+        }
+      }
+    },
+    "%@ of %@" : {
+      "comment" : "VoiceOver value of the playback position: the elapsed time of the song's duration.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ resets in %@" : {
+      "comment" : "VoiceOver: a rate limit window's usage and the time until it resets, e.g. \"16% resets in 1h\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@、リセットまで%2$@"
+          }
+        }
+      }
+    },
+    "%@, muted" : {
+      "comment" : "VoiceOver value of the volume widget while muted.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@、消音"
+          }
+        }
+      }
+    },
     "%lld" : {
       "shouldTranslate" : false
+    },
+    "%lld hidden" : {
+      "comment" : "VoiceOver: the number of widgets not on the bar.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld個が非表示"
+          }
+        }
+      }
+    },
+    "%lld-day" : {
+      "comment" : "A rate limit window of this many days.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日間"
+          }
+        }
+      }
+    },
+    "%lld-hour" : {
+      "comment" : "A rate limit window of this many hours.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld時間"
+          }
+        }
+      }
+    },
+    "%lld-minute" : {
+      "comment" : "A rate limit window of this many minutes.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分間"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+      "shouldTranslate" : false
+    },
+    "%lld%%, charging" : {
+      "comment" : "VoiceOver value of the battery.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%、充電中"
+          }
+        }
+      }
+    },
+    "%lld%%, plugged in, not charging" : {
+      "comment" : "VoiceOver value of the battery.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%、電源に接続、充電していません"
+          }
+        }
+      }
+    },
+    "A change made in Barik could not be saved to the config file, which was left as it was." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barikで行った変更を設定ファイルに保存できなかったため、ファイルは変更されていません。"
+          }
+        }
+      }
     },
     "ALL_DAY" : {
       "extractionState" : "manual",
@@ -132,6 +265,77 @@
         }
       }
     },
+    "Barik has no access to your calendars. Allow it in System Settings > Privacy & Security > Calendars." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barikはカレンダーにアクセスできません。“システム設定” > “プライバシーとセキュリティ” > “カレンダー”で許可してください。"
+          }
+        }
+      }
+    },
+    "Battery" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バッテリー"
+          }
+        }
+      }
+    },
+    "Box layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボックスレイアウト"
+          }
+        }
+      }
+    },
+    "Calendar" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カレンダー"
+          }
+        }
+      }
+    },
+    "Config error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定エラー"
+          }
+        }
+      }
+    },
+    "Configuration Error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定エラー"
+          }
+        }
+      }
+    },
+    "Could not save %@ to %@: %@" : {
+      "comment" : "The config key, the config file's path, and the error.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を%2$@に保存できませんでした: %3$@"
+          }
+        }
+      }
+    },
     "EMPTY_EVENTS" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -253,6 +457,236 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天没有更多活动"
+          }
+        }
+      }
+    },
+    "Error creating default config: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトの設定を作成できませんでした: %@"
+          }
+        }
+      }
+    },
+    "Error parsing %@: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を解析できませんでした: %2$@"
+          }
+        }
+      }
+    },
+    "Error parsing TOML file: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TOMLファイルを解析できませんでした: %@"
+          }
+        }
+      }
+    },
+    "Horizontal layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "横レイアウト"
+          }
+        }
+      }
+    },
+    "More widgets" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他のウィジェット"
+          }
+        }
+      }
+    },
+    "Mute" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消音"
+          }
+        }
+      }
+    },
+    "Next Track" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次へ"
+          }
+        }
+      }
+    },
+    "Nothing Playing" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生中の項目はありません"
+          }
+        }
+      }
+    },
+    "Now Playing" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生中"
+          }
+        }
+      }
+    },
+    "Open %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@を開く"
+          }
+        }
+      }
+    },
+    "Open the usage page" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用量のページを開く"
+          }
+        }
+      }
+    },
+    "Open usage page for %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@の使用量のページを開く"
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一時停止"
+          }
+        }
+      }
+    },
+    "Play" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生"
+          }
+        }
+      }
+    },
+    "Playback position" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生位置"
+          }
+        }
+      }
+    },
+    "Popup opened. Press Escape to close." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポップアップを開きました。閉じるにはEscキーを押します。"
+          }
+        }
+      }
+    },
+    "Previous Track" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前へ"
+          }
+        }
+      }
+    },
+    "Quit" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終了"
+          }
+        }
+      }
+    },
+    "Sound" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サウンド"
+          }
+        }
+      }
+    },
+    "The config file changed while the change was being saved." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更の保存中に設定ファイルが変更されました。"
+          }
+        }
+      }
+    },
+    "The config file could not be read, so the config read before is still in use. Fix the file and save it to apply it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定ファイルを読み込めなかったため、前に読み込んだ設定を使用しています。ファイルを修正して保存すると適用されます。"
+          }
+        }
+      }
+    },
+    "The config file has been read." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定ファイルを読み込みました。"
+          }
+        }
+      }
+    },
+    "This output device has no volume control" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この出力装置では音量を調整できません"
           }
         }
       }
@@ -503,6 +937,77 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "明天"
+          }
+        }
+      }
+    },
+    "Unmute" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消音を解除"
+          }
+        }
+      }
+    },
+    "Usage" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用量"
+          }
+        }
+      }
+    },
+    "Usage is not available" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用量を取得できません"
+          }
+        }
+      }
+    },
+    "Vertical layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縦レイアウト"
+          }
+        }
+      }
+    },
+    "Volume" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音量"
+          }
+        }
+      }
+    },
+    "Weekly" : {
+      "comment" : "The weekly rate limit window.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "週間"
+          }
+        }
+      }
+    },
+    "Widgets that do not fit on the bar" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バーに収まらないウィジェット"
           }
         }
       }
