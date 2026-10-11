@@ -116,11 +116,11 @@ final class ConfigManager: ObservableObject {
             # calendar.allow-list = ["Home", "Personal"] # show only these calendars
             # calendar.deny-list = ["Work", "Boss"] # show all calendars except these
 
-            [popup.default.time]
+            [widgets.default.time.popup]
             view-variant = "box"
-            
-            [background]
-            enabled = true
+
+            [experimental.background]
+            displayed = true
             """
         try defaultTOML.write(toFile: path, atomically: true, encoding: .utf8)
     }
