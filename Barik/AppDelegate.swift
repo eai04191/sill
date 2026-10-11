@@ -53,9 +53,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupPanel(
             &menuBarPanel,
             frame: menuBarFrame(in: screenFrame),
-            level: Int(CGWindowLevelForKey(.backstopMenu)),
+            level: menuBarLevel(),
             hostingRootView: AnyView(MenuBarView()),
             fixedFrame: true)
+    }
+
+    /// At the top the bar stays behind the system menu bar, which appears over it on hover. At the bottom nothing
+    /// needs to cover it, so it sits above windows like the Dock instead of being hidden by floating windows.
+    private func menuBarLevel() -> Int {
+        ConfigManager.shared.config.position == .bottom
+            ? Int(CGWindowLevelForKey(.statusWindow))
+            : Int(CGWindowLevelForKey(.backstopMenu))
     }
 
     /// The strip along the configured screen edge that the bar occupies.
@@ -74,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hostingRootView: AnyView, fixedFrame: Bool = false
     ) {
         if let existingPanel = panel {
+            existingPanel.level = NSWindow.Level(rawValue: level)
             existingPanel.setFrame(frame, display: true)
             return
         }
