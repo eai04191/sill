@@ -38,7 +38,11 @@ private struct ServiceUsageSection: View {
                 Spacer()
                 Link(destination: service.usagePageURL) {
                     Image(systemName: "arrow.up.right.square")
+                        .font(.headline)
                 }
+                .buttonStyle(.plain)
+                // The popup panel becomes key when shown, which otherwise draws a focus ring on the first link.
+                .focusEffectDisabled()
                 .help("Open the usage page")
             }
             ForEach(Array(usage.windows.enumerated()), id: \.offset) { index, window in
