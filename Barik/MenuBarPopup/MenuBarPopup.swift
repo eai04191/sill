@@ -161,17 +161,16 @@ class MenuBarPopup {
         }
     }
 
-    static func setup() {
-        guard let screen = NSScreen.main?.visibleFrame else { return }
-        let panelFrame = NSRect(
-            x: 0,
-            y: 0,
-            width: screen.size.width,
-            height: screen.size.height
-        )
+    /// Creates the popup panel, or moves it, to cover `frame`: the whole screen with the bar, so a popup sits right
+    /// next to the bar on whichever edge it is, and is kept inside the screen's sides.
+    static func setup(frame: CGRect) {
+        if let panel {
+            panel.setFrame(frame, display: true)
+            return
+        }
 
         let newPanel = HidingPanel(
-            contentRect: panelFrame,
+            contentRect: frame,
             styleMask: [.nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -182,6 +181,7 @@ class MenuBarPopup {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
+        newPanel.setFrame(frame, display: false)
 
         panel = newPanel
     }

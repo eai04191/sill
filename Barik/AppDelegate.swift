@@ -1,6 +1,12 @@
 import Combine
 import SwiftUI
 
+extension NSScreen {
+    /// The screen with Barik's bar and popups: the primary screen, which has the system menu bar. `NSScreen.main` is
+    /// the screen with the focused window, so it would move the bar between displays as focus changes.
+    static var barScreen: NSScreen? { screens.first }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var backgroundPanel: NSPanel?
     private var menuBarPanel: NSPanel?
@@ -22,7 +28,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        MenuBarPopup.setup()
         setupPanels()
 
         // The config file is applied asynchronously after launch, and `position` may change while running,
@@ -43,9 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupPanels()
     }
 
-    /// Configures and displays the background and menu bar panels.
+    /// Configures and displays the background and menu bar panels, and fits the popup panel to the same screen.
+    /// Without a screen nothing is set up; the next screen change sets it up.
     private func setupPanels() {
-        guard let screenFrame = NSScreen.main?.frame else { return }
+        guard let screenFrame = NSScreen.barScreen?.frame else { return }
+        MenuBarPopup.setup(frame: screenFrame)
         setupPanel(
             &backgroundPanel,
             frame: screenFrame,

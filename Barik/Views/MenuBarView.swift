@@ -279,7 +279,7 @@ private struct MoreWidgetsPopup: View {
 
     /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
     private var maxHeight: CGFloat {
-        let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+        let screenHeight = NSScreen.barScreen?.visibleFrame.height ?? 800
         return max(screenHeight - configManager.config.experimental.foreground.resolveHeight() - 80, 100)
     }
 }
