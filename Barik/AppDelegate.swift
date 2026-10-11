@@ -28,10 +28,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        setupPanels()
-
-        // The config file is applied asynchronously after launch, and `position` may change while running,
-        // so place the panels again whenever the config changes.
+        // The config file is applied asynchronously after launch, so the panels are first set up once it is, rather
+        // than showing the bar with the default config and then moving it. A config file that cannot be read stops
+        // Barik with the error above instead. `position` may change while running, so the panels are placed again
+        // whenever the config changes.
+        if ConfigManager.shared.hasLoadedConfigFile {
+            setupPanels()
+        }
         configCancellable = ConfigManager.shared.$config
             .dropFirst()
             .receive(on: DispatchQueue.main)

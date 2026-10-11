@@ -7,6 +7,8 @@ final class ConfigManager: ObservableObject {
 
     @Published private(set) var config = Config()
     @Published private(set) var initError: String?
+    /// Whether `config` holds the config file rather than the defaults it starts with. Read on the main thread.
+    private(set) var hasLoadedConfigFile = false
     
     private var fileWatchSource: DispatchSourceFileSystemObject?
     private var fileDescriptor: CInt = -1
@@ -51,6 +53,7 @@ final class ConfigManager: ObservableObject {
             let decoder = TOMLDecoder()
             let rootToml = try decoder.decode(RootToml.self, from: content)
             DispatchQueue.main.async {
+                self.hasLoadedConfigFile = true
                 self.config = Config(rootToml: rootToml)
             }
         } catch {
