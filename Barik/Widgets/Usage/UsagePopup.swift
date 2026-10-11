@@ -6,6 +6,11 @@ struct UsagePopup: View {
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
+        modules.popupFollowsSystemAppearance()
+    }
+
+    @ViewBuilder
+    private var modules: some View {
         if configManager.config.usesLiquidGlass {
             // Like the Control Center, each service is its own glass module instead of sharing one glass panel.
             VStack(spacing: Constants.popupModuleSpacing) {

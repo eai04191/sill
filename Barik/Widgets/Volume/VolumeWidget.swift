@@ -102,5 +102,6 @@ struct VolumePopup: View {
         }
         .frame(width: 280, alignment: .leading)
         .padding(24)
+        .popupFollowsSystemAppearance()
     }
 }

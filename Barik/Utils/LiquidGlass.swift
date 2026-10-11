@@ -41,10 +41,33 @@ extension View {
         }
     }
 
+    /// The regular glass behind a popup, or no glass when `enabled` is false. Switching between `.regular` and
+    /// `.identity` keeps the view structure, so the content is not rebuilt when it turns out to draw its own modules.
+    @ViewBuilder
+    func popupGlass<S: Shape>(enabled: Bool, in shape: S) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(enabled ? .regular : .identity, in: shape)
+        } else {
+            self
+        }
+    }
+
+    /// Marks popup content whose colors adapt to the system appearance, so a glass popup does not force it dark.
+    func popupFollowsSystemAppearance() -> some View {
+        preference(key: PopupFollowsSystemAppearanceKey.self, value: true)
+    }
+
     /// Marks popup content that draws its own glass modules, so the popup does not add glass behind them
     /// (glass on glass, which the HIG asks to avoid).
     func popupProvidesGlassModules() -> some View {
         preference(key: PopupProvidesGlassModulesKey.self, value: true)
+    }
+}
+
+struct PopupFollowsSystemAppearanceKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
     }
 }
 
