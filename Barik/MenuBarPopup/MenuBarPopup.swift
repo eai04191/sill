@@ -88,6 +88,7 @@ class MenuBarPopup {
                         .id(UUID())
                 )
                 panel.makeKeyAndOrderFront(nil)
+                clearInitialFocus(of: panel)
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
                         name: .willShowWindow, object: nil)
@@ -105,10 +106,20 @@ class MenuBarPopup {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
             panel.makeKeyAndOrderFront(nil)
+            clearInitialFocus(of: panel)
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
                     name: .willShowWindow, object: nil)
             }
+        }
+    }
+
+    /// The panel becomes key to receive clicks, and AppKit then focuses its first control, drawing a focus ring
+    /// before any keyboard use. Clear that initial focus once the content is laid out; pressing Tab still moves
+    /// focus with the standard ring for keyboard navigation.
+    private static func clearInitialFocus(of panel: NSPanel) {
+        DispatchQueue.main.async {
+            panel.makeFirstResponder(nil)
         }
     }
 

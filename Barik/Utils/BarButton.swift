@@ -8,8 +8,6 @@ extension View {
             self.contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // Popup panels become key when shown, which otherwise draws a focus ring around the first button.
-        .focusEffectDisabled()
         .accessibilityLabel(label)
         .accessibilityValue(value ?? "")
     }

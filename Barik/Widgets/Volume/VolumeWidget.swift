@@ -73,8 +73,6 @@ struct VolumePopup: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                     .buttonStyle(.plain)
-                    // The popup panel becomes key when shown, which otherwise draws a focus ring on this button.
-                    .focusEffectDisabled()
                     .help(volumeManager.isMuted ? "Unmute" : "Mute")
 
                     Slider(
