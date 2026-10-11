@@ -90,12 +90,9 @@ displayed = [
     "center",             # widgets between two "center" markers stay at the center of the bar
     "default.frontapp",   # frontmost app icon and name; click it for the window switcher (needs AeroSpace)
     "center",
-    "default.usage",      # Claude Code / Codex usage
+    "default.usage",      # Claude Code / Codex usage from CodexBar (`brew install --cask codexbar`)
     "default.volume",     # output volume with a slider popup
 ]
-
-[widgets.default.usage]
-command = "~/.local/bin/usage-display.sh" # prints {"claude": {"primary": {"pct": 10, "reset": "2h"}, "secondary": ...}, "codex": ...}
 
 [widgets.default.volume]
 show-percentage = true
@@ -123,6 +120,16 @@ Sill looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up wi
 Clicking the front app widget opens a window switcher, a replacement for Mission Control: a menu of the windows on every workspace, grouped by app, with the workspace of each window. Type to filter the windows by title, app or workspace, move with the Up and Down keys, and press Return or click to focus a window; Escape closes it.
 
 The switcher lists and focuses windows through the [AeroSpace](https://github.com/nikitabobko/AeroSpace) CLI, so it needs AeroSpace running, and no extra permission for Sill. Sill looks for `aerospace` in `/opt/homebrew/bin` and `/usr/local/bin`, and the switcher says so when it is not available.
+
+## Usage Widget
+
+The usage widget shows the Claude Code and Codex rate limits from [CodexBar](https://github.com/steipete/CodexBar), and its popup adds each window's pace, the plan, extra usage and links to the usage and status pages. Install CodexBar with Homebrew, open it once to sign in to the services, and quit it:
+
+```sh
+brew install --cask codexbar
+```
+
+Sill runs `codexbar serve` while the widget is shown, which asks each service for the usage at most every 5 minutes. CodexBar.app does not need to run; if it does, it fetches the usage on its own as well. Sill looks for `codexbar` in `/opt/homebrew/bin` and `/usr/local/bin`, and the widget says so when it is not installed.
 
 ## Where Are the Menu Items?
 

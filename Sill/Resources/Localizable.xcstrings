@@ -47,6 +47,50 @@
         }
       }
     },
+    "%@ · lasts until reset" : {
+      "comment" : "The pace of a rate limit window that lasts until it resets, e.g. \"72% in reserve · lasts until reset\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · リセットまで持つ"
+          }
+        }
+      }
+    },
+    "%@ · runs out in %@" : {
+      "comment" : "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · あと%2$@で上限"
+          }
+        }
+      }
+    },
+    "%@%% in deficit" : {
+      "comment" : "Usage above an even pace, e.g. \"3% in deficit\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@%%の超過"
+          }
+        }
+      }
+    },
+    "%@%% in reserve" : {
+      "comment" : "Usage below an even pace, e.g. \"72% in reserve\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@%%の余裕"
+          }
+        }
+      }
+    },
     "%@, %@, workspace %@" : {
       "comment" : "VoiceOver label of a window in the window switcher: the window title, app and workspace.",
       "localizations" : {
@@ -71,6 +115,17 @@
     },
     "%lld" : {
       "shouldTranslate" : false
+    },
+    "%lld available" : {
+      "comment" : "How many free rate limit resets can be used, e.g. \"3 available\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "残り%lld回"
+          }
+        }
+      }
     },
     "%lld hidden" : {
       "comment" : "VoiceOver: the number of widgets not on the bar.",
@@ -326,6 +381,17 @@
         }
       }
     },
+    "CodexBar is not installed" : {
+      "comment" : "VoiceOver: the usage widget without CodexBar.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CodexBarがインストールされていません"
+          }
+        }
+      }
+    },
     "Config error" : {
       "localizations" : {
         "ja" : {
@@ -532,12 +598,33 @@
         }
       }
     },
+    "Extra usage" : {
+      "comment" : "Paid usage beyond the plan's rate limits.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加使用"
+          }
+        }
+      }
+    },
     "Horizontal layout" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "横レイアウト"
+          }
+        }
+      }
+    },
+    "Install it with `brew install --cask codexbar`, open it once to sign in, and quit it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "`brew install --cask codexbar`でインストールし、一度開いてサインインしてから終了してください。"
           }
         }
       }
@@ -569,6 +656,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "消音"
+          }
+        }
+      }
+    },
+    "Next expires %@" : {
+      "comment" : "The date the first free rate limit reset expires, e.g. \"Next expires Oct 22\".",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の失効: %@"
           }
         }
       }
@@ -629,6 +727,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@を開く"
+          }
+        }
+      }
+    },
+    "Open status page for %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@のステータスページを開く"
+          }
+        }
+      }
+    },
+    "Open the status page" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータスページを開く"
           }
         }
       }
@@ -709,6 +827,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "終了"
+          }
+        }
+      }
+    },
+    "Rate limit resets" : {
+      "comment" : "Free resets of the rate limits the service granted.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レート制限のリセット"
           }
         }
       }
