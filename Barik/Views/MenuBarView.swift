@@ -31,26 +31,17 @@ struct MenuBarView: View {
             // are equally wide. Place them at the center of the whole bar (including the banner) instead, and keep
             // the sides to the space next to them. Widgets that do not fit are left out, nearest to the center first,
             // like status items in the macOS menu bar; clipping does not work because glass and the content on it
-            // are drawn outside the clip.
+            // are drawn outside the clip. When the trailing side cannot fit even its "more" widget, its widgets are
+            // put in the leading side's "more" widget instead. A layout cannot move views between the sides, so the
+            // leading side is also built with them added, and CenteredBarLayout shows the variants that fit.
             CenteredBarLayout(spacing: spacing) {
-                LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
-                    fittingRow(sections.leading, dropping: .trailing)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .modifier(HiddenFromAccessibilityWhenOffscreen())
+                leadingSide(sections.leading, adding: [])
                 LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
                     row(sections.centered)
                 }
-                LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
-                    HStack(spacing: 0) {
-                        fittingRow(sections.trailing, dropping: .leading)
-                        if showsBanner {
-                            SystemBannerWidget(withLeftPadding: true)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .modifier(HiddenFromAccessibilityWhenOffscreen())
+                trailingSide(sections.trailing, showsBanner: showsBanner)
+                leadingSide(sections.leading, adding: sections.trailing)
+                trailingSide([], showsBanner: showsBanner)
             }
             .modifier(BarFrame(configManager: configManager, theme: theme))
         } else {
@@ -66,14 +57,44 @@ struct MenuBarView: View {
         }
     }
 
+    /// The leading side of the centered layout, with `moved` (the trailing side's widgets) added to its "more" widget.
+    private func leadingSide(_ items: [TomlWidgetItem], adding moved: [TomlWidgetItem]) -> some View {
+        LiquidGlassContainer(
+            enabled: configManager.config.usesLiquidGlass, spacing: configManager.config.experimental.foreground.spacing
+        ) {
+            fittingRow(items, dropping: .trailing, adding: moved)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(HiddenFromAccessibilityWhenOffscreen())
+    }
+
+    /// The trailing side of the centered layout with the system banner.
+    private func trailingSide(_ items: [TomlWidgetItem], showsBanner: Bool) -> some View {
+        LiquidGlassContainer(
+            enabled: configManager.config.usesLiquidGlass, spacing: configManager.config.experimental.foreground.spacing
+        ) {
+            HStack(spacing: 0) {
+                fittingRow(items, dropping: .leading)
+                if showsBanner {
+                    SystemBannerWidget(withLeftPadding: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .modifier(HiddenFromAccessibilityWhenOffscreen())
+    }
+
     /// The widgets that fit the offered width: all of them, or fewer by leaving out widgets from the given edge. The
-    /// left-out widgets are kept in a "more" widget on that edge, which shows them in a popup. When even the "more"
-    /// widget does not fit, ViewThatFits still shows it, and CenteredBarLayout moves the side away.
-    private func fittingRow(_ items: [TomlWidgetItem], dropping edge: HorizontalEdge) -> some View {
+    /// left-out widgets are kept in a "more" widget on that edge, which shows them in a popup, together with `moved`,
+    /// the other side's widgets in bar order. When even the "more" widget does not fit, ViewThatFits still shows it,
+    /// and CenteredBarLayout moves the side away.
+    private func fittingRow(
+        _ items: [TomlWidgetItem], dropping edge: HorizontalEdge, adding moved: [TomlWidgetItem] = []
+    ) -> some View {
         ViewThatFits(in: .horizontal) {
             ForEach(0...items.count, id: \.self) { dropped in
                 let shown = edge == .trailing ? Array(items.prefix(items.count - dropped)) : Array(items.suffix(items.count - dropped))
-                let hidden = edge == .trailing ? Array(items.suffix(dropped)) : Array(items.prefix(dropped))
+                let hidden = edge == .trailing ? Array(items.suffix(dropped)) + moved : moved + Array(items.prefix(dropped))
                 HStack(spacing: configManager.config.experimental.foreground.spacing) {
                     if edge == .leading, !hidden.isEmpty { moreWidget(hidden, droppedFrom: edge) }
                     row(shown)
@@ -174,8 +195,10 @@ private struct CenteredSections {
     }
 }
 
-/// Places three views on the bar: the second at the center of the whole width, the first leading and the third
-/// trailing, each limited to the space between the bar edge and the centered view so they never overlap it.
+/// Places the views of the centered layout on the bar: the centered widgets (the second view) at the center of the
+/// whole width, and one variant of each side next to them, limited to the space between the bar edge and the centered
+/// widgets so they never overlap them. The sides are, in order: the leading side, the trailing side, the leading side
+/// with the trailing side's widgets, and the trailing side with only the system banner.
 private struct CenteredBarLayout: Layout {
     let spacing: CGFloat
 
@@ -185,18 +208,38 @@ private struct CenteredBarLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard subviews.count == 3 else { return }
+        guard subviews.count == 5 else { return }
         let centered = subviews[1].sizeThatFits(ProposedViewSize(width: bounds.width, height: bounds.height))
         let side = max(0, (bounds.width - centered.width) / 2 - spacing)
         let sideProposal = ProposedViewSize(width: side, height: bounds.height)
         subviews[1].place(
             at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: ProposedViewSize(centered))
-        subviews[0].place(
-            at: fits(subviews[0], in: sideProposal) ? CGPoint(x: bounds.minX, y: bounds.midY) : offscreen,
-            anchor: .leading, proposal: sideProposal)
-        subviews[2].place(
-            at: fits(subviews[2], in: sideProposal) ? CGPoint(x: bounds.maxX, y: bounds.midY) : offscreen,
-            anchor: .trailing, proposal: sideProposal)
+        let shown = shownSides(subviews, in: sideProposal)
+        for index in [0, 3] {
+            subviews[index].place(
+                at: index == shown.leading ? CGPoint(x: bounds.minX, y: bounds.midY) : offscreen,
+                anchor: .leading, proposal: sideProposal)
+        }
+        for index in [2, 4] {
+            subviews[index].place(
+                at: index == shown.trailing ? CGPoint(x: bounds.maxX, y: bounds.midY) : offscreen,
+                anchor: .trailing, proposal: sideProposal)
+        }
+    }
+
+    /// The indices of the side variants to show, nil for a side that shows nothing. When the trailing side cannot fit
+    /// even its "more" widget, the leading side shows the trailing side's widgets in its "more" widget if that still
+    /// fits, and the trailing side keeps only the system banner. The leading side never hands its widgets to the
+    /// trailing side: both sides get the same width, and the trailing side's "more" widget needs the banner's width
+    /// on top of the room the leading side's lacked. The decision only depends on the bar width and the widgets, not
+    /// on which variants were shown before, so it cannot flip back and forth. When neither side can fit a "more"
+    /// widget, the widgets of a side that does not fit cannot be reached.
+    private func shownSides(_ subviews: Subviews, in proposal: ProposedViewSize) -> (leading: Int?, trailing: Int?) {
+        let leadingFits = fits(subviews[0], in: proposal)
+        let trailingFits = fits(subviews[2], in: proposal)
+        let leading = leadingFits ? (!trailingFits && fits(subviews[3], in: proposal) ? 3 : 0) : nil
+        let trailing = trailingFits ? 2 : (fits(subviews[4], in: proposal) ? 4 : nil)
+        return (leading, trailing)
     }
 
     /// Whether a side is no wider than its space. ViewThatFits shows its last candidate even when it does not fit,
