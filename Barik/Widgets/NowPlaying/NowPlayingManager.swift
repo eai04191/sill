@@ -24,6 +24,8 @@ struct NowPlayingSong: Equatable, Identifiable {
     let elapsedTime: Double?
     let elapsedTimeMeasuredAt: Date?
     let playbackRate: Double
+    /// The app playing the song, as reported to Now Playing.
+    let bundleIdentifier: String?
 
     /// The position in seconds at `date`, estimated from the elapsed time while playing.
     func position(at date: Date) -> Double? {
@@ -84,7 +86,8 @@ struct MediaControlPayload: Decodable, Equatable {
             duration: duration,
             elapsedTime: elapsedTime,
             elapsedTimeMeasuredAt: timestampDate,
-            playbackRate: playbackRate ?? 1)
+            playbackRate: playbackRate ?? 1,
+            bundleIdentifier: bundleIdentifier)
     }
 }
 

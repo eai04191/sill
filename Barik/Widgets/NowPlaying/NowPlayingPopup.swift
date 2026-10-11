@@ -1,3 +1,4 @@
+import AVKit
 import EventKit
 import SwiftUI
 
@@ -55,35 +56,38 @@ private struct NowPlayingVerticalPopup: View {
     var body: some View {
         if let song = playingManager.nowPlaying {
             VStack(spacing: 15) {
-                RotateAnimatedCachedImage(
-                    url: song.albumArtURL,
-                    targetSize: CGSize(width: 200, height: 200)
-                ) { image in
-                    image.clipShape(artworkShape)
-                }
-                .frame(width: 200, height: 200)
-                .scaleEffect(song.state == .paused ? 0.9 : 1)
-                .overlay(
-                    song.state == .paused ?
-                    Color.black.opacity(0.3)
-                        .clipShape(artworkShape)
-                    : nil
-                )
-                .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
+                VStack(spacing: 15) {
+                    RotateAnimatedCachedImage(
+                        url: song.albumArtURL,
+                        targetSize: CGSize(width: 200, height: 200)
+                    ) { image in
+                        image.clipShape(artworkShape)
+                    }
+                    .frame(width: 200, height: 200)
+                    .scaleEffect(song.state == .paused ? 0.9 : 1)
+                    .overlay(
+                        song.state == .paused ?
+                        Color.black.opacity(0.3)
+                            .clipShape(artworkShape)
+                        : nil
+                    )
+                    .animation(.smooth(duration: 0.5, extraBounce: 0.4), value: song.state == .paused)
 
-                VStack(alignment: .center) {
-                    Text(song.title)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 15))
-                        .fontWeight(.medium)
-                    // Some players, such as Firefox, report an empty artist.
-                    if !song.artist.isEmpty {
-                        Text(song.artist)
-                            .opacity(0.6)
+                    VStack(alignment: .center) {
+                        Text(song.title)
+                            .multilineTextAlignment(.center)
                             .font(.system(size: 15))
-                            .fontWeight(.light)
+                            .fontWeight(.medium)
+                        // Some players, such as Firefox, report an empty artist.
+                        if !song.artist.isEmpty {
+                            Text(song.artist)
+                                .opacity(0.6)
+                                .font(.system(size: 15))
+                                .fontWeight(.light)
+                        }
                     }
                 }
+                .opensPlayingApp(song)
 
                 PlaybackTimeline(song: song)
 
@@ -102,6 +106,9 @@ private struct NowPlayingVerticalPopup: View {
             .padding(.horizontal, 25)
             .padding(.vertical, 30)
             .frame(width: 300)
+            .overlay(alignment: .topTrailing) {
+                AirPlayButton().padding(12)
+            }
             .animation(.easeInOut, value: song.albumArtURL)
         } else {
             NothingPlayingView()
@@ -118,6 +125,7 @@ struct NowPlayingHorizontalPopup: View {
     var body: some View {
         if let song = playingManager.nowPlaying {
             VStack(spacing: 15) {
+                HStack(alignment: .top, spacing: 8) {
                 HStack(spacing: 15) {
                     RotateAnimatedCachedImage(
                         url: song.albumArtURL,
@@ -150,8 +158,10 @@ struct NowPlayingHorizontalPopup: View {
                                 .lineLimit(1)
                         }
                     }
-                    .padding(.trailing, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .opensPlayingApp(song)
+                AirPlayButton()
                 }
 
                 PlaybackTimeline(song: song)
@@ -252,4 +262,51 @@ struct NowPlayingPopup_Previews: PreviewProvider {
 /// the previous 10pt radius as the minimum.
 private var artworkShape: AnyShape {
     AnyShape(ConcentricRectangle(corners: .concentric(minimum: 10), isUniform: true))
+}
+
+/// The system AirPlay button, which lists the Mac's audio outputs and AirPlay devices like the Control Center.
+private struct AirPlayButton: NSViewRepresentable {
+    func makeNSView(context: Context) -> AVRoutePickerView {
+        let picker = AVRoutePickerView()
+        picker.isRoutePickerButtonBordered = false
+        return picker
+    }
+
+    func updateNSView(_ picker: AVRoutePickerView, context: Context) {}
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: AVRoutePickerView, context: Context) -> CGSize? {
+        CGSize(width: 24, height: 24)
+    }
+}
+
+extension View {
+    /// Makes the artwork and title a button that brings the playing app to the front, as clicking them does in the
+    /// Control Center. Without a reported app, the view stays as it is.
+    @ViewBuilder
+    fileprivate func opensPlayingApp(_ song: NowPlayingSong) -> some View {
+        if let app = PlayingApp(bundleIdentifier: song.bundleIdentifier) {
+            barButton(label: "Open \(app.name)") { app.open() }
+                .help("Open \(app.name)")
+        } else {
+            self
+        }
+    }
+}
+
+/// The app playing the song, found from its bundle identifier.
+private struct PlayingApp {
+    let url: URL
+    let name: String
+
+    init?(bundleIdentifier: String?) {
+        guard let bundleIdentifier,
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+        else { return nil }
+        self.url = url
+        name = FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
+    func open() {
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
 }
