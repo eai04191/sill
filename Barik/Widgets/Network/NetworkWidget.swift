@@ -49,9 +49,6 @@ struct NetworkWidget: View {
         case .connected:
             return Image(systemName: "wifi")
                 .foregroundColor(.foregroundOutside)
-        case .connecting:
-            return Image(systemName: "wifi")
-                .foregroundColor(.yellow)
         case .connectedWithoutInternet:
             return Image(systemName: "wifi.exclamationmark")
                 .foregroundColor(.yellow)
@@ -74,9 +71,6 @@ struct NetworkWidget: View {
                 .foregroundColor(.primary)
         case .connectedWithoutInternet:
             return Image(systemName: "network")
-                .foregroundColor(.yellow)
-        case .connecting:
-            return Image(systemName: "network.slash")
                 .foregroundColor(.yellow)
         case .disconnected:
             return Image(systemName: "network.slash")

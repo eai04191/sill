@@ -48,12 +48,6 @@ struct NetworkPopup: View {
                 .background(Color.blue.opacity(0.8))
                 .clipShape(Circle())
                 .foregroundStyle(.white)
-        case .connecting:
-            return Image(systemName: "wifi")
-                .padding(8)
-                .background(Color.yellow.opacity(0.8))
-                .clipShape(Circle())
-                .foregroundStyle(.white)
         case .connectedWithoutInternet:
             return Image(systemName: "wifi.exclamationmark")
                 .padding(8)
@@ -90,11 +84,6 @@ struct NetworkPopup: View {
                 .clipShape(Circle())
         case .connectedWithoutInternet:
             return Image(systemName: "network")
-                .padding(8)
-                .background(Color.yellow.opacity(0.8))
-                .clipShape(Circle())
-        case .connecting:
-            return Image(systemName: "network.slash")
                 .padding(8)
                 .background(Color.yellow.opacity(0.8))
                 .clipShape(Circle())
