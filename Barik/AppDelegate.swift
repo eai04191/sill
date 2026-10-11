@@ -134,6 +134,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .critical
         alert.addButton(withTitle: "Quit")
         
+        // Barik is an agent app and is not active at launch, so the alert would open behind other apps.
+        NSApp.activate()
         alert.runModal()
         NSApplication.shared.terminate(nil)
     }
