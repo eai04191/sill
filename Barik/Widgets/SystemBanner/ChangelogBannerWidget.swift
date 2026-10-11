@@ -30,6 +30,10 @@ struct ChangelogBannerWidget: View {
             }
         )
         .buttonStyle(BannerButtonStyle(color: .green.opacity(0.8)))
+        // The close icon inside the button is a tap gesture that VoiceOver cannot reach, so offer it as an action.
+        .accessibilityAction(named: "Hide") {
+            NotificationCenter.default.post(name: Notification.Name("HideWhatsNewBanner"), object: nil)
+        }
         .transition(.blurReplace)
 
     }

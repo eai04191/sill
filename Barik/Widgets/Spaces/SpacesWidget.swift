@@ -70,6 +70,14 @@ private struct SpaceView: View {
         .onTapGesture {
             viewModel.switchToSpace(space, needWindowFocus: true)
         }
+        // The space contains tappable windows, so it keeps the tap gesture instead of becoming a button with nested
+        // buttons, and exposes the same action to VoiceOver.
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Space \(space.id)")
+        .accessibilityAction {
+            viewModel.switchToSpace(space, needWindowFocus: true)
+        }
         .animation(.smooth, value: isHovered)
         .onHover { value in
             isHovered = value
@@ -144,6 +152,15 @@ private struct WindowView: View {
         .animation(.smooth, value: isHovered)
         .frame(height: 30)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(window.appName ?? window.title)
+        .accessibilityValue(window.title)
+        .accessibilityAction {
+            viewModel.switchToSpace(space)
+            usleep(100_000)
+            viewModel.switchToWindow(window)
+        }
         .onTapGesture {
             viewModel.switchToSpace(space)
             usleep(100_000)

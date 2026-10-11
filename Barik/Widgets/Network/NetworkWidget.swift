@@ -28,9 +28,17 @@ struct NetworkWidget: View {
         .experimentalConfiguration(cornerRadius: 15)
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
-        .onTapGesture {
+        .barButton(label: "Network", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "network") { NetworkPopup() }
         }
+    }
+
+    /// The Wi-Fi network and Ethernet state shown by the icons.
+    private var accessibilityValue: String {
+        var parts: [String] = []
+        if viewModel.wifiState != .notSupported { parts.append("Wi-Fi \(viewModel.ssid)") }
+        if viewModel.ethernetState != .notSupported { parts.append("Ethernet \(viewModel.ethernetState.rawValue)") }
+        return parts.joined(separator: ", ")
     }
 
     private var wifiIcon: some View {

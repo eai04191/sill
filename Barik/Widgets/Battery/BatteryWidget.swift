@@ -55,7 +55,7 @@ struct BatteryWidget: View {
         .experimentalConfiguration(cornerRadius: 15)
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
-        .onTapGesture {
+        .barButton(label: "Battery", value: "\(level)%" + (isCharging ? ", charging" : "")) {
             MenuBarPopup.show(rect: rect, id: "battery") { BatteryPopup() }
         }
 
