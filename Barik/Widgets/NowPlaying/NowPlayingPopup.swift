@@ -153,11 +153,22 @@ private var artworkShape: AnyShape {
 }
 
 /// The system AirPlay button, which lists the Mac's audio outputs and AirPlay devices like the Control Center.
+/// Devices are detected while the popup shows the button: the list only had this Mac and "Show More…" when detection
+/// started with the click, and listed every device when it was already running.
 private struct AirPlayButton: NSViewRepresentable {
+    func makeCoordinator() -> AVRouteDetector {
+        AVRouteDetector()
+    }
+
     func makeNSView(context: Context) -> AVRoutePickerView {
+        context.coordinator.isRouteDetectionEnabled = true
         let picker = AVRoutePickerView()
         picker.isRoutePickerButtonBordered = false
         return picker
+    }
+
+    static func dismantleNSView(_ picker: AVRoutePickerView, coordinator: AVRouteDetector) {
+        coordinator.isRouteDetectionEnabled = false
     }
 
     func updateNSView(_ picker: AVRoutePickerView, context: Context) {}
