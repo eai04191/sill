@@ -143,7 +143,9 @@ liquid-glass = true   # macOS 26+: Liquid Glass for widget backgrounds and popup
 [widgets]
 displayed = [
     "default.nowplaying", # now playing from media-control (`brew install media-control`), any player incl. browsers
+    "center",             # widgets between two "center" markers stay at the center of the bar
     "default.frontapp",   # frontmost app icon and name
+    "center",
     "default.usage",      # Claude Code / Codex usage
     "default.volume",     # output volume with a slider popup
 ]
