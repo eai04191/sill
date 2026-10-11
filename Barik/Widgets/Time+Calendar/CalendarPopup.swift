@@ -168,7 +168,8 @@ private struct CalendarAccessDeniedText: View {
 
 private func monthYear(of date: Date, in calendar: Calendar) -> String {
     let formatter = DateFormatter()
-    formatter.dateFormat = "LLLL yyyy"
+    // In the locale's order, e.g. "October 2026" or "2026年10月"; a fixed "LLLL yyyy" gave "10月 2026" in Japanese.
+    formatter.setLocalizedDateFormatFromTemplate("yMMMM")
     formatter.timeZone = calendar.timeZone
     return formatter.string(from: date).capitalized
 }
