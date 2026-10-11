@@ -23,6 +23,7 @@ class HidingPanel: NSPanel, NSWindowDelegate {
 
     func windowDidResignKey(_ notification: Notification) {
         NotificationCenter.default.post(name: .willHideWindow, object: nil)
+        MenuBarPopup.fadeOutIfGlass(self)
         hideTimer = Timer.scheduledTimer(
             withTimeInterval: TimeInterval(
                 Constants.menuBarPopupAnimationDurationInMilliseconds) / 1000.0,
@@ -48,6 +49,7 @@ class MenuBarPopup {
 
         if panel.isKeyWindow, lastContentIdentifier == id {
             NotificationCenter.default.post(name: .willHideWindow, object: nil)
+            fadeOutIfGlass(panel)
             let duration =
                 Double(Constants.menuBarPopupAnimationDurationInMilliseconds)
                 / 1000.0
@@ -73,6 +75,7 @@ class MenuBarPopup {
         if panel.isKeyWindow {
             NotificationCenter.default.post(
                 name: .willChangeContent, object: nil)
+            fadeOutIfGlass(panel)
             let baseDuration =
                 Double(Constants.menuBarPopupAnimationDurationInMilliseconds)
                 / 1000.0
@@ -89,6 +92,7 @@ class MenuBarPopup {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id(UUID())
                 )
+                panel.alphaValue = 1
                 panel.makeKeyAndOrderFront(nil)
                 clearInitialFocus(of: panel)
                 DispatchQueue.main.async {
@@ -107,6 +111,7 @@ class MenuBarPopup {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
+            panel.alphaValue = 1
             panel.makeKeyAndOrderFront(nil)
             clearInitialFocus(of: panel)
             DispatchQueue.main.async {
@@ -121,6 +126,16 @@ class MenuBarPopup {
     /// The material popup keeps the system appearance and draws its own black background.
     private static func applyAppearance(to panel: NSPanel) {
         panel.appearance = ConfigManager.shared.config.usesLiquidGlass ? NSAppearance(named: .darkAqua) : nil
+    }
+
+    /// Fades a glass popup out with its window. Liquid Glass ignores the opacity of the SwiftUI views around it, so
+    /// fading the view would leave the glass in place until the window is ordered out.
+    static func fadeOutIfGlass(_ panel: NSPanel) {
+        guard ConfigManager.shared.config.usesLiquidGlass else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.15
+            panel.animator().alphaValue = 0
+        }
     }
 
     /// The panel becomes key to receive clicks, and AppKit then focuses its first control, drawing a focus ring

@@ -15,12 +15,10 @@ struct MenuBarPopupView<Content: View>: View {
     private var animated: Bool { isShowAnimation || isHideAnimation }
     @State private var isShowAnimation = false
     @State private var isHideAnimation = false
-    /// Liquid Glass popups materialize instead of scaling, so their content is shown and hidden with this flag.
+    /// Liquid Glass popups materialize instead of scaling, so their content is inserted with this flag.
     @State private var glassVisible = false
     /// Set by content that draws its own glass modules (see `popupProvidesGlassModules()`), so no outer glass is added.
     @State private var providesModules = false
-    /// The last size of the glass content, kept while it is removed so the popup does not move as it dematerializes.
-    @State private var glassContentSize: CGSize = .zero
 
     private let willShowWindow = NotificationCenter.default.publisher(
         for: .willShowWindow)
@@ -79,7 +77,9 @@ struct MenuBarPopupView<Content: View>: View {
                     }
                 }
                 .onReceive(willHideWindow) { _ in
-                    withAnimation(.smooth) { glassVisible = false }
+                    // Glass popups fade out with their window (see MenuBarPopup); the scale and blur below are for the
+                    // material look. Animating them while a glass popup was still appearing moved it to the top left.
+                    guard !usesGlass else { return }
                     isHideAnimation = true
                     withAnimation(
                         .interactiveSpring(
@@ -101,7 +101,9 @@ struct MenuBarPopupView<Content: View>: View {
                     }
                 }
                 .onReceive(willChangeContent) { _ in
-                    withAnimation(.smooth) { glassVisible = false }
+                    // Glass popups fade out with their window (see MenuBarPopup); the scale and blur below are for the
+                    // material look. Animating them while a glass popup was still appearing moved it to the top left.
+                    guard !usesGlass else { return }
                     isHideAnimation = true
                     withAnimation(
                         .spring(
@@ -170,24 +172,12 @@ struct MenuBarPopupView<Content: View>: View {
     private var popupBody: some View {
         if usesGlass {
             LiquidGlassContainer(enabled: true, spacing: Constants.popupModuleSpacing) {
-                // The content exists only while shown, so its state and loading are not duplicated; an empty frame
-                // keeps the last size while the glass dematerializes.
-                ZStack {
-                    Color.clear
-                        .frame(width: glassContentSize.width, height: glassContentSize.height)
-                    if glassVisible {
-                        content
-                            .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                            .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                            .background(
-                                GeometryReader { geometry in
-                                    Color.clear
-                                        .onAppear { glassContentSize = geometry.size }
-                                        .onChange(of: geometry.size) { _, size in glassContentSize = size }
-                                }
-                            )
-                            .liquidGlassMaterializes()
-                    }
+                // The content is inserted when the popup is shown so its glass materializes; it fades out with the window.
+                if glassVisible {
+                    content
+                        .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                        .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                        .liquidGlassMaterializes()
                 }
             }
         } else {
@@ -223,3 +213,4 @@ extension Notification.Name {
     static let willHideWindow = Notification.Name("willHideWindow")
     static let willChangeContent = Notification.Name("willChangeContent")
 }
+
