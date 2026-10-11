@@ -68,10 +68,8 @@ theme = "system" # system, light, dark
 
 [widgets]
 displayed = [ # widgets on menu bar
-    "spacer",
     "default.nowplaying",
     "default.battery",
-    "divider",
     # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
     "default.time",
 ]

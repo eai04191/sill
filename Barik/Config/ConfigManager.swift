@@ -83,9 +83,7 @@ final class ConfigManager: ObservableObject {
 
             [widgets]
             displayed = [ # widgets on menu bar
-                "spacer",
                 "default.battery",
-                "divider",
                 # { "default.time" = { time-zone = "America/Los_Angeles", format = "E d, hh:mm" } },
                 "default.time"
             ]

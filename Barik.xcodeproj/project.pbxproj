@@ -303,7 +303,6 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Barik;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;
@@ -338,7 +337,6 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Barik;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "We need this permission for control of third-party media players via an interactive widget";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;

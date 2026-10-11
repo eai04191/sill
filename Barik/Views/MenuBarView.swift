@@ -143,15 +143,6 @@ struct MenuBarView: View {
             FrontAppWidget()
                 .environmentObject(config)
 
-        case "spacer":
-            Spacer().frame(minWidth: 50, maxWidth: .infinity)
-
-        case "divider":
-            Rectangle()
-                .fill(Color.active)
-                .frame(width: 2, height: 15)
-                .clipShape(Capsule())
-
         case "system-banner":
             SystemBannerWidget()
 
