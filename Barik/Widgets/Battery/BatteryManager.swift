@@ -14,6 +14,17 @@ class BatteryManager: ObservableObject {
     @Published var isPluggedIn: Bool = false
     private var runLoopSource: CFRunLoopSource?
 
+    /// The level and power state read by VoiceOver.
+    var accessibilityValue: String {
+        if isCharging {
+            return "\(batteryLevel)%, charging"
+        } else if isPluggedIn {
+            return "\(batteryLevel)%, plugged in, not charging"
+        } else {
+            return "\(batteryLevel)%"
+        }
+    }
+
     init() {
         startMonitoring()
     }
