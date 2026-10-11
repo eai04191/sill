@@ -24,8 +24,10 @@ private struct ExperimentalConfigurationModifier: ViewModifier {
                     // style would resolve to the bar's white foreground style instead, so use `Color.primary`.
                     // glassEffect captures the content as styled so far, so this has to come before it.
                     .foregroundStyle(usesGlass ? AnyShapeStyle(Color.primary) : AnyShapeStyle(Color.foregroundOutside))
-                    // Bar widgets are buttons, so their glass reacts to the pointer.
-                    .liquidGlassBackground(usesGlass, in: RoundedRectangle(cornerRadius: radius), interactive: true) {
+                    // Bar widgets are buttons, so their glass reacts to the pointer. Glass widgets are capsules like the
+                    // now playing widget, which is always one; the corner radius would leave a 38-point widget with
+                    // 15-point corners next to it.
+                    .liquidGlassBackground(usesGlass, in: Capsule(), interactive: true) {
                         Rectangle().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
                     }
                     .applying(!usesGlass) { $0.cornerRadius(radius) }
