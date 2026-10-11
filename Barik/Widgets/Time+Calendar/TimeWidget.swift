@@ -22,7 +22,7 @@ struct TimeWidget: View {
 
     @ObservedObject private var configManager = ConfigManager.shared
     @State private var currentTime = Date()
-    let calendarManager: CalendarManager
+    @ObservedObject var calendarManager: CalendarManager
 
     @State private var rect = CGRect()
 

@@ -66,10 +66,10 @@ struct CalendarBoxPopup: View {
 }
 
 struct CalendarVerticalPopup: View {
-    let calendarManager: CalendarManager
+    @ObservedObject var calendarManager: CalendarManager
 
     init(_ calendarManager: CalendarManager) {
-        self.calendarManager = calendarManager
+        _calendarManager = ObservedObject(wrappedValue: calendarManager)
     }
 
     var body: some View {
@@ -106,10 +106,10 @@ struct CalendarVerticalPopup: View {
 }
 
 struct CalendarHorizontalPopup: View {
-    let calendarManager: CalendarManager
+    @ObservedObject var calendarManager: CalendarManager
 
     init(_ calendarManager: CalendarManager) {
-        self.calendarManager = calendarManager
+        _calendarManager = ObservedObject(wrappedValue: calendarManager)
     }
 
     var body: some View {
