@@ -2,7 +2,7 @@ import AppKit
 
 /// Tells whether full-screen content is in front on the bar's screen, so the bar can step aside for it.
 ///
-/// Full-screen content is the frontmost normal window of another app covering the whole screen: a native full-screen
+/// Full-screen content is a normal window of the active app covering the whole screen: a native full-screen
 /// window in its own Space, a browser playing video full screen, or a player that covers the screen itself. Windows
 /// tiled by AeroSpace keep their gaps and do not count. The bar sits at the status window level, above the full-screen
 /// Space's window, so it hid the bottom of full-screen content.
@@ -50,22 +50,23 @@ final class FullscreenDetector {
     private static func frontWindowCoversBarScreen() -> Bool {
         guard let screen = NSScreen.barScreen,
             let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+            let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+            frontPID != ProcessInfo.processInfo.processIdentifier,
             let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
                 as? [[String: Any]]
         else { return false }
         let screenBounds = CGDisplayBounds(displayID)
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        // The list is ordered front to back; the first visible normal window of another app is the one in front.
-        for window in windows {
+        // Look at all the windows of the active app, not only the one in front: a native full-screen window shows its
+        // toolbar in a separate window at the top of the screen, and small windows of other apps, such as floating
+        // indicators, can sit in front of the full-screen window.
+        return windows.contains { window in
             guard (window[kCGWindowLayer as String] as? Int) == 0,
-                (window[kCGWindowOwnerPID as String] as? pid_t) != ownPID,
+                (window[kCGWindowOwnerPID as String] as? pid_t) == frontPID,
                 (window[kCGWindowAlpha as String] as? Double ?? 0) > 0,
                 let boundsInfo = window[kCGWindowBounds as String] as? NSDictionary,
-                let bounds = CGRect(dictionaryRepresentation: boundsInfo),
-                bounds.width > 1, bounds.height > 1
-            else { continue }
+                let bounds = CGRect(dictionaryRepresentation: boundsInfo)
+            else { return false }
             return bounds == screenBounds
         }
-        return false
     }
 }
