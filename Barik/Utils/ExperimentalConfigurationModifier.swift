@@ -31,7 +31,8 @@ private struct ExperimentalConfigurationModifier: ViewModifier {
                     .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
                     // On a bar under 30 points the widget still gets a little room around its content, so its background
                     // does not shrink to the text.
-                    .padding(.horizontal, max(0, padding - buttonInset.width))
+                    // Below the button's margin the padding is negative, which takes the rest out of the margin.
+                    .padding(.horizontal, padding - buttonInset.width)
                     // The bar's white text is meant to sit on the wallpaper. On glass, use the system primary color and let
                     // Liquid Glass adapt it to what is behind (dark over a light background). The hierarchical `.primary`
                     // style would resolve to the bar's white foreground style instead, so use `Color.primary`.

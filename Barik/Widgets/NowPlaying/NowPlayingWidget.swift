@@ -68,7 +68,8 @@ struct NowPlayingContent: View {
             AlbumArtView(song: song)
             SongTextView(song: song)
         }
-        .padding(.horizontal, max(0, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width))
+        // Below the button's margin the padding is negative, which takes the rest out of the margin.
+        .padding(.horizontal, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width)
         .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
         .liquidGlassBackground(
             configManager.config.usesLiquidGlass && !usesSystemGlassButton, in: Capsule(), interactive: true
@@ -112,10 +113,12 @@ struct MeasurableNowPlayingContent: View {
 struct VisibleNowPlayingContent: View {
     let song: NowPlayingSong
     let width: CGFloat
+    /// A system glass button wraps this frame in its glass, so it keeps the widget's own height there.
+    @Environment(\.barButtonUsesSystemGlass) private var usesSystemGlassButton
 
     var body: some View {
         NowPlayingContent(song: song)
-            .frame(width: width, height: 38)
+            .frame(width: width, height: usesSystemGlassButton ? nil : 38)
             .animation(.smooth(duration: 0.1), value: song)
             .transition(.blurReplace)
     }

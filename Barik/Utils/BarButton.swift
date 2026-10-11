@@ -28,16 +28,23 @@ private struct BarButtonModifier: ViewModifier {
     @ObservedObject private var configManager = ConfigManager.shared
 
     func body(content: Content) -> some View {
-        let button = Button(action: action) {
-            content.barHitArea()
-        }
         Group {
             if usesSystemGlass, configManager.config.usesLiquidGlass, #available(macOS 26.0, *) {
-                button
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.capsule)
+                // Widgets stretch their content to the bar's height to make the whole strip clickable, which the
+                // glass button would wrap in its glass; keep the content at its own height so the glass is the chip.
+                Button(action: action) {
+                    content.fixedSize(horizontal: false, vertical: true)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.capsule)
+                // A glass button gives up its margin when offered less than its width, which the bar's stack did to
+                // the usage widget; widgets keep their width.
+                .fixedSize(horizontal: true, vertical: false)
             } else {
-                button.buttonStyle(.plain)
+                Button(action: action) {
+                    content.barHitArea()
+                }
+                .buttonStyle(.plain)
             }
         }
         .accessibilityLabel(label)
