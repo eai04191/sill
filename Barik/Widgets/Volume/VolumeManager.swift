@@ -9,6 +9,10 @@ final class VolumeManager: ObservableObject {
     /// Volume between 0 and 1, or nil when the current output device does not expose a volume (e.g. some HDMI displays).
     @Published private(set) var volume: Float?
     @Published private(set) var isMuted = false
+    /// Whether the device lets the volume be changed; some report a volume they do not let apps set.
+    @Published private(set) var canSetVolume = false
+    /// Whether the device has a mute control that can be set.
+    @Published private(set) var canMute = false
 
     private var deviceID = AudioObjectID(kAudioObjectUnknown)
     private let listenerQueue = DispatchQueue.main
@@ -41,18 +45,27 @@ final class VolumeManager: ObservableObject {
 
     /// Sets the volume between 0 and 1, unmuting first so that dragging the slider is audible.
     func setVolume(_ newValue: Float) {
-        guard deviceID != kAudioObjectUnknown else { return }
-        if isMuted { setMuted(false) }
+        guard deviceID != kAudioObjectUnknown, canSetVolume else { return }
+        if isMuted && canMute { setMuted(false) }
         var value = min(max(newValue, 0), 1)
-        AudioObjectSetPropertyData(
+        let status = AudioObjectSetPropertyData(
             deviceID, &Self.volumeAddress, 0, nil, UInt32(MemoryLayout<Float32>.size), &value)
+        if status != noErr {
+            print("Failed to set the volume: \(status)")
+            // Publish the device's actual state, as no listener reports an unchanged value.
+            readValues()
+        }
     }
 
     func setMuted(_ muted: Bool) {
-        guard deviceID != kAudioObjectUnknown else { return }
+        guard deviceID != kAudioObjectUnknown, canMute else { return }
         var value: UInt32 = muted ? 1 : 0
-        AudioObjectSetPropertyData(
+        let status = AudioObjectSetPropertyData(
             deviceID, &Self.muteAddress, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+        if status != noErr {
+            print("Failed to set mute: \(status)")
+            readValues()
+        }
     }
 
     private func attachToDefaultDevice() {
@@ -88,5 +101,14 @@ final class VolumeManager: ObservableObject {
         if volume != volumeValue { volume = volumeValue }
         let mutedValue = hasMute && muted != 0
         if isMuted != mutedValue { isMuted = mutedValue }
+        let canSetVolumeValue = hasVolume && isSettable(&Self.volumeAddress)
+        if canSetVolume != canSetVolumeValue { canSetVolume = canSetVolumeValue }
+        let canMuteValue = hasMute && isSettable(&Self.muteAddress)
+        if canMute != canMuteValue { canMute = canMuteValue }
+    }
+
+    private func isSettable(_ address: inout AudioObjectPropertyAddress) -> Bool {
+        var settable: DarwinBoolean = false
+        return AudioObjectIsPropertySettable(deviceID, &address, &settable) == noErr && settable.boolValue
     }
 }

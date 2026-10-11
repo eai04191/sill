@@ -79,21 +79,26 @@ struct VolumePopup: View {
                     )
                     .tint(Color.primary)
                     .accessibilityLabel("Volume")
+                    // A device can report a volume without letting apps change it.
+                    .disabled(!volumeManager.canSetVolume)
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundStyle(.secondary)
                         .accessibilityHidden(true)
 
-                    Button {
-                        volumeManager.setMuted(!volumeManager.isMuted)
-                    } label: {
-                        Image(systemName: volumeManager.isMuted ? "speaker.slash.fill" : "speaker.fill")
-                            .contentTransition(.symbolEffect(.replace))
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color.primary.opacity(volumeManager.isMuted ? 0.25 : 0.1)))
+                    // Shown only for devices with a mute control that can be set.
+                    if volumeManager.canMute {
+                        Button {
+                            volumeManager.setMuted(!volumeManager.isMuted)
+                        } label: {
+                            Image(systemName: volumeManager.isMuted ? "speaker.slash.fill" : "speaker.fill")
+                                .contentTransition(.symbolEffect(.replace))
+                                .frame(width: 28, height: 28)
+                                .background(Circle().fill(Color.primary.opacity(volumeManager.isMuted ? 0.25 : 0.1)))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(volumeManager.isMuted ? "Unmute" : "Mute")
+                        .help(volumeManager.isMuted ? "Unmute" : "Mute")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(volumeManager.isMuted ? "Unmute" : "Mute")
-                    .help(volumeManager.isMuted ? "Unmute" : "Mute")
                 }
             } else {
                 Text("This output device has no volume control")
