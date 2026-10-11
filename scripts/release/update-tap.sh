@@ -1,7 +1,8 @@
 #!/bin/sh
 # Usage: update-tap.sh <version> <tap directory>
 # Writes the cask for dist/Sill-<version>.zip into a checkout of the tap, commits and pushes it. The release workflow
-# runs this after the zip is on GitHub Releases.
+# runs this after the zip is on GitHub Releases. When TAP_GITHUB_TOKEN is set, the push to GitHub uses it without
+# storing it in the checkout's git config.
 set -eu
 
 if [ "$#" -ne 2 ]; then
@@ -26,4 +27,9 @@ if git diff --cached --quiet; then
 fi
 git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
   commit -m "sill $version"
-git push
+if [ -n "${TAP_GITHUB_TOKEN:-}" ]; then
+  auth=$(printf 'x-access-token:%s' "$TAP_GITHUB_TOKEN" | base64 | tr -d '\n')
+  git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push
+else
+  git push
+fi
