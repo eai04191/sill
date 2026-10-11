@@ -9,6 +9,20 @@ struct UsageWindow: Decodable, Equatable {
     let pct: Double
     /// Time until the window resets, already formatted (e.g. "2h", "4d").
     let reset: String?
+    /// Length of the window in minutes (e.g. 300 for the 5-hour limit), when the command reports it.
+    let mins: Int?
+
+    /// The window's name from its length. Services do not agree on which limit comes first (Codex can report only a
+    /// weekly window as primary), so without a length the window is not named by its position.
+    var label: String {
+        switch mins {
+        case 10080: return "Weekly"
+        case let mins? where mins > 0 && mins % 1440 == 0: return "\(mins / 1440)-day"
+        case let mins? where mins > 0 && mins % 60 == 0: return "\(mins / 60)-hour"
+        case let mins? where mins > 0: return "\(mins)-minute"
+        default: return "Usage"
+        }
+    }
 
     var fraction: Double { min(max(pct / 100, 0), 1) }
     var percentText: String { "\(Int(pct.rounded()))%" }

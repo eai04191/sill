@@ -80,13 +80,13 @@ private struct ServiceUsageSection: View {
                 .buttonStyle(.plain)
                 .help("Open the usage page")
             }
-            ForEach(Array(usage.windows.enumerated()), id: \.offset) { index, window in
+            ForEach(Array(usage.windows.enumerated()), id: \.offset) { _, window in
                 VStack(alignment: .leading, spacing: 4) {
                     // The native linear ProgressView skipped drawing its track for some values, so use the bar's own style.
                     UsageBar(fraction: window.fraction)
                         .frame(height: 6)
                     HStack {
-                        Text(label(forWindowAt: index))
+                        Text(window.label)
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(window.percentText)
@@ -100,12 +100,5 @@ private struct ServiceUsageSection: View {
                 }
             }
         }
-    }
-
-    /// With two windows the first is the session (5-hour) limit and the second the weekly one;
-    /// a single window is not labeled by length because services differ in which one they report.
-    private func label(forWindowAt index: Int) -> String {
-        guard usage.windows.count > 1 else { return "Usage" }
-        return index == 0 ? "Session" : "Weekly"
     }
 }
