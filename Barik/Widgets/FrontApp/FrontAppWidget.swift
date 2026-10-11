@@ -9,12 +9,12 @@ final class FrontAppManager: ObservableObject {
     private var observer: NSObjectProtocol?
 
     private init() {
-        app = Self.ignoringSelf(NSWorkspace.shared.frontmostApplication) ?? Self.frontmostWindowOwner()
+        app = Self.shown(NSWorkspace.shared.frontmostApplication) ?? Self.frontmostWindowOwner()
         observer = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] notification in
             let activated = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
-            if let app = Self.ignoringSelf(activated) {
+            if let app = Self.shown(activated) {
                 self?.app = app
             }
         }
@@ -36,9 +36,15 @@ final class FrontAppManager: ObservableObject {
         return nil
     }
 
-    /// Barik becomes active when it launches or a popup takes focus; keep showing the app the user was working in.
-    private static func ignoringSelf(_ app: NSRunningApplication?) -> NSRunningApplication? {
-        app?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : app
+    /// The app to show, or nil to keep showing the app the user was working in: only regular apps, which have a
+    /// menu bar of their own, as the macOS menu bar shows. Barik becomes active when it launches or a popup takes
+    /// focus, and macOS makes loginwindow, a background process, active when the active app quits until another app
+    /// is activated.
+    private static func shown(_ app: NSRunningApplication?) -> NSRunningApplication? {
+        guard let app, app.activationPolicy == .regular,
+            app.processIdentifier != ProcessInfo.processInfo.processIdentifier
+        else { return nil }
+        return app
     }
 }
 
