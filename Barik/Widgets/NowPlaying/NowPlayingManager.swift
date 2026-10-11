@@ -188,8 +188,9 @@ final class MediaControl {
         let payload: MediaControlPayload
     }
 
-    /// Fetches the current artwork, which the stream omits to avoid sending it with every update.
-    static func fetchArtwork() -> (data: Data, fileExtension: String)? {
+    /// Fetches the current artwork, which the stream omits to avoid sending it with every update, with the key of the
+    /// track `get` reported it for, as the track can change between a stream update and `get`.
+    static func fetchArtwork() -> (trackKey: String, artwork: (data: Data, fileExtension: String)?)? {
         guard let executableURL else { return nil }
         let process = Process()
         process.executableURL = executableURL
@@ -208,14 +209,16 @@ final class MediaControl {
         }
         let output = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        guard let json = try? JSONSerialization.jsonObject(with: output) as? [String: Any],
-            let base64 = json["artworkData"] as? String,
-            let data = Data(base64Encoded: base64)
+        guard let payload = try? JSONDecoder().decode(MediaControlPayload.self, from: output),
+            let json = try? JSONSerialization.jsonObject(with: output) as? [String: Any]
         else {
             return nil
         }
+        guard let base64 = json["artworkData"] as? String, let data = Data(base64Encoded: base64) else {
+            return (payload.trackKey, nil)
+        }
         let fileExtension = (json["artworkMimeType"] as? String) == "image/png" ? "png" : "jpg"
-        return (data, fileExtension)
+        return (payload.trackKey, (data, fileExtension))
     }
 
     static func run(_ command: String) {
@@ -272,10 +275,12 @@ final class NowPlayingManager: ObservableObject {
         if payload.trackKey != artworkTrackKey || artworkURL == nil {
             let trackKey = payload.trackKey
             DispatchQueue.global(qos: .utility).async { [weak self] in
-                let artwork = MediaControl.fetchArtwork()
+                let fetched = MediaControl.fetchArtwork()
                 DispatchQueue.main.async {
-                    guard let self, self.payload?.trackKey == trackKey else { return }
-                    self.setArtwork(artwork, for: trackKey)
+                    // The artwork is stored only for the track get reported it for, which is still the current one.
+                    guard let self, let fetched, fetched.trackKey == trackKey, self.payload?.trackKey == trackKey
+                    else { return }
+                    self.setArtwork(fetched.artwork, for: trackKey)
                     self.publish()
                 }
             }
