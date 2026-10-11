@@ -1,14 +1,13 @@
 import SwiftUI
 
 enum MenuBarPopupVariant: String, Equatable {
-    case box, vertical, horizontal, settings
+    case box, vertical, horizontal
 }
 
 struct MenuBarPopupVariantView: View {
     private let box: AnyView?
     private let vertical: AnyView?
     private let horizontal: AnyView?
-    private let settings: AnyView?
 
     var selectedVariant: MenuBarPopupVariant
     @State private var hovered = false
@@ -21,8 +20,7 @@ struct MenuBarPopupVariantView: View {
         onVariantSelected: ((MenuBarPopupVariant) -> Void)? = nil,
         @ViewBuilder box: () -> some View = { EmptyView() },
         @ViewBuilder vertical: () -> some View = { EmptyView() },
-        @ViewBuilder horizontal: () -> some View = { EmptyView() },
-        @ViewBuilder settings: () -> some View = { EmptyView() }
+        @ViewBuilder horizontal: () -> some View = { EmptyView() }
     ) {
         self.selectedVariant = selectedVariant
         self.onVariantSelected = onVariantSelected
@@ -30,15 +28,12 @@ struct MenuBarPopupVariantView: View {
         let boxView = box()
         let verticalView = vertical()
         let horizontalView = horizontal()
-        let settingsView = settings()
 
         self.box = (boxView is EmptyView) ? nil : AnyView(boxView)
         self.vertical =
             (verticalView is EmptyView) ? nil : AnyView(verticalView)
         self.horizontal =
             (horizontalView is EmptyView) ? nil : AnyView(horizontalView)
-        self.settings =
-            (settingsView is EmptyView) ? nil : AnyView(settingsView)
     }
 
     var body: some View {
@@ -63,10 +58,6 @@ struct MenuBarPopupVariantView: View {
                         variant: .horizontal,
                         systemImageName: "rectangle.inset.filled")
                 }
-                if settings != nil {
-                    variantButton(
-                        variant: .settings, systemImageName: "gearshape.fill")
-                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 5)
@@ -89,8 +80,6 @@ struct MenuBarPopupVariantView: View {
             if let view = vertical { view }
         case .horizontal:
             if let view = horizontal { view }
-        case .settings:
-            if let view = settings { view }
         }
     }
 
