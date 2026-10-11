@@ -85,13 +85,14 @@ extension NSWindow {
     /// as frosted glass, which only blurs what is behind it, and Barik's bar never becomes key so it does not take the
     /// keyboard from the app in use. No public API changes this (overriding `isKeyWindow` or setting the SwiftUI
     /// `appearsActive` and `controlActiveState` environment values does not), so this uses the private
-    /// `_setForceMainAppearance:`, which keeps the active look without making the window key. If a later macOS removes
-    /// it, the window keeps the frosted glass.
-    func forceActiveGlassAppearance() {
+    /// `_setForceMainAppearance:`, which keeps the active look without making the window key. Callers turn it on only
+    /// with Liquid Glass enabled and off when it is disabled, so the private API is not used without glass. If a later
+    /// macOS removes it, the window keeps the frosted glass.
+    func setForcesActiveGlassAppearance(_ forces: Bool) {
         let selector = NSSelectorFromString("_setForceMainAppearance:")
         guard responds(to: selector) else { return }
         typealias Setter = @convention(c) (AnyObject, Selector, Bool) -> Void
-        unsafeBitCast(method(for: selector), to: Setter.self)(self, selector, true)
+        unsafeBitCast(method(for: selector), to: Setter.self)(self, selector, forces)
     }
 }
 

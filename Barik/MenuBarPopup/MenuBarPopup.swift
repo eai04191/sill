@@ -124,9 +124,16 @@ class MenuBarPopup {
     /// Glass popups are dark in either system appearance, like the Control Center modules in macOS 26 and later.
     /// The window appearance, not the SwiftUI color scheme, decides whether Liquid Glass is drawn light or dark.
     /// The material popup keeps the system appearance and draws its own black background.
+    /// The glass also keeps its active look while the popup fades out after it stops being key.
     private static func applyAppearance(to panel: NSPanel) {
-        panel.appearance = ConfigManager.shared.config.usesLiquidGlass ? NSAppearance(named: .darkAqua) : nil
+        let usesGlass = ConfigManager.shared.config.usesLiquidGlass
+        panel.appearance = usesGlass ? NSAppearance(named: .darkAqua) : nil
+        if usesGlass || panelForcesActiveGlass {
+            panel.setForcesActiveGlassAppearance(usesGlass)
+            panelForcesActiveGlass = usesGlass
+        }
     }
+    private static var panelForcesActiveGlass = false
 
     /// Fades a glass popup out with its window. Liquid Glass ignores the opacity of the SwiftUI views around it, so
     /// fading the view would leave the glass in place until the window is ordered out.
@@ -168,8 +175,6 @@ class MenuBarPopup {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
-        // Keeps the glass active while the popup fades out after it stops being key.
-        newPanel.forceActiveGlassAppearance()
 
         panel = newPanel
     }

@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var backgroundPanel: NSPanel?
     private var menuBarPanel: NSPanel?
     private var configCancellable: AnyCancellable?
+    private var menuBarForcesActiveGlass = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let error = ConfigManager.shared.initError {
@@ -56,6 +57,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             level: menuBarLevel(),
             hostingRootView: AnyView(MenuBarView()),
             fixedFrame: true)
+        updateActiveGlassAppearance()
+    }
+
+    /// Only the bar has glass, and only with Liquid Glass enabled; the config may turn it on or off while running.
+    private func updateActiveGlassAppearance() {
+        let usesGlass = ConfigManager.shared.config.usesLiquidGlass
+        if usesGlass || menuBarForcesActiveGlass {
+            menuBarPanel?.setForcesActiveGlassAppearance(usesGlass)
+            menuBarForcesActiveGlass = usesGlass
+        }
     }
 
     /// At the top the bar stays behind the system menu bar, which appears over it on hover. At the bottom nothing
@@ -96,7 +107,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
-        newPanel.forceActiveGlassAppearance()
         let hostingView = NSHostingView(rootView: hostingRootView)
         if fixedFrame {
             hostingView.sizingOptions = []
