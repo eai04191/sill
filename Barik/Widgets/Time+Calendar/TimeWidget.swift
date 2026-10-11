@@ -40,14 +40,13 @@ struct TimeWidget: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 0) {
             Text(barTime)
-                .fontWeight(.semibold)
             if let event = calendarManager.nextEvent, calendarShowEvents {
                 Text(eventText(for: event))
                     .opacity(0.8)
                     .font(.subheadline)
             }
         }
-        .font(.headline)
+        .font(.barText)
         // The shadow keeps the white text legible on the wallpaper; glass already provides the contrast.
         .applying(!configManager.config.usesLiquidGlass) { $0.shadow(color: .foregroundShadowOutside, radius: 3) }
         .task(id: tickInterval) {

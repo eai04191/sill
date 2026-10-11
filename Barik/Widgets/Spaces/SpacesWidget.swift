@@ -40,7 +40,7 @@ private struct SpaceView: View {
             Spacer().frame(width: 10)
             if showKey {
                 Text(space.id)
-                    .font(.headline)
+                    .font(.barText)
                     .frame(minWidth: 15)
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer().frame(width: 5)
