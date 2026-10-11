@@ -4,8 +4,8 @@ struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
 
     var body: some View {
-        // With the system theme, glass widgets are dark glass with white text like the glass popups and the Control
-        // Center. The HIG has small glass elements adapt to the content behind them, but only system components do
+        // With the system theme, glass widgets are dark glass with white text, so the bar keeps its white text on
+        // the wallpaper; popups follow the system appearance (see MenuBarPopup). The HIG has small glass elements adapt to the content behind them, but only system components do
         // that; custom glass keeps the window's appearance whatever is behind it. The window appearance decides how
         // the glass is drawn, so it is set with preferredColorScheme.
         let theme: ColorScheme? =

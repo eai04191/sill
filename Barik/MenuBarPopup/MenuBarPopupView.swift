@@ -47,10 +47,6 @@ struct MenuBarPopupView<Content: View>: View {
                     withAnimation(PopupMotion.hideAnimation) { isPresented = false }
                 }
         }
-        // Popups are always dark like the Control Center (MenuBarPopup gives their window the dark appearance, which
-        // the glass follows).
-        .foregroundStyle(Color.white)
-        .environment(\.colorScheme, .dark)
         .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
         // MenuBarPopup builds a new view for every popup and may post willShowWindow before this view subscribes,
         // so also show the popup when the view appears; otherwise it would stay invisible. Showing it twice animates

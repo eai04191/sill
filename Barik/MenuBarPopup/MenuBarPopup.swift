@@ -122,11 +122,16 @@ class MenuBarPopup {
             element: contentView, notification: .layoutChanged, userInfo: [.uiElements: [contentView]])
     }
 
-    /// Glass popups are dark in either system appearance, like the Control Center modules in macOS 26 and later.
-    /// The window appearance, not the SwiftUI color scheme, decides whether Liquid Glass is drawn light or dark.
-    /// The glass also keeps its active look while the popup disappears after it stops being key.
+    /// Popups follow the `theme` setting: the system appearance by default, as the HIG asks apps to follow the
+    /// appearance people choose, or always light or dark. The window appearance, not the SwiftUI color scheme,
+    /// decides whether Liquid Glass is drawn light or dark. The glass also keeps its active look while the popup
+    /// disappears after it stops being key.
     private static func applyAppearance(to panel: NSPanel) {
-        panel.appearance = NSAppearance(named: .darkAqua)
+        switch ConfigManager.shared.config.rootToml.theme {
+        case "dark": panel.appearance = NSAppearance(named: .darkAqua)
+        case "light": panel.appearance = NSAppearance(named: .aqua)
+        default: panel.appearance = nil
+        }
         panel.setForcesActiveGlassAppearance(true)
     }
 
