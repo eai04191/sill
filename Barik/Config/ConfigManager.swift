@@ -111,17 +111,26 @@ final class ConfigManager: ObservableObject {
     }
 
     /// Watches the config file for changes. Editors that save atomically replace the file, so the watched file is
-    /// deleted or renamed; the new file at the same path is then watched instead, and the config is read again.
+    /// deleted or renamed; the new file at the same path is then watched instead, and the config is read again once it
+    /// exists. While the file is missing, opening it is retried with growing delays, and it is not read.
     /// Watching, rewatching and reloading all run on one serial queue, so an older reload never publishes after a
     /// newer one.
-    private func startWatchingFile(at path: String) {
+    /// - Parameters:
+    ///   - reloadsWhenOpened: Reads the config once the file is opened, for a file that replaced the watched one.
+    ///   - retryDelay: The delay before the next attempt when the file is missing.
+    private func startWatchingFile(
+        at path: String, reloadsWhenOpened: Bool = false, retryDelay: TimeInterval = 0.25
+    ) {
         let descriptor = open(path, O_EVTONLY)
         fileDescriptor = descriptor
         guard descriptor != -1 else {
             // The replacing file does not exist yet; try again until it does, or later edits would go unnoticed.
-            watchQueue.asyncAfter(deadline: .now() + 0.25) { [weak self] in
-                self?.startWatchingFile(at: path)
-                self?.parseConfigFile(at: path)
+            if retryDelay == 0.25 {
+                print("Config file is missing, waiting for it:", path)
+            }
+            watchQueue.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
+                self?.startWatchingFile(
+                    at: path, reloadsWhenOpened: true, retryDelay: min(retryDelay * 2, 5))
             }
             return
         }
@@ -134,9 +143,10 @@ final class ConfigManager: ObservableObject {
             }
             if source.data.contains(.delete) || source.data.contains(.rename) {
                 source.cancel()
-                self.startWatchingFile(at: path)
+                self.startWatchingFile(at: path, reloadsWhenOpened: true)
+            } else {
+                self.parseConfigFile(at: path)
             }
-            self.parseConfigFile(at: path)
         }
         // Close this watcher's own descriptor; fileDescriptor may already belong to the watcher of the new file.
         source.setCancelHandler {
@@ -144,6 +154,9 @@ final class ConfigManager: ObservableObject {
         }
         fileWatchSource = source
         source.resume()
+        if reloadsWhenOpened {
+            parseConfigFile(at: path)
+        }
     }
 
     /// Writes on the watch queue, where the config is also reloaded, so a reload never reads a half-written file and
