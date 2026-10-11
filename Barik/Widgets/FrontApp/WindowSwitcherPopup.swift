@@ -130,7 +130,17 @@ struct WindowSwitcherPopup: View {
         return Button {
             Task { await model.focus(window) }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                // The app's name heads the group and is read in the row's label.
+                Group {
+                    if let icon = window.bundleIdentifier.flatMap({ model.icons[$0] }) {
+                        Image(nsImage: icon).resizable()
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(width: 16, height: 16)
+                .accessibilityHidden(true)
                 Text(window.displayTitle)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -139,6 +149,7 @@ struct WindowSwitcherPopup: View {
                     .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
                     .frame(maxWidth: 120, alignment: .trailing)
                     .layoutPriority(1)
+                    .padding(.leading, 4)
             }
             .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
             .padding(.horizontal, 8)

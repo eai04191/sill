@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// A window as AeroSpace lists it.
 struct AeroSpaceWindow: Decodable, Identifiable, Equatable {
@@ -106,6 +106,8 @@ final class WindowSwitcherModel: ObservableObject {
     @Published private(set) var state: State = .loading
     /// Set when focusing a window failed, such as one closed after the list was loaded, so the popup says so.
     @Published private(set) var focusFailed = false
+    /// The icons of the listed windows' apps, by bundle identifier, read once for each app when the list is loaded.
+    private(set) var icons: [String: NSImage] = [:]
 
     func load() async {
         state = .loading
@@ -114,9 +116,19 @@ final class WindowSwitcherModel: ObservableObject {
         }.value
         switch result {
         case .success(let windows):
+            loadIcons(for: windows)
             state = .loaded(windows)
         case .failure(let error):
             state = .failed(error as? AeroSpace.Failure ?? .commandFailed)
+        }
+    }
+
+    /// Reads the icon of each app in the list that has none yet. An app found by neither AeroSpace's bundle identifier
+    /// nor Launch Services, such as one deleted while it runs, is listed without an icon.
+    private func loadIcons(for windows: [AeroSpaceWindow]) {
+        for bundleIdentifier in Set(windows.compactMap(\.bundleIdentifier)) where icons[bundleIdentifier] == nil {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else { continue }
+            icons[bundleIdentifier] = NSWorkspace.shared.icon(forFile: url.path)
         }
     }
 
