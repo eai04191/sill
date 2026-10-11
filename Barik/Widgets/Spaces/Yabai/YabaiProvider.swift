@@ -41,7 +41,8 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         for i in 0..<resultSpaces.count {
             resultSpaces[i].windows.sort { $0.stackIndex < $1.stackIndex }
         }
-        return resultSpaces.filter { !$0.windows.isEmpty }
+        // Spaces without windows are left out, except the focused one, so the bar still shows where the user is.
+        return resultSpaces.filter { !$0.windows.isEmpty || $0.isFocused }
     }
 
     func focusSpace(spaceId: String, needWindowFocus: Bool) throws {
