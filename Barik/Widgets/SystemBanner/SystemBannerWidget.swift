@@ -52,7 +52,6 @@ struct SystemBannerWidget: View {
             if configManager.reloadError != nil {
                 ConfigErrorBannerWidget()
             }
-            UpdateBannerWidget()
             if whatsNew.isShown {
                 ChangelogBannerWidget()
             }
