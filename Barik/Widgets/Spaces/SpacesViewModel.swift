@@ -32,7 +32,8 @@ class SpacesViewModel: ObservableObject {
     private var fetchesAgain = false
     private var observers: [NSObjectProtocol] = []
     private var configCancellable: AnyCancellable?
-    /// The window manager and CLI path the provider was made for, or nil when there is no provider.
+    /// The window manager, CLI path and whether it was executable when the provider was picked, or nil when no window
+    /// manager runs. A CLI installed at the same path later is picked up on the next app launch or config change.
     private var providerSource: String?
     /// The last error printed, so a failure that lasts is printed once instead of on every fetch.
     private var lastPrintedError: String?
@@ -70,20 +71,22 @@ class SpacesViewModel: ObservableObject {
         let runningApps = NSWorkspace.shared.runningApplications.compactMap {
             $0.localizedName?.lowercased()
         }
-        let windowManager: (name: String, path: String)?
+        let windowManager: (name: String, path: String, isExecutable: Bool)?
         if runningApps.contains("yabai") {
-            windowManager = ("yabai", config.yabai.path)
+            let path = config.yabai.path
+            windowManager = ("yabai", path, FileManager.default.isExecutableFile(atPath: path))
         } else if runningApps.contains("aerospace") {
-            windowManager = ("aerospace", config.aerospace.path)
+            let path = config.aerospace.path
+            windowManager = ("aerospace", path, FileManager.default.isExecutableFile(atPath: path))
         } else {
             windowManager = nil
         }
-        let source = windowManager.map { "\($0.name) at \($0.path)" }
+        let source = windowManager.map { "\($0.name) at \($0.path), executable: \($0.isExecutable)" }
         guard source != providerSource else { return }
         providerSource = source
         lastPrintedError = nil
 
-        if let windowManager, !FileManager.default.isExecutableFile(atPath: windowManager.path) {
+        if let windowManager, !windowManager.isExecutable {
             print(
                 "Spaces: \(windowManager.name) is running, but \(windowManager.path) is not an executable. "
                     + "Set \(windowManager.name).path in the config.")
