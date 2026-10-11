@@ -10,6 +10,7 @@ final class ConfigManager: ObservableObject {
     
     private var fileWatchSource: DispatchSourceFileSystemObject?
     private var fileDescriptor: CInt = -1
+    private let watchQueue = DispatchQueue(label: "Barik.ConfigManager.watch")
     private var configFilePath: String?
 
     private init() {
@@ -108,25 +109,29 @@ final class ConfigManager: ObservableObject {
 
     /// Watches the config file for changes. Editors that save atomically replace the file, so the watched file is
     /// deleted or renamed; the new file at the same path is then watched instead, and the config is read again.
+    /// Watching, rewatching and reloading all run on one serial queue, so an older reload never publishes after a
+    /// newer one.
     private func startWatchingFile(at path: String) {
         let descriptor = open(path, O_EVTONLY)
         fileDescriptor = descriptor
-        if descriptor == -1 { return }
+        guard descriptor != -1 else {
+            // The replacing file does not exist yet; try again until it does, or later edits would go unnoticed.
+            watchQueue.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.startWatchingFile(at: path)
+                self?.parseConfigFile(at: path)
+            }
+            return
+        }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor, eventMask: [.write, .delete, .rename],
-            queue: DispatchQueue.global())
+            queue: watchQueue)
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source, let path = self.configFilePath else {
                 return
             }
             if source.data.contains(.delete) || source.data.contains(.rename) {
                 source.cancel()
-                // The replacing file may not exist yet right after the old one goes away.
-                DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-                    self.startWatchingFile(at: path)
-                    self.parseConfigFile(at: path)
-                }
-                return
+                self.startWatchingFile(at: path)
             }
             self.parseConfigFile(at: path)
         }
