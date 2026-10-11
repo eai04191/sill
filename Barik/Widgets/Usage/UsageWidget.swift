@@ -68,9 +68,7 @@ private struct ServiceUsageView: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(service.logoName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 13, height: 13)
+                .font(.barText)
             ForEach(Array(usage.windows.enumerated()), id: \.offset) { index, window in
                 if index > 0 {
                     Circle()

@@ -57,8 +57,8 @@ enum UsageService: String, CaseIterable, Identifiable {
 
     var logoName: String {
         switch self {
-        case .claude: "ClaudeLogo"
-        case .codex: "CodexLogo"
+        case .claude: "claude.logo"
+        case .codex: "openai.logo"
         }
     }
 

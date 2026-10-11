@@ -67,9 +67,7 @@ private struct ServiceUsageSection: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(service.logoName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
+                    .font(.headline)
                 Text(service.displayName)
                     .font(.headline)
                 Spacer()
