@@ -334,13 +334,7 @@ struct WidgetBackgroundConfig: Decodable {
         
         displayed = try container.decodeIfPresent(Bool.self, forKey: .displayed) ?? false
         
-        var materialIndex = try container.decodeIfPresent(Int.self, forKey: .blur) ?? 1
-        if materialIndex < 1 {
-            materialIndex = 1
-        } else if materialIndex > 6 {
-            materialIndex = 6
-        }
-        
+        let materialIndex = try container.decodeBlurIndex(forKey: .blur, maximum: 6)
         blur = [.ultraThin, .thin, .regular, .thick, .ultraThick, .bar][materialIndex - 1]
     }
 
@@ -367,13 +361,7 @@ struct BackgroundConfig: Decodable {
         displayed = try container.decodeIfPresent(Bool.self, forKey: .displayed) ?? true
         height = try container.decodeIfPresent(BackgroundForegroundHeight.self, forKey: .height) ?? .barikDefault
         
-        var materialIndex = try container.decodeIfPresent(Int.self, forKey: .blur) ?? 1
-        if materialIndex < 1 {
-            materialIndex = 1
-        } else if materialIndex > 7 {
-            materialIndex = 7
-        }
-        
+        let materialIndex = try container.decodeBlurIndex(forKey: .blur, maximum: 7)
         blur = [.ultraThin, .thin, .regular, .thick, .ultraThick, .bar, .bar][materialIndex - 1]
         self.black = materialIndex == 7
     }
@@ -391,6 +379,19 @@ struct BackgroundConfig: Decodable {
         case .float(let value):
             return CGFloat(value)
         }
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// Reads a `blur` index from 1 up to `maximum`. Without it the blur is 3 (`.regular`), as when the whole table is
+    /// not set. A value outside the range is an error instead of being changed to the nearest valid one.
+    fileprivate func decodeBlurIndex(forKey key: Key, maximum: Int) throws -> Int {
+        let index = try decodeIfPresent(Int.self, forKey: key) ?? 3
+        guard (1...maximum).contains(index) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: key, in: self, debugDescription: "blur must be from 1 to \(maximum), but is \(index)")
+        }
+        return index
     }
 }
 
