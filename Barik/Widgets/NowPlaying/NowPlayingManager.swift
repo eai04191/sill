@@ -6,7 +6,7 @@ import Foundation
 
 /// Represents the current playback state.
 enum PlaybackState: String {
-    case playing, paused, stopped
+    case playing, paused
 }
 
 // MARK: - Now Playing Song Model
@@ -14,13 +14,28 @@ enum PlaybackState: String {
 /// A model representing the currently playing song.
 struct NowPlayingSong: Equatable, Identifiable {
     var id: String { title + artist }
-    let appName: String
     let state: PlaybackState
     let title: String
     let artist: String
     let albumArtURL: URL?
-    let position: Double?
     let duration: Double?  // Duration in seconds
+    /// The elapsed time in seconds at `elapsedTimeMeasuredAt`. The model holds this measurement rather than the
+    /// position, so that it does not change while the song plays and the bar is not re-rendered for the position.
+    let elapsedTime: Double?
+    let elapsedTimeMeasuredAt: Date?
+    let playbackRate: Double
+
+    /// The position in seconds at `date`, estimated from the elapsed time while playing.
+    func position(at date: Date) -> Double? {
+        guard var position = elapsedTime else { return nil }
+        if state == .playing, let elapsedTimeMeasuredAt {
+            position += date.timeIntervalSince(elapsedTimeMeasuredAt) * playbackRate
+        }
+        if let duration {
+            position = min(max(position, 0), duration)
+        }
+        return position
+    }
 }
 
 // MARK: - media-control Payload
@@ -58,33 +73,18 @@ struct MediaControlPayload: Decodable, Equatable {
         [bundleIdentifier, title, artist, album].map { $0 ?? "" }.joined(separator: "\u{1f}")
     }
 
-    /// Builds the song model, estimating the current position from the elapsed time and its timestamp.
-    func song(artworkURL: URL?, now: Date = Date()) -> NowPlayingSong? {
+    /// Builds the song model.
+    func song(artworkURL: URL?) -> NowPlayingSong? {
         guard let title, !title.isEmpty else { return nil }
-        let isPlaying = playing ?? false
-        var position = elapsedTime
-        if isPlaying, let elapsed = elapsedTime, let measured = timestampDate {
-            position = elapsed + now.timeIntervalSince(measured) * (playbackRate ?? 1)
-        }
-        if let current = position, let duration {
-            position = min(max(current, 0), duration)
-        }
         return NowPlayingSong(
-            appName: bundleIdentifier.flatMap(Self.appName(for:)) ?? "",
-            state: isPlaying ? .playing : .paused,
+            state: playing == true ? .playing : .paused,
             title: title,
             artist: artist ?? "",
             albumArtURL: artworkURL,
-            position: position,
-            duration: duration)
-    }
-
-    private static func appName(for bundleIdentifier: String) -> String? {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            return nil
-        }
-        return FileManager.default.displayName(atPath: url.path)
-            .replacingOccurrences(of: ".app", with: "")
+            duration: duration,
+            elapsedTime: elapsedTime,
+            elapsedTimeMeasuredAt: timestampDate,
+            playbackRate: playbackRate ?? 1)
     }
 }
 
@@ -207,7 +207,6 @@ final class NowPlayingManager: ObservableObject {
     private var payload: MediaControlPayload?
     private var artworkURL: URL?
     private var artworkTrackKey: String?
-    private var positionTimer: AnyCancellable?
     private var terminateObserver: NSObjectProtocol?
 
     /// Album art is written to this directory so the existing URL-based image views can load it.
@@ -222,14 +221,6 @@ final class NowPlayingManager: ObservableObject {
             self?.update(payload)
         }
         mediaControl?.start()
-
-        // Only the position changes while a song plays, so recompute it locally instead of polling media-control.
-        positionTimer = Timer.publish(every: 0.5, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                guard let self, self.payload?.playing == true else { return }
-                self.publish()
-            }
 
         terminateObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main

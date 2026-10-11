@@ -82,20 +82,7 @@ private struct NowPlayingVerticalPopup: View {
                         .fontWeight(.light)
                 }
 
-                // Live streams report no duration or position; keep the song and its controls without the timeline.
-                if let duration = song.duration, let position = song.position {
-                    HStack {
-                        Text(timeString(from: position))
-                            .font(.caption)
-                        ProgressView(value: position, total: duration)
-                            .progressViewStyle(LinearProgressViewStyle())
-                            .tint(Color.primary)
-                        Text("-" + timeString(from: duration - position))
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                }
+                PlaybackTimeline(song: song)
 
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
@@ -154,20 +141,7 @@ struct NowPlayingHorizontalPopup: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                // Live streams report no duration or position; keep the song and its controls without the timeline.
-                if let duration = song.duration, let position = song.position {
-                    HStack {
-                        Text(timeString(from: position))
-                            .font(.caption)
-                        ProgressView(value: position, total: duration)
-                            .progressViewStyle(LinearProgressViewStyle())
-                            .tint(Color.primary)
-                        Text("-" + timeString(from: duration - position))
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                }
+                PlaybackTimeline(song: song)
 
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
@@ -185,6 +159,30 @@ struct NowPlayingHorizontalPopup: View {
             .padding(.vertical, 20)
             .frame(width: 300, height: 180)
             .animation(.easeInOut, value: song.albumArtURL)
+        }
+    }
+}
+
+/// The elapsed and remaining time around a progress bar, updated while the song plays.
+private struct PlaybackTimeline: View {
+    let song: NowPlayingSong
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+            // Live streams report no duration or position; keep the song and its controls without the timeline.
+            if let duration = song.duration, let position = song.position(at: context.date) {
+                HStack {
+                    Text(timeString(from: position))
+                        .font(.caption)
+                    ProgressView(value: position, total: duration)
+                        .progressViewStyle(LinearProgressViewStyle())
+                        .tint(Color.primary)
+                    Text("-" + timeString(from: duration - position))
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            }
         }
     }
 }
