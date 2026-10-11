@@ -15,6 +15,12 @@ struct BatteryWidget: View {
     @State private var rect: CGRect = CGRect()
 
     var body: some View {
+        if batteryManager.hasBattery {
+            battery
+        }
+    }
+
+    private var battery: some View {
         ZStack {
             ZStack(alignment: .leading) {
                 BatteryBodyView(mask: false)

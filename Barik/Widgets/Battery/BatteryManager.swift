@@ -7,6 +7,8 @@ class BatteryManager: ObservableObject {
     /// One manager, polling every second, for all battery widgets on the bar.
     static let inUse = SharedWhileInUse<BatteryManager>()
 
+    /// Whether the Mac has an internal battery. Desktop Macs have none, and the widget shows nothing then.
+    @Published var hasBattery: Bool = false
     @Published var batteryLevel: Int = 0
     @Published var isCharging: Bool = false
     @Published var isPluggedIn: Bool = false
@@ -34,7 +36,8 @@ class BatteryManager: ObservableObject {
         timer = nil
     }
 
-    /// This method updates the battery level and charging state.
+    /// This method updates the battery level and charging state from the internal battery. Other power sources, such
+    /// as a UPS, are ignored, so they neither replace the battery's values nor show a battery on a desktop Mac.
     func updateBatteryStatus() {
         guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
             let sources = IOPSCopyPowerSourcesList(snapshot)?
@@ -43,26 +46,31 @@ class BatteryManager: ObservableObject {
             return
         }
 
-        for source in sources {
-            if let description = IOPSGetPowerSourceDescription(
-                snapshot, source)?.takeUnretainedValue() as? [String: Any],
-                let currentCapacity = description[
-                    kIOPSCurrentCapacityKey as String] as? Int,
-                let maxCapacity = description[kIOPSMaxCapacityKey as String]
-                    as? Int,
-                let charging = description[kIOPSIsChargingKey as String]
-                    as? Bool,
-                let powerSourceState = description[
-                    kIOPSPowerSourceStateKey as String] as? String
-            {
-                let isAC = (powerSourceState == kIOPSACPowerValue)
-
-                DispatchQueue.main.async {
-                    self.batteryLevel = (currentCapacity * 100) / maxCapacity
-                    self.isCharging = charging
-                    self.isPluggedIn = isAC
-                }
+        let battery = sources.lazy
+            .compactMap {
+                IOPSGetPowerSourceDescription(snapshot, $0)?.takeUnretainedValue() as? [String: Any]
             }
+            .first { $0[kIOPSTypeKey as String] as? String == kIOPSInternalBatteryType }
+
+        guard let battery,
+            let currentCapacity = battery[kIOPSCurrentCapacityKey as String] as? Int,
+            let maxCapacity = battery[kIOPSMaxCapacityKey as String] as? Int,
+            maxCapacity > 0,
+            let charging = battery[kIOPSIsChargingKey as String] as? Bool,
+            let powerSourceState = battery[kIOPSPowerSourceStateKey as String] as? String
+        else {
+            DispatchQueue.main.async {
+                self.hasBattery = false
+            }
+            return
+        }
+        let isAC = (powerSourceState == kIOPSACPowerValue)
+
+        DispatchQueue.main.async {
+            self.hasBattery = true
+            self.batteryLevel = (currentCapacity * 100) / maxCapacity
+            self.isCharging = charging
+            self.isPluggedIn = isAC
         }
     }
 }
