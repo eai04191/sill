@@ -1,8 +1,8 @@
-import EventKit
 import SwiftUI
 
 struct BatteryPopup: View {
-    @StateObject private var batteryManager = BatteryManager()
+    /// The widget's manager, so the ring opens at the current level instead of animating up from 0%.
+    @ObservedObject var batteryManager: BatteryManager
 
     var body: some View {
         ZStack {
@@ -36,6 +36,9 @@ struct BatteryPopup: View {
         }
         .frame(width: 60, height: 60)
         .padding(30)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Battery")
+        .accessibilityValue(batteryManager.accessibilityValue)
     }
 
     private var batteryColor: Color {
@@ -55,7 +58,7 @@ struct BatteryPopup: View {
 
 struct BatteryPopup_Previews: PreviewProvider {
     static var previews: some View {
-        BatteryPopup()
+        BatteryPopup(batteryManager: BatteryManager())
             .background(Color.black)
             .previewLayout(.sizeThatFits)
     }
