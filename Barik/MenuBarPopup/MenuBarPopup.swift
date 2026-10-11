@@ -27,11 +27,6 @@ class HidingPanel: NSPanel, NSWindowDelegate {
 class MenuBarPopup {
     static var lastContentIdentifier: String? = nil
 
-    /// The panel edge next to the bar, where the popup is anchored before MenuBarPopupView shifts it into the screen.
-    private static func edgeY(of panel: NSPanel) -> CGFloat {
-        ConfigManager.shared.config.position == .bottom ? panel.frame.height : 0
-    }
-
     /// Whether a popup is shown or about to be shown, as opposed to hidden or fading out.
     private static var isShown = false
     /// The delayed step of the latest show or hide: showing the new content once the old content has faded, or
@@ -98,11 +93,8 @@ class MenuBarPopup {
     ) {
         panel.contentView = NSHostingView(
             rootView:
-                ZStack {
-                    MenuBarPopupView {
-                        content()
-                    }
-                    .position(x: rect.midX, y: edgeY(of: panel))
+                MenuBarPopupView(anchorX: rect.midX) {
+                    content()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
