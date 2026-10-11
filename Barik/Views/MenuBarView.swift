@@ -145,6 +145,11 @@ struct MenuBarView: View {
         case "system-banner":
             SystemBannerWidget()
 
+        case "center":
+            // A marker for CenteredSections, not a widget. Without exactly two markers the widgets are laid out in
+            // one row, and the markers are left out of it.
+            EmptyView()
+
         default:
             Text("?\(item.id)?").foregroundColor(.red)
         }
