@@ -13,12 +13,12 @@ struct VolumeWidget: View {
         if let volume = volumeManager.volume {
             HStack(spacing: 5) {
                 Image(systemName: VolumeSymbol.name(volume: volume, muted: volumeManager.isMuted))
-                    .font(.system(size: 13))
+                    .font(.barText)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: 18, alignment: .leading)
                 if showPercentage {
                     Text("\(Int((volume * 100).rounded()))%")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.barText)
                         .monospacedDigit()
                         .opacity(volumeManager.isMuted ? 0.5 : 1)
                 }

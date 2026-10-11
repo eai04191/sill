@@ -69,7 +69,7 @@ private struct ServiceUsageView: View {
                 UsageBar(fraction: window.fraction)
                     .frame(width: 28, height: 4)
                 Text(window.reset.map { "\(window.percentText) \($0)" } ?? window.percentText)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.barText)
                     .monospacedDigit()
             }
         }

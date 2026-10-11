@@ -60,7 +60,7 @@ struct FrontAppWidget: View {
                         .frame(width: 16, height: 16)
                 }
                 Text(name)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.barText)
                     .lineLimit(1)
             }
             .experimentalConfiguration(cornerRadius: 15)
