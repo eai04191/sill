@@ -203,13 +203,19 @@ final class ConfigManager: ObservableObject {
     }
 
     func resolvedWidgetConfig(for item: TomlWidgetItem) -> ConfigData {
-        let global = globalWidgetConfig(for: item.id)
-        if item.inlineParams.isEmpty {
-            return global
-        }
-        var merged = global
-        for (key, value) in item.inlineParams {
-            merged[key] = value
+        Self.merging(item.inlineParams, into: globalWidgetConfig(for: item.id))
+    }
+
+    /// Inline values replace global ones, except tables, which are merged key by key. An inline
+    /// `calendar = { format = ... }` then keeps the other keys of the global calendar table.
+    private static func merging(_ overrides: ConfigData, into base: ConfigData) -> ConfigData {
+        var merged = base
+        for (key, value) in overrides {
+            if case .dictionary(let overrideTable) = value, case .dictionary(let baseTable)? = merged[key] {
+                merged[key] = .dictionary(merging(overrideTable, into: baseTable))
+            } else {
+                merged[key] = value
+            }
         }
         return merged
     }
