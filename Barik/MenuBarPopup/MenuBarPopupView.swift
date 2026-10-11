@@ -49,18 +49,7 @@ struct MenuBarPopupView<Content: View>: View {
                         transaction.animation = .linear(duration: 0.1)
                     }
                 }
-                .onReceive(willShowWindow) { _ in
-                    withAnimation(.smooth) { glassVisible = true }
-                    withAnimation(
-                        .smooth(
-                            duration: Double(
-                                Constants
-                                    .menuBarPopupAnimationDurationInMilliseconds
-                            ) / 1000.0, extraBounce: 0.3)
-                    ) {
-                        animationValue = 1.0
-                    }
-                }
+                .onReceive(willShowWindow) { _ in appear() }
                 .onReceive(willHideWindow) { _ in
                     // Glass popups fade out with their window (see MenuBarPopup); the scale and blur are for the
                     // material look. Animating them while a glass popup was still appearing moved it to the top left.
@@ -116,10 +105,22 @@ struct MenuBarPopupView<Content: View>: View {
         .environment(\.colorScheme, .dark)
         .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
         // MenuBarPopup builds a new view for every popup and may post willShowWindow before this view subscribes,
-        // so also materialize the glass when the view appears.
-        .onAppear {
-            guard usesGlass else { return }
-            withAnimation(.smooth) { glassVisible = true }
+        // so also show the popup when the view appears; otherwise it would stay invisible. Showing it twice animates
+        // to the same values and changes nothing.
+        .onAppear { appear() }
+    }
+
+    /// Materializes the glass, or grows the material popup out of the bar.
+    private func appear() {
+        withAnimation(.smooth) { glassVisible = true }
+        withAnimation(
+            .smooth(
+                duration: Double(
+                    Constants
+                        .menuBarPopupAnimationDurationInMilliseconds
+                ) / 1000.0, extraBounce: 0.3)
+        ) {
+            animationValue = 1.0
         }
     }
 
