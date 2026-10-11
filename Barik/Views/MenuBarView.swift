@@ -74,16 +74,18 @@ struct MenuBarView: View {
                 let shown = edge == .trailing ? Array(items.prefix(items.count - dropped)) : Array(items.suffix(items.count - dropped))
                 let hidden = edge == .trailing ? Array(items.suffix(dropped)) : Array(items.prefix(dropped))
                 HStack(spacing: configManager.config.experimental.foreground.spacing) {
-                    if edge == .leading, !hidden.isEmpty { moreWidget(hidden) }
+                    if edge == .leading, !hidden.isEmpty { moreWidget(hidden, droppedFrom: edge) }
                     row(shown)
-                    if edge == .trailing, !hidden.isEmpty { moreWidget(hidden) }
+                    if edge == .trailing, !hidden.isEmpty { moreWidget(hidden, droppedFrom: edge) }
                 }
             }
         }
     }
 
-    private func moreWidget(_ items: [TomlWidgetItem]) -> some View {
-        MoreWidgetsWidget(count: items.count) {
+    /// The "more" widget of one side. Each side has its own popup identifier, so clicking the other side's "more"
+    /// widget switches the popup instead of closing it.
+    private func moreWidget(_ items: [TomlWidgetItem], droppedFrom edge: HorizontalEdge) -> some View {
+        MoreWidgetsWidget(count: items.count, id: "more-widgets-\(edge == .trailing ? "leading" : "trailing")") {
             MoreWidgetsPopup(items: items, view: { AnyView(buildView(for: $0)) })
         }
     }
@@ -221,6 +223,7 @@ private struct BarFrame: ViewModifier {
 /// Stands for the widgets that do not fit on the bar; clicking it shows them in a popup.
 private struct MoreWidgetsWidget<Popup: View>: View {
     let count: Int
+    let id: String
     @ViewBuilder let popup: () -> Popup
 
     @State private var rect: CGRect = .zero
@@ -239,7 +242,7 @@ private struct MoreWidgetsWidget<Popup: View>: View {
                 }
             )
             .barButton(label: "More widgets", value: "\(count) hidden") {
-                MenuBarPopup.show(rect: rect, id: "more-widgets", content: popup)
+                MenuBarPopup.show(rect: rect, id: id, content: popup)
             }
             .help("Widgets that do not fit on the bar")
     }
@@ -254,13 +257,29 @@ private struct MoreWidgetsPopup: View {
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
+        // Scrolls when there are more widgets than the screen can hold.
+        ViewThatFits(in: .vertical) {
+            list
+            ScrollView { list }
+                .scrollIndicators(.automatic)
+        }
+        .frame(maxHeight: maxHeight)
+        .padding(configManager.config.usesLiquidGlass ? 0 : 20)
+        .applying(configManager.config.usesLiquidGlass) { $0.popupProvidesGlassModules() }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: Constants.popupModuleSpacing) {
             ForEach(0..<items.count, id: \.self) { index in
                 view(items[index])
                     .frame(height: configManager.config.experimental.foreground.resolveHeight())
             }
         }
-        .padding(configManager.config.usesLiquidGlass ? 0 : 20)
-        .applying(configManager.config.usesLiquidGlass) { $0.popupProvidesGlassModules() }
+    }
+
+    /// The popup sits between the bar and the other edge of the screen, with room left for its margins.
+    private var maxHeight: CGFloat {
+        let screenHeight = NSScreen.main?.visibleFrame.height ?? 800
+        return max(screenHeight - configManager.config.experimental.foreground.resolveHeight() - 80, 100)
     }
 }
