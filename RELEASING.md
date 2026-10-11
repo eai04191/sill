@@ -7,7 +7,8 @@ Then the workflow:
 1. builds Sill with that version on `macos-26` (Apple silicon) with the same signing settings as `make install-sill` in eai04191/dotfiles ([scripts/release/build.sh](scripts/release/build.sh)),
 2. attests the zip with [actions/attest](https://github.com/actions/attest), so `gh attestation verify Sill-<version>.zip -R eai04191/sill` checks that the workflow built it,
 3. creates a GitHub release with `Sill-<version>.zip` and the notes from git-cliff, which tags the commit with the version (barik's format, without a `v`),
-4. updates `Casks/sill.rb` in the tap ([scripts/release/update-tap.sh](scripts/release/update-tap.sh)).
+4. updates `Casks/sill.rb` in the tap ([scripts/release/update-tap.sh](scripts/release/update-tap.sh)),
+5. adds the notes to the top of [CHANGELOG.md](CHANGELOG.md) ([scripts/release/prepend-changelog.sh](scripts/release/prepend-changelog.sh)) and pushes it to `main` as `chore(release): <version>`, which does not count toward the next release.
 
 The version comes from the commits, so `MARKETING_VERSION` in Sill.xcodeproj is not bumped; the release build is given the version instead.
 
@@ -41,7 +42,7 @@ gh run watch -R eai04191/sill
 
 Then check that the release has the zip and that `brew upgrade --cask sill` installs it.
 
-If the cask update fails after the GitHub release is created, fix the cause, download the zip into `dist/` with `gh release download <version> -R eai04191/sill -D dist`, and run `scripts/release/update-tap.sh <version> <tap checkout>`, because running the workflow again finds no new commits to release.
+If the cask update fails after the GitHub release is created, fix the cause, download the zip into `dist/` with `gh release download <version> -R eai04191/sill -D dist`, and run `scripts/release/update-tap.sh <version> <tap checkout>`, because running the workflow again finds no new commits to release. Likewise, if the CHANGELOG.md commit fails, run `scripts/release/prepend-changelog.sh <version> <notes>` with the release's notes (`gh release view <version> -R eai04191/sill --json body --jq .body`) and commit it as `chore(release): <version>`.
 
 ## Dependencies
 

@@ -2,8 +2,8 @@ name: Release
 
 # git-cliff (cliff.toml) picks the version from the conventional commits since the last tag and writes the release
 # notes. The build job signs and zips Sill with that version; the release job attests the zip, tags the commit with a
-# GitHub release that has the zip, and updates the cask in the tap. Nothing happens when no commit needs a release.
-# Run it from main.
+# GitHub release that has the zip, updates the cask in the tap, and adds the notes to CHANGELOG.md in a
+# chore(release) commit on main. Nothing happens when no commit needs a release. Run it from main.
 #
 # What the release needs from outside this repository (RELEASING.md explains how to prepare each one):
 # - Secrets of the release environment, which only main can use:
@@ -149,9 +149,8 @@ jobs:
     env:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
+      # Keeps the token for pushing the CHANGELOG.md commit to main.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -180,3 +179,14 @@ jobs:
 
       - name: Update the cask
         run: scripts/release/update-tap.sh "$VERSION" tap
+
+      - name: Record the release in CHANGELOG.md
+        # git-cliff skips chore commits, so this commit does not make a release of its own. Rebases onto main in case a
+        # commit was pushed during the release.
+        run: |
+          scripts/release/prepend-changelog.sh "$VERSION" dist/notes.md
+          git add CHANGELOG.md
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore(release): $VERSION"
+          git pull --rebase origin main
+          git push origin HEAD:main
