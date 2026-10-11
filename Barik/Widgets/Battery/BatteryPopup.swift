@@ -21,7 +21,7 @@ struct BatteryPopup: View {
                 .resizable()
                 .scaledToFit()
                 .padding(14)
-                .foregroundColor(.white)
+                .foregroundStyle(Color.primary)
             if batteryManager.isPluggedIn {
                 Image(
                     systemName: batteryManager.isCharging
@@ -36,6 +36,7 @@ struct BatteryPopup: View {
         }
         .frame(width: 60, height: 60)
         .padding(30)
+        .popupFollowsSystemAppearance()
     }
 
     private var batteryColor: Color {
@@ -47,7 +48,7 @@ struct BatteryPopup: View {
             } else if batteryManager.batteryLevel <= 20 {
                 return .yellow
             } else {
-                return .white
+                return .primary
             }
         }
     }

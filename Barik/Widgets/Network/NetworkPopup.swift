@@ -10,7 +10,6 @@ struct NetworkPopup: View {
                 HStack(spacing: 8) {
                     wifiIcon
                     Text(viewModel.ssid)
-                        .foregroundColor(.white)
                         .font(.headline)
                 }
 
@@ -34,13 +33,13 @@ struct NetworkPopup: View {
                 HStack(spacing: 8) {
                     ethernetIcon
                     Text("Ethernet: \(viewModel.ethernetState.rawValue)")
-                        .foregroundColor(.white)
                         .font(.headline)
                 }
             }
         }
         .padding(25)
-        .background(Color.black)
+        // The popup container draws the background, and the text inherits its color, so this follows the appearance.
+        .popupFollowsSystemAppearance()
     }
 
     /// Chooses the Wi‑Fi icon based on the status and connection availability.

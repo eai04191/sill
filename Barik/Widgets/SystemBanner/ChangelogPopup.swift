@@ -15,14 +15,13 @@ struct ChangelogPopup: View {
                 .padding(15)
                 .font(.system(size: 14))
                 .fontWeight(.medium)
-            Rectangle().fill(.white).opacity(0.2).frame(height: 0.5)
+            Rectangle().fill(Color.primary).opacity(0.2).frame(height: 0.5)
             ScrollView {
                 Markdown(changelogText)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 20)
                     .padding(.trailing, 15)
                     .markdownTheme(.barik)
-                    .foregroundStyle(.white)
             }.offset(x: 15)
                 .markdownImageProvider(WebImageProvider())
         }
@@ -32,6 +31,7 @@ struct ChangelogPopup: View {
         .task {
             await loadChangelog()
         }
+        .popupFollowsSystemAppearance()
     }
 
     // Asynchronously loads the changelog from the remote URL
