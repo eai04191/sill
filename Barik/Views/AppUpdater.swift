@@ -1,6 +1,10 @@
 import Foundation
 
 final class AppUpdater: ObservableObject {
+    /// One updater for the whole app: the bar can show several update banners (one per layout candidate and in the
+    /// "more" popup), and each would otherwise check GitHub on its own.
+    static let shared = AppUpdater()
+
     // Published properties to notify the UI
     @Published var latestVersion: String?
     @Published var updateAvailable = false
@@ -13,7 +17,7 @@ final class AppUpdater: ObservableObject {
     // Timer to schedule periodic update checks
     private var updateTimer: Timer?
 
-    init() {
+    private init() {
         fetchLatestRelease()
         // Check for updates every 30 minutes
         updateTimer = Timer.scheduledTimer(

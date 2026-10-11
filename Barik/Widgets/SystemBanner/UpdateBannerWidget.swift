@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UpdateBannerWidget: View {
     @ObservedObject private var configManager = ConfigManager.shared
-    @StateObject private var updater = AppUpdater()
+    @ObservedObject private var updater = AppUpdater.shared
     @State private var isUpdating = false
 
     var body: some View {
