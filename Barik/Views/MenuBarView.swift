@@ -60,7 +60,7 @@ struct MenuBarView: View {
     }
 
     /// The widgets that fit the offered width: all of them, or fewer by leaving out widgets from the given edge. When
-    /// even the last widget does not fit, it is shown compressed, which truncates the now playing title.
+    /// even the last widget does not fit, ViewThatFits still shows it, and CenteredBarLayout moves the side away.
     private func fittingRow(_ items: [TomlWidgetItem], dropping edge: HorizontalEdge) -> some View {
         ViewThatFits(in: .horizontal) {
             ForEach(0..<max(items.count, 1), id: \.self) { dropped in
@@ -162,15 +162,26 @@ private struct CenteredBarLayout: Layout {
         guard subviews.count == 3 else { return }
         let centered = subviews[1].sizeThatFits(ProposedViewSize(width: bounds.width, height: bounds.height))
         let side = max(0, (bounds.width - centered.width) / 2 - spacing)
+        let sideProposal = ProposedViewSize(width: side, height: bounds.height)
         subviews[1].place(
             at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: ProposedViewSize(centered))
         subviews[0].place(
-            at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
-            proposal: ProposedViewSize(width: side, height: bounds.height))
+            at: fits(subviews[0], in: sideProposal) ? CGPoint(x: bounds.minX, y: bounds.midY) : offscreen,
+            anchor: .leading, proposal: sideProposal)
         subviews[2].place(
-            at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
-            proposal: ProposedViewSize(width: side, height: bounds.height))
+            at: fits(subviews[2], in: sideProposal) ? CGPoint(x: bounds.maxX, y: bounds.midY) : offscreen,
+            anchor: .trailing, proposal: sideProposal)
     }
+
+    /// Whether a side is no wider than its space. ViewThatFits shows its last candidate even when it does not fit,
+    /// and widgets with fixed-size text do not shrink, so a side can still be wider than offered.
+    private func fits(_ subview: LayoutSubview, in proposal: ProposedViewSize) -> Bool {
+        subview.sizeThatFits(proposal).width <= (proposal.width ?? 0) + 0.5
+    }
+
+    /// Where a side that does not fit is placed so it is not drawn over the centered widgets. A layout cannot remove
+    /// a subview, and clipping does not hide Liquid Glass, so it is moved outside the bar's window instead.
+    private let offscreen = CGPoint(x: -100_000, y: 0)
 }
 
 /// The bar's size, padding and color scheme, shared by both layouts.
