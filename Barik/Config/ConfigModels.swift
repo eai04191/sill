@@ -32,10 +32,6 @@ struct Config {
         self.rootToml = rootToml
     }
 
-    var theme: String {
-        rootToml.theme ?? "light"
-    }
-
     var position: BarPosition {
         rootToml.position ?? .top
     }
