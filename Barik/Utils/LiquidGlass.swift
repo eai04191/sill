@@ -80,6 +80,21 @@ extension View {
     }
 }
 
+extension NSWindow {
+    /// Makes Liquid Glass in this window render as in an active window. AppKit draws glass in a window that is not key
+    /// as frosted glass, which only blurs what is behind it, and Barik's bar never becomes key so it does not take the
+    /// keyboard from the app in use. No public API changes this (overriding `isKeyWindow` or setting the SwiftUI
+    /// `appearsActive` and `controlActiveState` environment values does not), so this uses the private
+    /// `_setForceMainAppearance:`, which keeps the active look without making the window key. If a later macOS removes
+    /// it, the window keeps the frosted glass.
+    func forceActiveGlassAppearance() {
+        let selector = NSSelectorFromString("_setForceMainAppearance:")
+        guard responds(to: selector) else { return }
+        typealias Setter = @convention(c) (AnyObject, Selector, Bool) -> Void
+        unsafeBitCast(method(for: selector), to: Setter.self)(self, selector, true)
+    }
+}
+
 /// Groups the bar's glass widgets so they render together, as the SwiftUI documentation recommends
 /// for multiple Liquid Glass effects. Without Liquid Glass it just shows the content.
 struct LiquidGlassContainer<Content: View>: View {

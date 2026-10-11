@@ -96,6 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
+        newPanel.forceActiveGlassAppearance()
         let hostingView = NSHostingView(rootView: hostingRootView)
         if fixedFrame {
             hostingView.sizingOptions = []

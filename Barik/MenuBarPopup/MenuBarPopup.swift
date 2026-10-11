@@ -168,6 +168,8 @@ class MenuBarPopup {
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
+        // Keeps the glass active while the popup fades out after it stops being key.
+        newPanel.forceActiveGlassAppearance()
 
         panel = newPanel
     }
