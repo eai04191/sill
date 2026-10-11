@@ -19,15 +19,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        // Show "What's New" banner if the app version is outdated
-        if !VersionChecker.isLatestVersion() {
-            VersionChecker.updateVersionFile()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                NotificationCenter.default.post(
-                    name: Notification.Name("ShowWhatsNewBanner"), object: nil)
-            }
-        }
-        
         // The config file is applied asynchronously after launch, so the panels are first set up once it is, rather
         // than showing the bar with the default config and then moving it. A config file that cannot be read stops
         // Barik with the error above instead. `position` may change while running, so the panels are placed again
