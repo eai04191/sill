@@ -65,14 +65,26 @@ struct MenuBarView: View {
         }
     }
 
-    /// The widgets that fit the offered width: all of them, or fewer by leaving out widgets from the given edge. When
-    /// even the last widget does not fit, ViewThatFits still shows it, and CenteredBarLayout moves the side away.
+    /// The widgets that fit the offered width: all of them, or fewer by leaving out widgets from the given edge. The
+    /// left-out widgets are kept in a "more" widget on that edge, which shows them in a popup. When even the "more"
+    /// widget does not fit, ViewThatFits still shows it, and CenteredBarLayout moves the side away.
     private func fittingRow(_ items: [TomlWidgetItem], dropping edge: HorizontalEdge) -> some View {
         ViewThatFits(in: .horizontal) {
-            ForEach(0..<max(items.count, 1), id: \.self) { dropped in
-                let count = max(items.count - dropped, 1)
-                row(edge == .trailing ? Array(items.prefix(count)) : Array(items.suffix(count)))
+            ForEach(0...items.count, id: \.self) { dropped in
+                let shown = edge == .trailing ? Array(items.prefix(items.count - dropped)) : Array(items.suffix(items.count - dropped))
+                let hidden = edge == .trailing ? Array(items.suffix(dropped)) : Array(items.prefix(dropped))
+                HStack(spacing: configManager.config.experimental.foreground.spacing) {
+                    if edge == .leading, !hidden.isEmpty { moreWidget(hidden) }
+                    row(shown)
+                    if edge == .trailing, !hidden.isEmpty { moreWidget(hidden) }
+                }
             }
+        }
+    }
+
+    private func moreWidget(_ items: [TomlWidgetItem]) -> some View {
+        MoreWidgetsWidget(count: items.count) {
+            MoreWidgetsPopup(items: items, view: { AnyView(buildView(for: $0)) })
         }
     }
 
@@ -203,5 +215,52 @@ private struct BarFrame: ViewModifier {
             .padding(.horizontal, configManager.config.experimental.foreground.horizontalPadding)
             .background(.black.opacity(0.001))
             .preferredColorScheme(theme)
+    }
+}
+
+/// Stands for the widgets that do not fit on the bar; clicking it shows them in a popup.
+private struct MoreWidgetsWidget<Popup: View>: View {
+    let count: Int
+    @ViewBuilder let popup: () -> Popup
+
+    @State private var rect: CGRect = .zero
+
+    var body: some View {
+        Image(systemName: "ellipsis")
+            .font(.barText)
+            .experimentalConfiguration(cornerRadius: 15)
+            .frame(maxHeight: .infinity)
+            .background(.black.opacity(0.001))
+            .background(
+                GeometryReader { geometry in
+                    Color.clear
+                        .onAppear { rect = geometry.frame(in: .global) }
+                        .onChange(of: geometry.frame(in: .global)) { _, newFrame in rect = newFrame }
+                }
+            )
+            .barButton(label: "More widgets", value: "\(count) hidden") {
+                MenuBarPopup.show(rect: rect, id: "more-widgets", content: popup)
+            }
+            .help("Widgets that do not fit on the bar")
+    }
+}
+
+/// The widgets that do not fit on the bar, each as it is on the bar. They are the popup's glass modules, so the popup
+/// adds no glass behind them (glass on glass, which the HIG asks to avoid); clicking one opens its own popup.
+private struct MoreWidgetsPopup: View {
+    let items: [TomlWidgetItem]
+    let view: (TomlWidgetItem) -> AnyView
+
+    @ObservedObject private var configManager = ConfigManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Constants.popupModuleSpacing) {
+            ForEach(0..<items.count, id: \.self) { index in
+                view(items[index])
+                    .frame(height: configManager.config.experimental.foreground.resolveHeight())
+            }
+        }
+        .padding(configManager.config.usesLiquidGlass ? 0 : 20)
+        .applying(configManager.config.usesLiquidGlass) { $0.popupProvidesGlassModules() }
     }
 }
