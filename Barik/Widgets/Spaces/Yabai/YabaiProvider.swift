@@ -46,8 +46,18 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         return resultSpaces.filter { !$0.windows.isEmpty || $0.isFocused }
     }
 
+    /// Focuses a space unless it is already focused, which yabai rejects. The focused space is read when the command
+    /// runs, since the shown spaces may be older than a command that ran just before.
+    private func focusSpaceIfNeeded(spaceId: String) throws {
+        let data = try runYabaiCommand(arguments: ["-m", "query", "--spaces", "--space"])
+        let focused = try JSONDecoder().decode(YabaiSpace.self, from: data)
+        if String(focused.id) != spaceId {
+            _ = try runYabaiCommand(arguments: ["-m", "space", "--focus", spaceId])
+        }
+    }
+
     func focusSpace(spaceId: String, needWindowFocus: Bool) throws {
-        _ = try runYabaiCommand(arguments: ["-m", "space", "--focus", spaceId])
+        try focusSpaceIfNeeded(spaceId: spaceId)
         if !needWindowFocus { return }
 
         DispatchQueue.global(qos: .userInitiated).asyncAfter(
@@ -70,11 +80,9 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     }
 
     /// Switches to the window's space first, as Barik did before, since focusing a window on another space may need
-    /// the scripting addition. yabai fails to focus the space that is already focused, so that space is not focused.
-    func focusWindow(windowId: String, spaceId: String, spaceIsFocused: Bool) throws {
-        if !spaceIsFocused {
-            _ = try runYabaiCommand(arguments: ["-m", "space", "--focus", spaceId])
-        }
+    /// the scripting addition.
+    func focusWindow(windowId: String, spaceId: String) throws {
+        try focusSpaceIfNeeded(spaceId: spaceId)
         _ = try runYabaiCommand(arguments: ["-m", "window", "--focus", windowId])
     }
 }

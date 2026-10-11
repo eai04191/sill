@@ -172,8 +172,7 @@ class SpacesViewModel: ObservableObject {
 
     func switchToWindow(_ window: AnyWindow, in space: AnySpace) {
         runCommand { provider in
-            try provider.focusWindow(
-                windowId: String(window.id), spaceId: space.id, spaceIsFocused: space.isFocused)
+            try provider.focusWindow(windowId: String(window.id), spaceId: space.id)
         }
     }
 

@@ -51,7 +51,7 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     }
 
     /// Focusing a window also switches to its workspace.
-    func focusWindow(windowId: String, spaceId: String, spaceIsFocused: Bool) throws {
+    func focusWindow(windowId: String, spaceId: String) throws {
         _ = try runAerospaceCommand(arguments: ["focus", "--window-id", windowId])
     }
 

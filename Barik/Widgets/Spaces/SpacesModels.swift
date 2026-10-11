@@ -21,8 +21,8 @@ protocol SpacesProvider {
 
 protocol SwitchableSpacesProvider: SpacesProvider {
     func focusSpace(spaceId: String, needWindowFocus: Bool) throws
-    /// Focuses a window and switches to its space. `spaceIsFocused` tells whether that space is already focused.
-    func focusWindow(windowId: String, spaceId: String, spaceIsFocused: Bool) throws
+    /// Focuses a window and switches to its space.
+    func focusWindow(windowId: String, spaceId: String) throws
 }
 
 struct AnyWindow: Identifiable, Equatable {
@@ -72,7 +72,7 @@ struct AnySpace: Identifiable, Equatable {
 class AnySpacesProvider {
     private let _getSpacesWithWindows: () throws -> [AnySpace]
     private let _focusSpace: ((String, Bool) throws -> Void)?
-    private let _focusWindow: ((String, String, Bool) throws -> Void)?
+    private let _focusWindow: ((String, String) throws -> Void)?
 
     init<P: SpacesProvider>(_ provider: P) {
         _getSpacesWithWindows = {
@@ -83,9 +83,8 @@ class AnySpacesProvider {
                 try switchable.focusSpace(
                     spaceId: spaceId, needWindowFocus: needWindowFocus)
             }
-            _focusWindow = { windowId, spaceId, spaceIsFocused in
-                try switchable.focusWindow(
-                    windowId: windowId, spaceId: spaceId, spaceIsFocused: spaceIsFocused)
+            _focusWindow = { windowId, spaceId in
+                try switchable.focusWindow(windowId: windowId, spaceId: spaceId)
             }
         } else {
             _focusSpace = nil
@@ -101,7 +100,7 @@ class AnySpacesProvider {
         try _focusSpace?(spaceId, needWindowFocus)
     }
 
-    func focusWindow(windowId: String, spaceId: String, spaceIsFocused: Bool) throws {
-        try _focusWindow?(windowId, spaceId, spaceIsFocused)
+    func focusWindow(windowId: String, spaceId: String) throws {
+        try _focusWindow?(windowId, spaceId)
     }
 }
