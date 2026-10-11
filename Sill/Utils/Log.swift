@@ -8,7 +8,9 @@ import os
 /// Events and failures are logged at the default level and errors at the error level, which the system keeps on disk.
 /// Read them with:
 ///
-///     log show --last 1h --predicate 'subsystem == "net.mizle.sill"'
+///     /usr/bin/log show --last 1h --predicate 'subsystem == "net.mizle.sill"'
+///
+/// In zsh, `log` alone is a shell builtin, so the path is spelled out.
 ///
 /// Window titles and file contents are logged as private, which the log shows as `<private>` unless private data
 /// logging is enabled; identifiers, counts, durations and errors are public.
