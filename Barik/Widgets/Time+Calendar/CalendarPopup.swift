@@ -161,7 +161,7 @@ private struct CalendarAccessDeniedText: View {
     var body: some View {
         Text("Barik has no access to your calendars. Allow it in System Settings > Privacy & Security > Calendars.")
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.primary.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -223,7 +223,8 @@ private struct WeekdayHeaderView: View {
                 let isWeekend = calendar.isDateInWeekend(
                     referenceDays[originalIndex]
                 )
-                let color = isWeekend ? Color.secondary : Color.primary
+                // The secondary color takes on the glass behind it and faded out; weekends are dimmed primary.
+                let color = isWeekend ? Color.primary.opacity(0.75) : Color.primary
 
                 Text(reordered[i])
                     .frame(width: 30)
@@ -239,7 +240,7 @@ private struct CalendarDaysView: View {
     @ObservedObject private var configManager = ConfigManager.shared
     /// On Liquid Glass, a primary-colored circle takes on the glass's vibrancy and fades, so today uses the system
     /// red like the macOS Calendar, as the color that marks the one emphasized day.
-    private var todayFill: Color { configManager.config.usesLiquidGlass ? .red : .primary }
+    private var todayFill: Color { configManager.config.usesLiquidGlass ? Color(red: 0.75, green: 0.1, blue: 0.1) : .primary }
     private var todayText: Color {
         if configManager.config.usesLiquidGlass { return .white }
         return colorScheme == .dark ? .black : .white
@@ -270,7 +271,7 @@ private struct CalendarDaysView: View {
                             let color =
                                 isToday
                                 ? todayText
-                                : (isWeekend ? Color.secondary : Color.primary)
+                                : (isWeekend ? Color.primary.opacity(0.75) : Color.primary)
 
                             ZStack {
                                 if isToday {
@@ -318,7 +319,7 @@ private struct EventListView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.primary.opacity(0.6))
                 ForEach(events, id: \.eventIdentifier) { event in
                     EventRow(event: event, day: day, calendar: calendar)
                 }
@@ -348,12 +349,15 @@ private struct EventRow: View {
                     .font(.caption)
                     .fontWeight(.regular)
                     .lineLimit(1)
+                    .opacity(0.8)
             }
             Spacer()
         }
         .padding(5)
         .padding(.trailing, 5)
-        .foregroundStyle(Color(event.calendar.cgColor))
+        // The calendar's color marks the event with the bar on its leading edge. Text in that color on a background
+        // tinted with it was unreadable on glass (blue on blue), so the text uses the primary color.
+        .foregroundStyle(Color.primary)
         .background(Color(event.calendar.cgColor).opacity(0.2))
         .cornerRadius(6)
         .frame(maxWidth: .infinity)
