@@ -71,6 +71,11 @@ struct MenuBarPopupView<Content: View>: View {
         return max(screenHeight - foregroundHeight - 80, 100)
     }
 
+    /// Room around content that draws its own glass modules for their shadows. The scroll view clips to its bounds,
+    /// which cut the modules' shadows off in a rectangle at the modules' outer edges; the scroll view is made larger by
+    /// this much on each side, and the popup keeps its size and place.
+    private var moduleShadowInset: CGFloat { providesModules ? 24 : 0 }
+
     /// The popup content on one glass module, unless the content draws its own modules.
     private var popupBody: some View {
         LiquidGlassContainer(spacing: Constants.popupModuleSpacing) {
@@ -81,11 +86,12 @@ struct MenuBarPopupView<Content: View>: View {
                 // ViewThatFits with the content and a scrolling copy of it built the content several times and swapped
                 // the copies as their sizes changed, which reset their state and restarted their tasks; with the
                 // window switcher the swapping did not end, and Sill hung and crashed.
-                HeightLimit(maxHeight: maxHeight) {
-                    ScrollView { content }
+                HeightLimit(maxHeight: maxHeight + moduleShadowInset * 2) {
+                    ScrollView { content.padding(moduleShadowInset) }
                         .scrollIndicators(.automatic)
                         .scrollBounceBehavior(.basedOnSize)
                 }
+                .padding(-moduleShadowInset)
                 .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
                 .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
                 .liquidGlassMaterializes()
