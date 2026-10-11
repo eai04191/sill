@@ -12,13 +12,9 @@ struct VolumeWidget: View {
     var body: some View {
         if let volume = volumeManager.volume {
             HStack(spacing: 5) {
-                Image(systemName: VolumeSymbol.name(volume: volume, muted: volumeManager.isMuted))
+                VolumeSymbol.image(volume: volume, muted: volumeManager.isMuted)
                     .font(.barText)
                     .contentTransition(.symbolEffect(.replace))
-                    // The symbol is sized by the bar text like other symbols next to text, and its slot is as wide as
-                    // the widest variant (speaker.wave.3.fill, 22 points at 13 points) so the percentage doesn't move
-                    // as the volume changes. At 18 points the wider variants ran into the percentage's spacing.
-                    .frame(width: 22, alignment: .leading)
                 if showPercentage {
                     Text("\(Int((volume * 100).rounded()))%")
                         .font(.barText)
@@ -51,12 +47,13 @@ struct VolumeWidget: View {
 }
 
 /// The speaker SF Symbol matching the volume, like the macOS Control Center.
+/// The speaker symbol for the volume, as the HIG's SF Symbols guidance shows for sound levels: one
+/// speaker.wave.3.fill whose waves take color with the volume (variable color), and speaker.slash.fill when muted.
+/// Keeping one symbol keeps its width, so the percentage next to it doesn't move as the volume changes.
 enum VolumeSymbol {
-    static func name(volume: Float, muted: Bool) -> String {
-        if muted || volume == 0 { return "speaker.slash.fill" }
-        if volume < 0.34 { return "speaker.wave.1.fill" }
-        if volume < 0.67 { return "speaker.wave.2.fill" }
-        return "speaker.wave.3.fill"
+    static func image(volume: Float, muted: Bool) -> Image {
+        if muted || volume == 0 { return Image(systemName: "speaker.slash.fill") }
+        return Image(systemName: "speaker.wave.3.fill", variableValue: Double(volume))
     }
 }
 
