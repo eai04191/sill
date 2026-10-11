@@ -71,7 +71,7 @@ private struct SpaceView: View {
         // The space contains tappable windows, so it keeps the tap gesture instead of becoming a button with nested
         // buttons, and exposes the same action to VoiceOver.
         .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isFocused ? [.isButton, .isSelected] : .isButton)
         .accessibilityLabel("Space \(space.id)")
         .accessibilityAction {
             viewModel.switchToSpace(space, needWindowFocus: true)
@@ -154,9 +154,10 @@ private struct WindowView: View {
         .frame(height: 30)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(window.isFocused ? [.isButton, .isSelected] : .isButton)
+        // A window without an app name is labeled with its title, which is then not read again as the value.
         .accessibilityLabel(window.appName ?? window.title)
-        .accessibilityValue(window.title)
+        .accessibilityValue(window.appName == nil ? "" : window.title)
         .accessibilityAction {
             viewModel.switchToWindow(window, in: space)
         }
