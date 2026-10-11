@@ -171,12 +171,13 @@ Soon, you'll also be able to place widgets not just at the top, but at the botto
 
 ## What to do if the currently playing song is not displayed in the Now Playing widget?
 
-Unfortunately, macOS does not support access to its API that allows music control. Fortunately, there is a workaround using Apple Script or a service API, but this requires additional work to integrate each service. Currently, the Now Playing widget supports the following services:
+The Now Playing widget reads the system-wide now playing session through [media-control](https://github.com/ungive/media-control), so it shows any player that reports to Now Playing in Control Center, including browsers such as Firefox. Install it with Homebrew:
 
-1. Spotify (requires the desktop application)
-2. Apple Music (requires the desktop application)
+```sh
+brew install media-control
+```
 
-Create an issue so we can add your favorite music service: https://github.com/mocki-toki/barik/issues/new
+Barik looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up within 30 seconds of installing it, without a restart. If a player is still not shown, check that it appears in Control Center's Now Playing and that `media-control get` prints it.
 
 ## Where Are the Menu Items?
 
