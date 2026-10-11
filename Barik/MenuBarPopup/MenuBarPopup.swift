@@ -110,7 +110,22 @@ class MenuBarPopup {
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .willShowWindow, object: nil)
+            announceToAssistiveTechnologies(panel)
         }
+    }
+
+    /// Barik stays in the background while its popup is key, so tell VoiceOver that the popup opened and point it at
+    /// the popup's content; Escape closes the popup (see HidingPanel).
+    private static func announceToAssistiveTechnologies(_ panel: NSPanel) {
+        guard isShown, let contentView = panel.contentView else { return }
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [
+                .announcement: "Popup opened. Press Escape to close.",
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ])
+        NSAccessibility.post(
+            element: contentView, notification: .layoutChanged, userInfo: [.uiElements: [contentView]])
     }
 
     /// Glass popups are dark in either system appearance, like the Control Center modules in macOS 26 and later.
