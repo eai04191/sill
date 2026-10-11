@@ -11,6 +11,13 @@ fi
 notes=$1
 git_cliff=${GIT_CLIFF:-git-cliff}
 
+# Without a release tag, git-cliff starts over at 0.1.0, which barik already released. Releases continue from barik's
+# tags, so a checkout without them is a mistake, not a first release.
+if [ -z "$(git tag --list --merged HEAD | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true)" ]; then
+  echo "No release tag (such as 0.5.1) is reachable from HEAD; fetch the tags first" >&2
+  exit 1
+fi
+
 # Not piped, so a git-cliff failure stops the script instead of reading as nothing to release.
 context=$("$git_cliff" --unreleased --context)
 count=$(printf '%s' "$context" | jq '[.[].commits[]] | length')
@@ -26,5 +33,14 @@ case "$version" in
     exit 1
     ;;
 esac
+# Stop before building a version that was released already, rather than after the GitHub release.
+if git rev-parse --quiet --verify "refs/tags/$version" > /dev/null; then
+  echo "The tag $version exists already" >&2
+  exit 1
+fi
+if grep -qx "## $version" CHANGELOG.md; then
+  echo "CHANGELOG.md has $version already" >&2
+  exit 1
+fi
 "$git_cliff" --unreleased --tag "$version" --output "$notes"
 echo "$version"
