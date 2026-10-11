@@ -100,7 +100,9 @@ final class UsageManager: ObservableObject {
     private static let timeout: TimeInterval = 10
 
     init() {
-        timer = Timer.publish(every: 5, on: .main, in: .common)
+        // The command's data changes by the minute and the widget shows minutes, so a 30-second interval keeps it
+        // current without running the command about 17,000 times a day.
+        timer = Timer.publish(every: 30, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.refresh() }
         refresh()
