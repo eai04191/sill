@@ -10,19 +10,20 @@ class CalendarManager: ObservableObject {
     static func shared(for configProvider: ConfigProvider) -> CalendarManager {
         let config = configProvider.config["calendar"]?.dictionaryValue
         let filter = [calendars(in: config, for: "allow-list"), calendars(in: config, for: "deny-list")]
-        let key = "\(filter)|\(timeZone(in: configProvider.config).identifier)"
+        let key = "\(filter)|\(configuredTimeZone(in: configProvider.config)?.identifier ?? "")"
         return inUse.instance(for: key) { CalendarManager(configProvider: configProvider) }
     }
 
-    /// The time widget's `time-zone`, or the system time zone. The bar's time, the popup's days and times and the
-    /// fetched day ranges all use it, so they agree on what today is.
-    private static func timeZone(in config: ConfigData) -> TimeZone {
-        config["time-zone"]?.stringValue.flatMap(TimeZone.init(identifier:)) ?? .current
+    /// The time widget's `time-zone`, or nil to follow the system time zone. The bar's time, the popup's days and times
+    /// and the fetched day ranges all use the same zone, so they agree on what today is.
+    private static func configuredTimeZone(in config: ConfigData) -> TimeZone? {
+        config["time-zone"]?.stringValue.flatMap(TimeZone.init(identifier:))
     }
 
     let configProvider: ConfigProvider
-    /// The calendar in the configured time zone.
-    let calendar: Calendar
+    private let configuredTimeZone: TimeZone?
+    /// The calendar in the configured time zone, or in the system time zone, updated on refresh when it changes.
+    private(set) var calendar = Calendar.current
     var config: ConfigData? {
         configProvider.config["calendar"]?.dictionaryValue
     }
@@ -53,9 +54,8 @@ class CalendarManager: ObservableObject {
 
     init(configProvider: ConfigProvider) {
         self.configProvider = configProvider
-        var calendar = Calendar.current
-        calendar.timeZone = Self.timeZone(in: configProvider.config)
-        self.calendar = calendar
+        configuredTimeZone = Self.configuredTimeZone(in: configProvider.config)
+        calendar.timeZone = configuredTimeZone ?? .current
         requestAccess()
         startMonitoring()
     }
@@ -101,6 +101,10 @@ class CalendarManager: ObservableObject {
     /// Fetches every list and schedules the next rollover. Called on the main thread.
     private func refresh() {
         let now = Date()
+        let timeZone = configuredTimeZone ?? .current
+        if calendar.timeZone != timeZone {
+            calendar.timeZone = timeZone
+        }
         if !calendar.isDate(today, inSameDayAs: now) {
             today = now
         }
