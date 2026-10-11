@@ -68,7 +68,12 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
         }
     }
 
-    func focusWindow(windowId: String) throws {
+    /// Switches to the window's space first, as Barik did before, since focusing a window on another space may need
+    /// the scripting addition. yabai fails to focus the space that is already focused, so that space is not focused.
+    func focusWindow(windowId: String, spaceId: String, spaceIsFocused: Bool) throws {
+        if !spaceIsFocused {
+            _ = try runYabaiCommand(arguments: ["-m", "space", "--focus", spaceId])
+        }
         _ = try runYabaiCommand(arguments: ["-m", "window", "--focus", windowId])
     }
 }

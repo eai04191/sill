@@ -26,6 +26,7 @@ class SpacesViewModel: ObservableObject {
     private var provider: AnySpacesProvider?
     /// Runs one fetch at a time, so the CLI calls of a slow fetch do not pile up behind each other.
     private let fetchQueue = DispatchQueue(label: "Barik.SpacesViewModel.fetch", qos: .utility)
+    private let commandQueue = DispatchQueue(label: "Barik.SpacesViewModel.command", qos: .userInitiated)
     /// Whether a fetch is running, and whether another one was requested meanwhile. Used on the main thread.
     private var isFetching = false
     private var fetchesAgain = false
@@ -164,22 +165,30 @@ class SpacesViewModel: ObservableObject {
     }
 
     func switchToSpace(_ space: AnySpace, needWindowFocus: Bool = false) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                try self.provider?.focusSpace(
-                    spaceId: space.id, needWindowFocus: needWindowFocus)
-            } catch {
-                print("Spaces: \(error)")
-            }
+        runCommand { provider in
+            try provider.focusSpace(spaceId: space.id, needWindowFocus: needWindowFocus)
         }
     }
 
-    func switchToWindow(_ window: AnyWindow) {
-        DispatchQueue.global(qos: .userInitiated).async {
+    func switchToWindow(_ window: AnyWindow, in space: AnySpace) {
+        runCommand { provider in
+            try provider.focusWindow(
+                windowId: String(window.id), spaceId: space.id, spaceIsFocused: space.isFocused)
+        }
+    }
+
+    /// Runs a focus command off the main thread. Commands run one at a time in the order they were given, and the
+    /// spaces are fetched once each one ends.
+    private func runCommand(_ command: @escaping (AnySpacesProvider) throws -> Void) {
+        guard let provider else { return }
+        commandQueue.async { [weak self] in
             do {
-                try self.provider?.focusWindow(windowId: String(window.id))
+                try command(provider)
             } catch {
                 print("Spaces: \(error)")
+            }
+            DispatchQueue.main.async {
+                self?.requestSpaces()
             }
         }
     }

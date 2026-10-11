@@ -157,14 +157,10 @@ private struct WindowView: View {
         .accessibilityLabel(window.appName ?? window.title)
         .accessibilityValue(window.title)
         .accessibilityAction {
-            viewModel.switchToSpace(space)
-            usleep(100_000)
-            viewModel.switchToWindow(window)
+            viewModel.switchToWindow(window, in: space)
         }
         .onTapGesture {
-            viewModel.switchToSpace(space)
-            usleep(100_000)
-            viewModel.switchToWindow(window)
+            viewModel.switchToWindow(window, in: space)
         }
         .onHover { value in
             isHovered = value
