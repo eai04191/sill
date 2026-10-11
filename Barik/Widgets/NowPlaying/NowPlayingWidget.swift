@@ -67,7 +67,7 @@ struct NowPlayingContent: View {
     }
 
     var body: some View {
-        // A capsule at every bar height, like the other widgets; it used to lose its background below 38 points.
+        // Sized to the bar like the other widgets; it used to lose its background below 38 points.
         HStack(spacing: 8) {
             AlbumArtView(song: song)
             SongTextView(song: song)
@@ -75,7 +75,8 @@ struct NowPlayingContent: View {
         // Below the button's margin the padding is negative, which takes the rest out of the margin.
         .padding(.horizontal, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width)
         .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
-        .liquidGlassBackground(!usesSystemGlassButton, in: Capsule(), interactive: true)
+        // The glass is the system glass button around the widget (see `barWidgetButton`); with widget backgrounds
+        // turned off there is none, like the other widgets.
         // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
         .foregroundStyle(Color.primary)
     }
