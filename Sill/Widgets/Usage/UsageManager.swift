@@ -32,10 +32,21 @@ struct UsageWindow: Decodable, Equatable {
     /// Formatted rather than converted to Int, which traps for a value beyond Int's range.
     var percentText: String { "\(usedPercent.formatted(.number.precision(.fractionLength(0)).grouping(.never)))%" }
 
-    /// Time until the window resets, e.g. "2h", or nil once it has passed or when the service does not report it.
+    /// Time until the window resets, e.g. "2h", for the bar, or nil once it has passed or when the service does not
+    /// report it.
     func resetText(now: Date) -> String? {
         guard let resetsAt, resetsAt > now else { return nil }
         return compactDuration(resetsAt.timeIntervalSince(now))
+    }
+
+    /// When the window resets, e.g. "2:30" today or "Oct 18, 9:00" on another day, for the popup, which has room to
+    /// tell more than the bar's "6d".
+    func resetDateText(now: Date) -> String? {
+        guard let resetsAt, resetsAt > now else { return nil }
+        if Calendar.current.isDate(resetsAt, inSameDayAs: now) {
+            return resetsAt.formatted(date: .omitted, time: .shortened)
+        }
+        return resetsAt.formatted(.dateTime.month().day().hour().minute())
     }
 }
 
@@ -68,8 +79,8 @@ struct UsagePace: Decodable, Equatable {
         }
         if let etaSeconds {
             return String(
-                localized: "\(balance) · runs out in \(compactDuration(etaSeconds))",
-                comment: "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d\".")
+                localized: "\(balance) · runs out in \(compactDuration(etaSeconds, maximumUnitCount: 2))",
+                comment: "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d 15h\".")
         }
         return balance
     }
@@ -231,11 +242,11 @@ enum UsageService: String, CaseIterable, Identifiable {
     }
 }
 
-/// A duration in its largest unit, rounded down, e.g. "2h" or "4d" ("2時間", "4日" in Japanese).
-func compactDuration(_ seconds: TimeInterval) -> String {
+/// A duration in its largest units, rounded down, e.g. "4d" or "4d 15h" ("4日", "4日15時間" in Japanese).
+func compactDuration(_ seconds: TimeInterval, maximumUnitCount: Int = 1) -> String {
     Duration.seconds(seconds).formatted(
         .units(
-            allowed: [.days, .hours, .minutes], width: .narrow, maximumUnitCount: 1,
+            allowed: [.days, .hours, .minutes], width: .narrow, maximumUnitCount: maximumUnitCount,
             fractionalPart: .hide(rounded: .down)))
 }
 

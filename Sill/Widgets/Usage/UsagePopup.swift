@@ -161,8 +161,8 @@ private struct WindowRow: View {
                 Spacer(minLength: 4)
                 Text(window.percentText)
                     .monospacedDigit()
-                if let reset = window.resetText(now: now) {
-                    Text("· resets in \(reset)")
+                if let reset = window.resetDateText(now: now) {
+                    Text("· resets \(reset)")
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }

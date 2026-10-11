@@ -4,12 +4,13 @@
     "?%@?" : {
       "shouldTranslate" : false
     },
-    "· resets in %@" : {
+    "· resets %@" : {
+      "comment" : "When a rate limit window resets, e.g. \"· resets Oct 18, 9:00\".",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "· リセットまで%@"
+            "value" : "· %@にリセット"
           }
         }
       }
@@ -59,7 +60,7 @@
       }
     },
     "%@ · runs out in %@" : {
-      "comment" : "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d\".",
+      "comment" : "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d 15h\".",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
