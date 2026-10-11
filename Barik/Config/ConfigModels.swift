@@ -237,13 +237,11 @@ struct ExperimentalConfig: Decodable {
 struct ForegroundConfig: Decodable {
     let height: BackgroundForegroundHeight
     let horizontalPadding: CGFloat
-    let widgetsBackground: WidgetBackgroundConfig
     let spacing: CGFloat
     
     init() {
         self.height = .barikDefault
         self.horizontalPadding = Constants.menuBarHorizontalPadding
-        self.widgetsBackground = WidgetBackgroundConfig()
         self.spacing = 15
     }
     
@@ -251,14 +249,12 @@ struct ForegroundConfig: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         height = try container.decodeIfPresent(BackgroundForegroundHeight.self, forKey: .height) ?? .barikDefault
         horizontalPadding = try container.decodeIfPresent(CGFloat.self, forKey: .horizontalPadding) ?? Constants.menuBarHorizontalPadding
-        widgetsBackground = try container.decodeIfPresent(WidgetBackgroundConfig.self, forKey: .widgetsBackground) ?? WidgetBackgroundConfig()
         spacing = try container.decodeIfPresent(CGFloat.self, forKey: .spacing) ?? 15
     }
     
     enum CodingKeys: String, CodingKey {
         case height
         case horizontalPadding = "horizontal-padding"
-        case widgetsBackground = "widgets-background"
         case spacing
     }
     
@@ -271,24 +267,6 @@ struct ForegroundConfig: Decodable {
         case .float(let value):
             return CGFloat(value)
         }
-    }
-}
-
-struct WidgetBackgroundConfig: Decodable {
-    let displayed: Bool
-    
-    init() {
-        self.displayed = false
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        displayed = try container.decodeIfPresent(Bool.self, forKey: .displayed) ?? false
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case displayed, height
     }
 }
 

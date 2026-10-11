@@ -320,13 +320,9 @@ private struct MoreWidgetsPopup: View {
                 .scrollIndicators(.automatic)
         }
         .frame(maxHeight: maxHeight)
-        // The widgets are the popup's glass modules when they are glass buttons; with widget backgrounds turned off
-        // they have no glass, so the popup keeps its own glass and margin around them.
-        .padding(showsWidgetGlass ? 0 : 20)
-        .preference(key: PopupProvidesGlassModulesKey.self, value: showsWidgetGlass)
+        // The widgets are glass buttons, which are the popup's glass modules.
+        .popupProvidesGlassModules()
     }
-
-    private var showsWidgetGlass: Bool { configManager.config.experimental.foreground.widgetsBackground.displayed }
 
     private var list: some View {
         VStack(alignment: .leading, spacing: Constants.popupModuleSpacing) {

@@ -5,7 +5,6 @@ import SwiftUI
 struct NowPlayingWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
     @ObservedObject var playingManager = NowPlayingManager.shared
-    @ObservedObject var configManager = ConfigManager.shared
 
     @State private var widgetFrame: CGRect = .zero
     @State private var animatedWidth: CGFloat = 0
@@ -23,9 +22,8 @@ struct NowPlayingWidget: View {
                         }
                     }
                 }
-                // Measured like the visible content, which is in a system glass button when widget backgrounds are
-                // displayed (see `barWidgetButton`).
-                .environment(\.widgetGlassIsButton, configManager.config.experimental.foreground.widgetsBackground.displayed)
+                // Measured like the visible content, which is in a system glass button (see `barWidgetButton`).
+                .environment(\.widgetGlassIsButton, true)
                 .hidden()
 
                 // Visible content with fixed animated width.
@@ -75,8 +73,7 @@ struct NowPlayingContent: View {
         // Below the button's margin the padding is negative, which takes the rest out of the margin.
         .padding(.horizontal, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width)
         .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
-        // The glass is the system glass button around the widget (see `barWidgetButton`); with widget backgrounds
-        // turned off there is none, like the other widgets.
+        // The glass is the system glass button around the widget (see `barWidgetButton`).
         // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
         .foregroundStyle(Color.primary)
     }

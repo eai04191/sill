@@ -14,8 +14,7 @@ extension View {
 
     /// Makes a bar widget a button. It is a system glass button, which draws the widget's glass with the system's
     /// hover and press states, the same at every width; the HIG asks custom buttons for a press state, which the
-    /// widgets' own interactive glass barely showed. With widget backgrounds turned off
-    /// (`experimental.foreground.widgets-background.displayed = false`) it is a plain button without glass.
+    /// widgets' own interactive glass barely showed.
     func barWidgetButton(label: String, value: String? = nil, action: @escaping () -> Void) -> some View {
         modifier(BarWidgetButtonModifier(label: label, value: value, action: action))
     }
@@ -34,27 +33,19 @@ private struct BarWidgetButtonModifier: ViewModifier {
     let value: String?
     let action: () -> Void
 
-    @ObservedObject private var configManager = ConfigManager.shared
-
     func body(content: Content) -> some View {
-        Group {
-            if configManager.config.experimental.foreground.widgetsBackground.displayed {
-                // Widgets stretch their content to the bar's height to make the whole strip clickable, which the
-                // glass button would wrap in its glass; keep the content at its own height so the glass is the chip.
-                Button(action: action) {
-                    content
-                        .fixedSize(horizontal: false, vertical: true)
-                        .environment(\.widgetGlassIsButton, true)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-                // A glass button gives up its margin when offered less than its width, which the bar's stack did to
-                // the usage widget; widgets keep their width.
-                .fixedSize(horizontal: true, vertical: false)
-            } else {
-                content.barButton(label: label, value: value, action: action)
-            }
+        // Widgets stretch their content to the bar's height to make the whole strip clickable, which the glass button
+        // would wrap in its glass; keep the content at its own height so the glass is the chip.
+        Button(action: action) {
+            content
+                .fixedSize(horizontal: false, vertical: true)
+                .environment(\.widgetGlassIsButton, true)
         }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.capsule)
+        // A glass button gives up its margin when offered less than its width, which the bar's stack did to the usage
+        // widget; widgets keep their width.
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityLabel(label)
         .accessibilityValue(value ?? "")
     }

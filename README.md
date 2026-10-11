@@ -100,9 +100,6 @@ view-variant = "box"
 height = "default"        # available values: default (55.0), menu-bar (height like system menu bar), <float> (e.g., 40, 33.5)
 horizontal-padding = 25   # padding on the left and right corners
 spacing = 15              # spacing between widgets
-
-[experimental.foreground.widgets-background] # settings for widgets background
-displayed = false                            # wrap widgets in their own background
 ```
 
 ### Additional options in this fork
