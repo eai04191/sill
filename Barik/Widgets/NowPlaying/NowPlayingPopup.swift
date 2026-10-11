@@ -285,7 +285,11 @@ extension View {
     @ViewBuilder
     fileprivate func opensPlayingApp(_ song: NowPlayingSong) -> some View {
         if let app = PlayingApp(bundleIdentifier: song.bundleIdentifier) {
-            barButton(label: "Open \(app.name)") { app.open() }
+            // The button covers the song's title and artist, so VoiceOver reads them as its value.
+            barButton(
+                label: "Open \(app.name)",
+                value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)"
+            ) { app.open() }
                 .help("Open \(app.name)")
         } else {
             self
