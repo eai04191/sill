@@ -4,7 +4,6 @@ import SwiftUI
 struct RootToml: Decodable {
     var theme: String?
     var position: BarPosition?
-    var liquidGlass: Bool?
     var yabai: YabaiConfig?
     var aerospace: AerospaceConfig?
     var experimental: ExperimentalConfig?
@@ -12,13 +11,11 @@ struct RootToml: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case theme, position, yabai, aerospace, experimental, widgets
-        case liquidGlass = "liquid-glass"
     }
 
     init() {
         self.theme = nil
         self.position = nil
-        self.liquidGlass = nil
         self.yabai = nil
         self.aerospace = nil
         self.widgets = WidgetsSection(displayed: [], others: [:])
@@ -322,24 +319,19 @@ struct ForegroundConfig: Decodable {
 
 struct WidgetBackgroundConfig: Decodable {
     let displayed: Bool
-    let blur: Material
     
     init() {
         self.displayed = false
-        self.blur = .regular
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         displayed = try container.decodeIfPresent(Bool.self, forKey: .displayed) ?? false
-        
-        let materialIndex = try container.decodeBlurIndex(forKey: .blur, maximum: 6)
-        blur = [.ultraThin, .thin, .regular, .thick, .ultraThick, .bar][materialIndex - 1]
     }
 
     enum CodingKeys: String, CodingKey {
-        case displayed, height, blur
+        case displayed, height
     }
 }
 

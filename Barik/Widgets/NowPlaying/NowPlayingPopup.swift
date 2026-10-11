@@ -248,11 +248,8 @@ struct NowPlayingPopup_Previews: PreviewProvider {
     }
 }
 
-/// The artwork's corners: concentric with the glass popup's corners on Liquid Glass, as the HIG asks for nested
-/// rounded shapes, with the previous 10pt radius as the minimum and as the shape without glass.
+/// The artwork's corners: concentric with the glass popup's corners, as the HIG asks for nested rounded shapes, with
+/// the previous 10pt radius as the minimum.
 private var artworkShape: AnyShape {
-    if ConfigManager.shared.config.usesLiquidGlass, #available(macOS 26.0, *) {
-        return AnyShape(ConcentricRectangle(corners: .concentric(minimum: 10), isUniform: true))
-    }
-    return AnyShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    AnyShape(ConcentricRectangle(corners: .concentric(minimum: 10), isUniform: true))
 }

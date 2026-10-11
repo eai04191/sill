@@ -24,7 +24,7 @@ struct VolumeWidget: View {
                         .opacity(volumeManager.isMuted ? 0.5 : 1)
                 }
             }
-            .experimentalConfiguration(cornerRadius: 15)
+            .experimentalConfiguration()
             .frame(maxHeight: .infinity)
             .background(.black.opacity(0.001))
             .background(

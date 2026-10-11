@@ -19,7 +19,6 @@ struct TimeWidget: View {
         calendarConfig?["show-events"]?.boolValue ?? true
     }
 
-    @ObservedObject private var configManager = ConfigManager.shared
     @State private var currentTime = Date()
     @ObservedObject var calendarManager: CalendarManager
 
@@ -47,8 +46,6 @@ struct TimeWidget: View {
             }
         }
         .font(.barText)
-        // The shadow keeps the white text legible on the wallpaper; glass already provides the contrast.
-        .applying(!configManager.config.usesLiquidGlass) { $0.shadow(color: .foregroundShadowOutside, radius: 3) }
         .task(id: tickInterval) {
             // Wake at each boundary of the interval, e.g. on the minute, instead of polling every second.
             currentTime = Date()
@@ -73,7 +70,7 @@ struct TimeWidget: View {
                     }
             }
         )
-        .experimentalConfiguration(cornerRadius: 15)
+        .experimentalConfiguration()
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .monospacedDigit()

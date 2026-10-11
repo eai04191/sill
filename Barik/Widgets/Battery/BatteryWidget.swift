@@ -58,7 +58,7 @@ struct BatteryWidget: View {
                 }
             )
         }
-        .experimentalConfiguration(cornerRadius: 15)
+        .experimentalConfiguration()
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .barWidgetButton(label: "Battery", value: batteryManager.accessibilityValue) {

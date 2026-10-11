@@ -4,12 +4,10 @@ struct MenuBarView: View {
     @ObservedObject var configManager = ConfigManager.shared
 
     var body: some View {
-        let usesGlass = configManager.config.usesLiquidGlass
         // With the system theme, glass widgets are dark glass with white text like the glass popups and the Control
         // Center. The HIG has small glass elements adapt to the content behind them, but only system components do
         // that; custom glass keeps the window's appearance whatever is behind it. The window appearance decides how
-        // the glass is drawn, so it is set with preferredColorScheme, which also clears it again when Liquid Glass is
-        // turned off.
+        // the glass is drawn, so it is set with preferredColorScheme.
         let theme: ColorScheme? =
             switch configManager.config.rootToml.theme {
             case "dark":
@@ -17,7 +15,7 @@ struct MenuBarView: View {
             case "light":
                 .light
             default:
-                usesGlass ? .dark : .none
+                .dark
             }
 
         let items = configManager.config.rootToml.widgets.displayed
@@ -36,7 +34,7 @@ struct MenuBarView: View {
             // leading side is also built with them added, and CenteredBarLayout shows the variants that fit.
             CenteredBarLayout(spacing: spacing) {
                 leadingSide(sections.leading, adding: [])
-                LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
+                LiquidGlassContainer(spacing: spacing) {
                     row(sections.centered)
                 }
                 trailingSide(sections.trailing, showsBanner: showsBanner)
@@ -45,7 +43,7 @@ struct MenuBarView: View {
             }
             .modifier(BarFrame(configManager: configManager, theme: theme))
         } else {
-            LiquidGlassContainer(enabled: usesGlass, spacing: spacing) {
+            LiquidGlassContainer(spacing: spacing) {
                 HStack(spacing: 0) {
                     row(items)
                     if showsBanner {
@@ -59,9 +57,7 @@ struct MenuBarView: View {
 
     /// The leading side of the centered layout, with `moved` (the trailing side's widgets) added to its "more" widget.
     private func leadingSide(_ items: [TomlWidgetItem], adding moved: [TomlWidgetItem]) -> some View {
-        LiquidGlassContainer(
-            enabled: configManager.config.usesLiquidGlass, spacing: configManager.config.experimental.foreground.spacing
-        ) {
+        LiquidGlassContainer(spacing: configManager.config.experimental.foreground.spacing) {
             fittingRow(items, dropping: .trailing, adding: moved)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -70,9 +66,7 @@ struct MenuBarView: View {
 
     /// The trailing side of the centered layout with the system banner.
     private func trailingSide(_ items: [TomlWidgetItem], showsBanner: Bool) -> some View {
-        LiquidGlassContainer(
-            enabled: configManager.config.usesLiquidGlass, spacing: configManager.config.experimental.foreground.spacing
-        ) {
+        LiquidGlassContainer(spacing: configManager.config.experimental.foreground.spacing) {
             HStack(spacing: 0) {
                 fittingRow(items, dropping: .leading)
                 if showsBanner {
@@ -299,7 +293,7 @@ private struct MoreWidgetsWidget<Popup: View>: View {
     var body: some View {
         Image(systemName: "ellipsis")
             .font(.barText)
-            .experimentalConfiguration(cornerRadius: 15)
+            .experimentalConfiguration()
             .frame(maxHeight: .infinity)
             .background(.black.opacity(0.001))
             .background(
@@ -332,8 +326,7 @@ private struct MoreWidgetsPopup: View {
                 .scrollIndicators(.automatic)
         }
         .frame(maxHeight: maxHeight)
-        .padding(configManager.config.usesLiquidGlass ? 0 : 20)
-        .applying(configManager.config.usesLiquidGlass) { $0.popupProvidesGlassModules() }
+        .popupProvidesGlassModules()
     }
 
     private var list: some View {

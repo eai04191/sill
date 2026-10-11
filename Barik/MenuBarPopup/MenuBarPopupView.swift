@@ -1,17 +1,14 @@
 import SwiftUI
 
-/// How every popup appears and disappears, modeled on the system popover (NSPopover) in macOS 26: it grows out of
-/// the bar while fading in and shrinks back while fading out, quickly and without bouncing or blurring. Measured on
-/// screen, a popover takes about 0.17 seconds to open and 0.1 seconds to close. With Reduce Motion the popup only
-/// fades, as the HIG asks in place of scaling. Liquid Glass popups materialize, the system transition for glass, and
-/// fade instead of scaling (see `MenuBarPopupView.presentation`).
+/// How every popup appears and disappears, timed like the system popover (NSPopover) in macOS 26: quickly and without
+/// bouncing or blurring. Measured on screen, a popover takes about 0.17 seconds to open and 0.1 seconds to close. The
+/// popup's glass materializes, the system transition for glass, while the popup fades instead of scaling (see
+/// `MenuBarPopupView.presentation`), which is also what the HIG asks for with Reduce Motion.
 enum PopupMotion {
     static let showDuration = 0.18
     static let hideDuration = 0.1
     static let showAnimation = Animation.easeOut(duration: showDuration)
     static let hideAnimation = Animation.easeIn(duration: hideDuration)
-    /// The scale a popup grows from and shrinks to, about where the system popover starts.
-    static let initialScale: CGFloat = 0.2
 }
 
 struct MenuBarPopupView<Content: View>: View {
@@ -22,11 +19,9 @@ struct MenuBarPopupView<Content: View>: View {
     @ObservedObject var configManager = ConfigManager.shared
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     private var isBottom: Bool { configManager.config.position == .bottom }
-    private var usesGlass: Bool { configManager.config.usesLiquidGlass }
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The content is inserted when the popup is shown and removed when it is hidden, so both looks appear and
-    /// disappear with the same transition (see `PopupMotion`).
+    /// The content is inserted when the popup is shown and removed when it is hidden, so it appears and disappears
+    /// with a transition (see `PopupMotion`).
     @State private var isPresented = false
     /// Set by content that draws its own glass modules (see `popupProvidesGlassModules()`), so no outer glass is added.
     @State private var providesModules = false
@@ -52,8 +47,8 @@ struct MenuBarPopupView<Content: View>: View {
                     withAnimation(PopupMotion.hideAnimation) { isPresented = false }
                 }
         }
-        // Popups are always dark: the material popup draws a black background, and glass popups are dark like the
-        // Control Center (MenuBarPopup gives their window the dark appearance, which the glass follows).
+        // Popups are always dark like the Control Center (MenuBarPopup gives their window the dark appearance, which
+        // the glass follows).
         .foregroundStyle(Color.white)
         .environment(\.colorScheme, .dark)
         .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
@@ -67,37 +62,22 @@ struct MenuBarPopupView<Content: View>: View {
         withAnimation(PopupMotion.showAnimation) { isPresented = true }
     }
 
-    /// Grows out of the bar edge and fades, or only fades with Reduce Motion. Glass only fades while it
-    /// materializes: scaling glass inside its container did not grow it but slid it at full size from below and to
-    /// the side of its frame, with its content apart from the glass (seen frame by frame in a screen recording).
-    private var presentation: AnyTransition {
-        guard !reduceMotion, !usesGlass else { return .opacity }
-        return .scale(scale: PopupMotion.initialScale, anchor: isBottom ? .bottom : .top)
-            .combined(with: .opacity)
-    }
+    /// Glass only fades while it materializes: scaling glass inside its container did not grow it but slid it at full
+    /// size from below and to the side of its frame, with its content apart from the glass (seen frame by frame in a
+    /// screen recording).
+    private var presentation: AnyTransition { .opacity }
 
-    /// The popup content on its background: one glass module unless the content draws its own modules, or the
-    /// black material background without Liquid Glass.
-    @ViewBuilder
+    /// The popup content on one glass module, unless the content draws its own modules.
     private var popupBody: some View {
-        if usesGlass {
-            LiquidGlassContainer(enabled: true, spacing: Constants.popupModuleSpacing) {
-                // The glass is inserted and removed inside its container so that it materializes in and out.
-                if isPresented {
-                    content
-                        .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                        .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
-                        .liquidGlassMaterializes()
-                        .transition(presentation)
-                }
+        LiquidGlassContainer(spacing: Constants.popupModuleSpacing) {
+            // The glass is inserted and removed inside its container so that it materializes in and out.
+            if isPresented {
+                content
+                    .popupGlass(enabled: !providesModules, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                    .containerShape(RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
+                    .liquidGlassMaterializes()
+                    .transition(presentation)
             }
-        } else if isPresented {
-            // The shadow is for the material look only; see `applying(_:_:)` for why it is left out around glass.
-            content
-                .background(Color.black)
-                .cornerRadius(40)
-                .shadow(radius: 30)
-                .transition(presentation)
         }
     }
 }

@@ -11,7 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var backgroundPanel: NSPanel?
     private var menuBarPanel: NSPanel?
     private var configCancellable: AnyCancellable?
-    private var menuBarForcesActiveGlass = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let error = ConfigManager.shared.initError {
@@ -61,13 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateActiveGlassAppearance()
     }
 
-    /// Only the bar has glass, and only with Liquid Glass enabled; the config may turn it on or off while running.
+    /// Only the bar has glass; the background panel has none.
     private func updateActiveGlassAppearance() {
-        let usesGlass = ConfigManager.shared.config.usesLiquidGlass
-        if usesGlass || menuBarForcesActiveGlass {
-            menuBarPanel?.setForcesActiveGlassAppearance(usesGlass)
-            menuBarForcesActiveGlass = usesGlass
-        }
+        menuBarPanel?.setForcesActiveGlassAppearance(true)
     }
 
     /// At the top the bar stays behind the system menu bar, which appears over it on hover. At the bottom nothing

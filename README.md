@@ -41,7 +41,7 @@ https://github.com/user-attachments/assets/d3799e24-c077-4c6a-a7da-a1f2eee1a07f
 
 ## Requirements
 
-- macOS 14.6+
+- macOS 26+
 
 ## Quick Start
 
@@ -132,14 +132,12 @@ spacing = 15              # spacing between widgets
 
 [experimental.foreground.widgets-background] # settings for widgets background
 displayed = false                            # wrap widgets in their own background
-blur = 3                                     # background type: from 1 to 6 for blur intensity
 ```
 
 ### Additional options in this fork
 
 ```toml
 position = "bottom"   # top (default) or bottom; popups open upward at the bottom
-liquid-glass = true   # macOS 26+: Liquid Glass for widget backgrounds and popups (needs widgets-background displayed)
 
 [widgets]
 displayed = [

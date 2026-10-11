@@ -236,15 +236,10 @@ private struct WeekdayHeaderView: View {
 }
 
 private struct CalendarDaysView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @ObservedObject private var configManager = ConfigManager.shared
     /// On Liquid Glass, a primary-colored circle takes on the glass's vibrancy and fades, so today uses the system
     /// red like the macOS Calendar, as the color that marks the one emphasized day.
-    private var todayFill: Color { configManager.config.usesLiquidGlass ? Color(red: 0.75, green: 0.1, blue: 0.1) : .primary }
-    private var todayText: Color {
-        if configManager.config.usesLiquidGlass { return .white }
-        return colorScheme == .dark ? .black : .white
-    }
+    private let todayFill = Color(red: 0.75, green: 0.1, blue: 0.1)
+    private let todayText = Color.white
     /// The day the popup shows; it marks this day in this day's month.
     let today: Date
     /// The calendar in the configured time zone, in which `today` is the current day.

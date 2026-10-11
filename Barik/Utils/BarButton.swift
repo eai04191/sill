@@ -12,10 +12,10 @@ extension View {
         .accessibilityValue(value ?? "")
     }
 
-    /// Makes a bar widget a button. With Liquid Glass it is a system glass button, which draws the widget's glass
-    /// with the system's hover and press states, the same at every width; the HIG asks custom buttons for a press
-    /// state, which the widgets' own interactive glass barely showed. Without Liquid Glass it is a plain button on the
-    /// widget's material background.
+    /// Makes a bar widget a button. It is a system glass button, which draws the widget's glass with the system's
+    /// hover and press states, the same at every width; the HIG asks custom buttons for a press state, which the
+    /// widgets' own interactive glass barely showed. With widget backgrounds turned off
+    /// (`experimental.foreground.widgets-background.displayed = false`) it is a plain button without glass.
     func barWidgetButton(label: String, value: String? = nil, action: @escaping () -> Void) -> some View {
         modifier(BarWidgetButtonModifier(label: label, value: value, action: action))
     }
@@ -38,7 +38,7 @@ private struct BarWidgetButtonModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         Group {
-            if configManager.config.usesLiquidGlass, #available(macOS 26.0, *) {
+            if configManager.config.experimental.foreground.widgetsBackground.displayed {
                 // Widgets stretch their content to the bar's height to make the whole strip clickable, which the
                 // glass button would wrap in its glass; keep the content at its own height so the glass is the chip.
                 Button(action: action) {

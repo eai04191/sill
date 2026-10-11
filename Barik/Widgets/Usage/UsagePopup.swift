@@ -3,47 +3,28 @@ import SwiftUI
 /// Details of the rate limit usage: each window's progress and reset time, with a link to the usage page.
 struct UsagePopup: View {
     @StateObject private var usageManager = UsageManager.inUse.instance { UsageManager() }
-    @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
         modules
     }
 
-    @ViewBuilder
+    /// Like the Control Center, each service is its own glass module instead of sharing one glass panel.
     private var modules: some View {
-        if configManager.config.usesLiquidGlass {
-            // Like the Control Center, each service is its own glass module instead of sharing one glass panel.
-            VStack(spacing: Constants.popupModuleSpacing) {
-                ForEach(sections, id: \.0) { service, usage in
-                    ServiceUsageSection(service: service, usage: usage)
-                        .frame(width: 260, alignment: .leading)
-                        .padding(20)
-                        .liquidGlassBackground(true, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius)) {
-                            EmptyView()
-                        }
-                }
-                if sections.isEmpty {
-                    unavailable
-                        .frame(width: 260, alignment: .leading)
-                        .padding(20)
-                        .liquidGlassBackground(true, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius)) {
-                            EmptyView()
-                        }
-                }
+        VStack(spacing: Constants.popupModuleSpacing) {
+            ForEach(sections, id: \.0) { service, usage in
+                ServiceUsageSection(service: service, usage: usage)
+                    .frame(width: 260, alignment: .leading)
+                    .padding(20)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
             }
-            .popupProvidesGlassModules()
-        } else {
-            VStack(alignment: .leading, spacing: 18) {
-                ForEach(sections, id: \.0) { service, usage in
-                    ServiceUsageSection(service: service, usage: usage)
-                }
-                if sections.isEmpty {
-                    unavailable
-                }
+            if sections.isEmpty {
+                unavailable
+                    .frame(width: 260, alignment: .leading)
+                    .padding(20)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
             }
-            .frame(width: 260, alignment: .leading)
-            .padding(24)
         }
+        .popupProvidesGlassModules()
     }
 
     private var sections: [(UsageService, ServiceUsage)] {

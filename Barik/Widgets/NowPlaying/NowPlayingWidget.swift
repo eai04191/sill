@@ -23,8 +23,9 @@ struct NowPlayingWidget: View {
                         }
                     }
                 }
-                // Measured like the visible content, which is in a system glass button with Liquid Glass.
-                .environment(\.widgetGlassIsButton, configManager.config.usesLiquidGlass)
+                // Measured like the visible content, which is in a system glass button when widget backgrounds are
+                // displayed (see `barWidgetButton`).
+                .environment(\.widgetGlassIsButton, configManager.config.experimental.foreground.widgetsBackground.displayed)
                 .hidden()
 
                 // Visible content with fixed animated width.
@@ -62,7 +63,7 @@ struct NowPlayingContent: View {
     
     /// A system glass button adds its own margin around the content (see `GlassButtonInset`).
     private var buttonInset: CGSize {
-        configManager.config.usesLiquidGlass && usesSystemGlassButton ? GlassButtonInset.regular : .zero
+        usesSystemGlassButton ? GlassButtonInset.regular : .zero
     }
 
     var body: some View {
@@ -74,16 +75,9 @@ struct NowPlayingContent: View {
         // Below the button's margin the padding is negative, which takes the rest out of the margin.
         .padding(.horizontal, (foregroundHeight < 45 ? 8 : 12) - buttonInset.width)
         .frame(height: barWidgetHeight(forBarHeight: foregroundHeight) - buttonInset.height * 2)
-        .liquidGlassBackground(
-            configManager.config.usesLiquidGlass && !usesSystemGlassButton, in: Capsule(), interactive: true
-        ) {
-            if !configManager.config.usesLiquidGlass {
-                Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
-                    .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
-            }
-        }
+        .liquidGlassBackground(!usesSystemGlassButton, in: Capsule(), interactive: true)
         // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
-        .foregroundStyle(configManager.config.usesLiquidGlass ? Color.primary : Color.foreground)
+        .foregroundStyle(Color.primary)
     }
 }
 

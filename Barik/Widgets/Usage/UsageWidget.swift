@@ -24,7 +24,7 @@ struct UsageWidget: View {
                             ServiceUsageView(service: service, usage: usage)
                         }
                     }
-                    .experimentalConfiguration(cornerRadius: 15)
+                    .experimentalConfiguration()
                     .frame(maxHeight: .infinity)
                     .background(.black.opacity(0.001))
                     .background(

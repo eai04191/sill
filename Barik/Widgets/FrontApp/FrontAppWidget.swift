@@ -65,7 +65,7 @@ struct FrontAppWidget: View {
                     .font(.barText)
                     .lineLimit(1)
             }
-            .experimentalConfiguration(cornerRadius: 15)
+            .experimentalConfiguration()
             .frame(maxHeight: .infinity)
             .animation(.smooth(duration: 0.15), value: name)
         }
