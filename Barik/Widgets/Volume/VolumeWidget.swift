@@ -70,7 +70,7 @@ struct VolumePopup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sound")
-                .font(.headline)
+                .font(.popupHeading)
             if let volume = volumeManager.volume {
                 HStack(spacing: 10) {
                     Image(systemName: "speaker.fill")
@@ -111,7 +111,7 @@ struct VolumePopup: View {
             }
         }
         .frame(width: 280, alignment: .leading)
-        .padding(24)
+        .padding(Constants.popupPadding)
     }
 
     /// Typed as a localized key: a conditional of two literals was taken as a `String` and shown untranslated.

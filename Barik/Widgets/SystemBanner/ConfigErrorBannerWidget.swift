@@ -37,8 +37,7 @@ private struct ConfigErrorPopup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Config error")
-                .font(.system(size: 14))
-                .fontWeight(.medium)
+                .font(.popupHeading)
             // Without either error, as once the file is fixed while the popup is open, it says the file has been read.
             if configManager.reloadError != nil || configManager.updateError == nil {
                 Text("The config file could not be read, so the config read before is still in use. Fix the file and save it to apply it.")
@@ -55,7 +54,7 @@ private struct ConfigErrorPopup: View {
                 errorText(error)
             }
         }
-        .padding(15)
+        .padding(Constants.popupPadding)
         .frame(width: 420, alignment: .leading)
     }
 

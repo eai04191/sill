@@ -17,6 +17,17 @@ struct MenuBarPopupVariantView: View {
 
     var onVariantSelected: ((MenuBarPopupVariant) -> Void)?
 
+    /// The layout buttons' symbol height, padding and distance from the popup's bottom edge.
+    fileprivate static let buttonSymbolHeight: CGFloat = 10
+    fileprivate static let buttonPadding: CGFloat = 8
+    private static let buttonsBottomInset: CGFloat = 5
+    /// The layout buttons sit in the bottom trailing corner, in the content's bottom padding, which is shorter than
+    /// them; the content leaves the rest of their height below it, so the buttons never cover its last row, such as the
+    /// calendar's last week.
+    private static var contentBottomClearance: CGFloat {
+        max(buttonSymbolHeight + buttonPadding * 2 + buttonsBottomInset - Constants.popupPadding, 0)
+    }
+
     init(
         selectedVariant: MenuBarPopupVariant,
         onVariantSelected: ((MenuBarPopupVariant) -> Void)? = nil,
@@ -41,6 +52,7 @@ struct MenuBarPopupVariantView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             content(for: shownVariant)
+                .padding(.bottom, Self.contentBottomClearance)
                 .transition(.opacity)
         }
         .overlay(alignment: .bottomTrailing) {
@@ -63,8 +75,8 @@ struct MenuBarPopupVariantView: View {
                         label: "Horizontal layout")
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 5)
+            .padding(.horizontal, Constants.popupPadding)
+            .padding(.bottom, Self.buttonsBottomInset)
             .contentShape(Rectangle())
             // The buttons appear on hover. Show them also while one has keyboard focus and while VoiceOver runs, as
             // a hidden button cannot be seen when focused and is left out by VoiceOver.
@@ -112,7 +124,7 @@ struct MenuBarPopupVariantView: View {
         } label: {
             Image(systemName: systemImageName)
                 .foregroundStyle(Color.primary.opacity(0.5))
-                .frame(width: 13, height: 10)
+                .frame(width: 13, height: Self.buttonSymbolHeight)
         }
         .buttonStyle(HoverButtonStyle())
         .focused($focusedVariant, equals: variant)
@@ -141,7 +153,7 @@ private struct HoverButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .padding(8)
+                .padding(MenuBarPopupVariantView.buttonPadding)
                 .background(isHovered ? Color.gray.opacity(0.4) : Color.clear)
                 .cornerRadius(8)
                 .onHover { hovering in

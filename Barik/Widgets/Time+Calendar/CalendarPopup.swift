@@ -68,12 +68,12 @@ struct CalendarBoxPopup: View {
         let today = calendarManager.today
         VStack(spacing: 0) {
             Text(monthYear(of: today, in: calendarManager.calendar))
-                .font(.title2)
+                .font(.popupHeading)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
         }
-        .padding(30)
+        .padding(Constants.popupPadding)
         .fontWeight(.semibold)
     }
 }
@@ -89,7 +89,7 @@ struct CalendarVerticalPopup: View {
         let today = calendarManager.today
         VStack(spacing: 0) {
             Text(monthYear(of: today, in: calendarManager.calendar))
-                .font(.title2)
+                .font(.popupHeading)
                 .padding(.bottom, 25)
             WeekdayHeaderView()
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
@@ -116,8 +116,7 @@ struct CalendarVerticalPopup: View {
             .frame(width: 255)
             .padding(.top, 20)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 30)
+        .padding(Constants.popupPadding)
         .fontWeight(.semibold)
     }
 }
@@ -134,7 +133,7 @@ struct CalendarHorizontalPopup: View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(monthYear(of: today, in: calendarManager.calendar))
-                    .font(.title2)
+                    .font(.popupHeading)
                     .padding(.bottom, 25)
                     .fixedSize(horizontal: true, vertical: false)
                 WeekdayHeaderView()
@@ -160,8 +159,7 @@ struct CalendarHorizontalPopup: View {
             .frame(width: 255)
             .padding(.leading, 30)
         }
-        .padding(.horizontal, 30)
-        .padding(.vertical, 30)
+        .padding(Constants.popupPadding)
         .fontWeight(.semibold)
     }
 }
@@ -374,8 +372,14 @@ private struct EventRow: View {
         // tinted with it was unreadable on glass (blue on blue), so the text uses the primary color.
         .foregroundStyle(Color.primary)
         .background(Color(event.calendar.cgColor).opacity(0.2))
-        .cornerRadius(6)
+        .clipShape(shape)
         .frame(maxWidth: .infinity)
+    }
+
+    /// Concentric with the popup's corners, as the HIG asks for nested rounded shapes and as the now playing artwork
+    /// is, with the previous 6pt radius as the minimum.
+    private var shape: ConcentricRectangle {
+        ConcentricRectangle(corners: .concentric(minimum: 6), isUniform: true)
     }
 
     func getEventTime(_ event: EKEvent) -> String {

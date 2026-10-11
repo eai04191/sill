@@ -14,13 +14,13 @@ struct UsagePopup: View {
             ForEach(sections, id: \.0) { service, usage in
                 ServiceUsageSection(service: service, usage: usage)
                     .frame(width: 260, alignment: .leading)
-                    .padding(20)
+                    .padding(Constants.popupPadding)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
             }
             if sections.isEmpty {
                 unavailable
                     .frame(width: 260, alignment: .leading)
-                    .padding(20)
+                    .padding(Constants.popupPadding)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Constants.popupCornerRadius))
             }
         }
@@ -48,9 +48,9 @@ private struct ServiceUsageSection: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(service.logoName)
-                    .font(.headline)
+                    .font(.popupHeading)
                 Text(service.displayName)
-                    .font(.headline)
+                    .font(.popupHeading)
                 Spacer()
                 Link(destination: service.usagePageURL) {
                     Image(systemName: "arrow.up.right.square")

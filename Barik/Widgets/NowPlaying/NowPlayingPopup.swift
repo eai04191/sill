@@ -10,7 +10,7 @@ struct NowPlayingPopup: View {
     @ObservedObject private var playingManager = NowPlayingManager.shared
 
     private let width: CGFloat = 300
-    private let padding: CGFloat = 25
+    private let padding = Constants.popupPadding
 
     var body: some View {
         if let song = playingManager.nowPlaying {
@@ -18,7 +18,7 @@ struct NowPlayingPopup: View {
             content(song)
         } else {
             NothingPlayingView()
-                .padding(30)
+                .padding(padding)
                 .frame(width: width)
         }
     }
@@ -83,7 +83,7 @@ private struct NothingPlayingView: View {
                 .font(.system(size: 30))
                 .accessibilityHidden(true)
             Text("Nothing Playing")
-                .font(.headline)
+                .font(.popupHeading)
         }
         .foregroundStyle(.secondary)
     }

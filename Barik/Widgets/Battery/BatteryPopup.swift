@@ -39,7 +39,7 @@ struct BatteryPopup: View {
             }
         }
         .frame(width: 60, height: 60)
-        .padding(30)
+        .padding(Constants.popupPadding)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Battery")
         .accessibilityValue(batteryManager.accessibilityValue)
