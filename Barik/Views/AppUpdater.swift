@@ -103,12 +103,21 @@ final class AppUpdater: ObservableObject {
         return 0
     }
 
+    /// Why an update could not be downloaded or installed.
+    struct UpdateError: LocalizedError {
+        let errorDescription: String?
+
+        init(_ description: String) {
+            errorDescription = description
+        }
+    }
+
     /// Downloads and unzips the update archive.
     /// - Parameters:
     ///   - version: The latest version string.
-    ///   - completion: Returns the temporary directory URL containing the unzipped app.
+    ///   - completion: Returns the temporary directory URL containing the unzipped app, or why there is none.
     private func downloadAndUnzip(
-        latest version: String, completion: @escaping (URL?) -> Void
+        latest version: String, completion: @escaping (Result<URL, Error>) -> Void
     ) {
         let assetURL: URL
         if let url = updateAssetURL {
@@ -116,8 +125,7 @@ final class AppUpdater: ObservableObject {
         } else if let fallbackURL = fallbackDownloadURL(for: version) {
             assetURL = fallbackURL
         } else {
-            print("Invalid update URL")
-            completion(nil)
+            completion(.failure(UpdateError("Invalid update URL")))
             return
         }
 
@@ -125,20 +133,18 @@ final class AppUpdater: ObservableObject {
         let downloadTask = URLSession.shared.downloadTask(with: assetURL) {
             localURL, response, error in
             if let error = error {
-                print("Update download error: \(error)")
-                completion(nil)
+                completion(.failure(error))
                 return
             }
             guard let httpResponse = response as? HTTPURLResponse,
                 httpResponse.statusCode == 200
             else {
-                print("Download failed with HTTP error")
-                completion(nil)
+                let status = (response as? HTTPURLResponse)?.statusCode
+                completion(.failure(UpdateError("Download failed with HTTP status \(status.map(String.init) ?? "unknown")")))
                 return
             }
             guard let localURL = localURL else {
-                print("No update file found")
-                completion(nil)
+                completion(.failure(UpdateError("No update file found")))
                 return
             }
 
@@ -159,52 +165,50 @@ final class AppUpdater: ObservableObject {
                 unzipProcess.waitUntilExit()
 
                 let newAppURL = tempDir.appendingPathComponent("Barik.app")
-                if fileManager.fileExists(atPath: newAppURL.path) {
-                    DispatchQueue.main.async {
-                        completion(tempDir)
-                    }
+                if unzipProcess.terminationStatus != 0 {
+                    completion(.failure(UpdateError("Unzipping failed with status \(unzipProcess.terminationStatus)")))
+                } else if fileManager.fileExists(atPath: newAppURL.path) {
+                    completion(.success(tempDir))
                 } else {
-                    print("Unzipping failed: Barik.app not found in archive")
-                    DispatchQueue.main.async {
-                        completion(nil)
-                    }
+                    completion(.failure(UpdateError("Barik.app not found in the update archive")))
                 }
             } catch {
-                print("Error unzipping update: \(error)")
-                DispatchQueue.main.async {
-                    completion(nil)
-                }
+                completion(.failure(error))
             }
         }
         downloadTask.resume()
     }
 
-    /// Downloads and installs the update immediately.
+    /// Downloads the update and starts installing it, which replaces the app once it has quit.
     /// - Parameters:
     ///   - version: The latest version string.
-    ///   - completion: Called when the installation process has been triggered.
+    ///   - completion: Called on the main thread once the installation has started, so the app should quit, or with
+    ///     why the update could not be downloaded or installed.
     func downloadAndInstall(
-        latest version: String, completion: @escaping () -> Void
+        latest version: String, completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        downloadAndUnzip(latest: version) { [weak self] tempDir in
-            guard let tempDir = tempDir else {
-                completion()
-                return
+        downloadAndUnzip(latest: version) { [weak self] result in
+            let installResult = result.flatMap { tempDir in
+                Result {
+                    guard let self else { throw UpdateError("The updater is gone") }
+                    self.downloadedUpdatePath = tempDir.path
+                    try self.installUpdate(latest: version)
+                }
             }
-            self?.downloadedUpdatePath = tempDir.path
-            self?.installUpdate(latest: version)
+            if case .failure(let error) = installResult {
+                print("Error updating: \(error)")
+            }
             DispatchQueue.main.async {
-                completion()
+                completion(installResult)
             }
         }
     }
 
     /// Installs the update by replacing the current application.
     /// - Parameter version: The latest version string.
-    func installUpdate(latest version: String) {
+    func installUpdate(latest version: String) throws {
         guard let downloadedPath = downloadedUpdatePath else {
-            print("No downloaded update to install")
-            return
+            throw UpdateError("No downloaded update to install")
         }
         let newAppURL = URL(fileURLWithPath: downloadedPath)
             .appendingPathComponent("Barik.app")
@@ -221,20 +225,16 @@ final class AppUpdater: ObservableObject {
         let fileManager = FileManager.default
         let updateTempDir = fileManager.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-        do {
-            try fileManager.createDirectory(
-                at: updateTempDir, withIntermediateDirectories: true,
-                attributes: nil)
-            let scriptURL = updateTempDir.appendingPathComponent("update.sh")
-            try script.write(to: scriptURL, atomically: true, encoding: .utf8)
-            try fileManager.setAttributes(
-                [.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        try fileManager.createDirectory(
+            at: updateTempDir, withIntermediateDirectories: true,
+            attributes: nil)
+        let scriptURL = updateTempDir.appendingPathComponent("update.sh")
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try fileManager.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
 
-            let process = Process()
-            process.executableURL = scriptURL
-            try process.run()
-        } catch {
-            print("Error installing update: \(error)")
-        }
+        let process = Process()
+        process.executableURL = scriptURL
+        try process.run()
     }
 }
