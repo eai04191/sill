@@ -104,6 +104,8 @@ final class WindowSwitcherModel: ObservableObject {
     }
 
     @Published private(set) var state: State = .loading
+    /// Set when focusing a window failed, such as one closed after the list was loaded, so the popup says so.
+    @Published private(set) var focusFailed = false
 
     func load() async {
         state = .loading
@@ -118,16 +120,21 @@ final class WindowSwitcherModel: ObservableObject {
         }
     }
 
-    /// Closes the popup and focuses the window. Focusing another app's window also takes key status from the popup,
-    /// which would close it anyway.
-    func focus(_ window: AeroSpaceWindow) {
-        MenuBarPopup.hide()
-        Task.detached(priority: .userInitiated) {
-            do {
-                try AeroSpace.focus(windowID: window.id)
-            } catch {
-                print("Failed to focus window \(window.id) with AeroSpace: \(error)")
-            }
+    /// Focuses the window and closes the popup, or keeps the popup open with a message and a fresh list when AeroSpace
+    /// could not focus it, rather than closing as if it had. Focusing another app's window also takes key status from
+    /// the popup, which closes it anyway.
+    func focus(_ window: AeroSpaceWindow) async {
+        focusFailed = false
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try AeroSpace.focus(windowID: window.id) }
+        }.value
+        switch result {
+        case .success:
+            MenuBarPopup.hide()
+        case .failure(let error):
+            print("Failed to focus window \(window.id) with AeroSpace: \(error)")
+            focusFailed = true
+            await load()
         }
     }
 }

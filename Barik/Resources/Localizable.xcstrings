@@ -356,6 +356,16 @@
         }
       }
     },
+    "Could not switch to the window" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィンドウに移れませんでした"
+          }
+        }
+      }
+    },
     "Could not save %@ to %@: %@" : {
       "comment" : "The config key, the config file's path, and the error.",
       "localizations" : {

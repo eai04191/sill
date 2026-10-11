@@ -21,6 +21,9 @@ struct WindowSwitcherPopup: View {
         ScrollViewReader { proxy in
             VStack(alignment: .leading, spacing: 10) {
                 searchField(proxy: proxy)
+                if model.focusFailed {
+                    message("Could not switch to the window")
+                }
                 content
             }
             .onChange(of: query) { resetSelection(proxy: proxy) }
@@ -125,7 +128,7 @@ struct WindowSwitcherPopup: View {
     private func row(_ window: AeroSpaceWindow) -> some View {
         let isSelected = window.id == selectedID
         return Button {
-            model.focus(window)
+            Task { await model.focus(window) }
         } label: {
             HStack(spacing: 12) {
                 Text(window.displayTitle)
@@ -228,6 +231,6 @@ struct WindowSwitcherPopup: View {
 
     private func focusSelectedWindow() {
         guard let window = visibleWindows.first(where: { $0.id == selectedID }) else { return }
-        model.focus(window)
+        Task { await model.focus(window) }
     }
 }
