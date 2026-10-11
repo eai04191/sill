@@ -27,8 +27,9 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
 
     /// Wi‑Fi state from CoreWLAN (power and association) and a Wi‑Fi path monitor (internet access).
     @Published var wifiState: NetworkState = .disconnected
-    /// Ethernet state from an Ethernet path monitor.
-    @Published var ethernetState: NetworkState = .disconnected
+    /// Ethernet state from an Ethernet path monitor. Hidden as not supported until the monitor's first update, so a Mac
+    /// without Ethernet does not flash a disconnected icon.
+    @Published var ethernetState: NetworkState = .notSupported
 
     // Wi‑Fi details obtained via CoreWLAN.
     /// The network name, or nil when Wi‑Fi is not connected or the name is unavailable. macOS gives the name only to
