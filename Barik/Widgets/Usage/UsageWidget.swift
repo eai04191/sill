@@ -82,6 +82,8 @@ private struct ServiceUsageView: View {
                 Text(window.reset.map { "\(window.percentText) \($0)" } ?? window.percentText)
                     .font(.barText)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
     }

@@ -20,6 +20,8 @@ struct VolumeWidget: View {
                     Text("\(Int((volume * 100).rounded()))%")
                         .font(.barText)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .fixedSize()
                         .opacity(volumeManager.isMuted ? 0.5 : 1)
                 }
             }

@@ -157,17 +157,21 @@ struct SongTextView: View {
 
         VStack(alignment: .leading, spacing: -1) {
             if foregroundHeight >= 30 {
+                // Long titles are truncated so the widget fits the space next to centered widgets.
                 Text(song.title)
                     .font(.system(size: 11))
                     .fontWeight(.medium)
+                    .lineLimit(1)
                     .padding(.trailing, 2)
                 Text(song.artist)
                     .opacity(0.8)
                     .font(.system(size: 10))
+                    .lineLimit(1)
                     .padding(.trailing, 2)
             } else {
                 Text(song.artist + " — " + song.title)
                     .font(.system(size: 12))
+                    .lineLimit(1)
             }
         }
         // Disable animations for text changes.
