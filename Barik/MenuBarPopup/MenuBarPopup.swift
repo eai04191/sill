@@ -33,16 +33,12 @@ class HidingPanel: NSPanel, NSWindowDelegate {
 class MenuBarPopup {
     static var lastContentIdentifier: String? = nil
 
-    /// Whether a popup is shown or about to be shown, as opposed to hidden or fading out.
+    /// Whether a popup is shown or about to be shown, as opposed to hidden or disappearing.
     private static var isShown = false
-    /// The delayed step of the latest show or hide: showing the new content once the old content has faded, or
-    /// ordering the panel out once the popup has faded. Each show or hide cancels the previous step, so a step
+    /// The delayed step of the latest show or hide: showing the new content once the old popup has disappeared, or
+    /// ordering the panel out once the popup has disappeared. Each show or hide cancels the previous step, so a step
     /// scheduled for an earlier popup never hides or shows a later one.
     private static var pendingStep: DispatchWorkItem?
-
-    private static var animationDuration: Double {
-        Double(Constants.menuBarPopupAnimationDurationInMilliseconds) / 1000.0
-    }
 
     static func show<Content: View>(
         rect: CGRect, id: String, @ViewBuilder content: @escaping () -> Content
@@ -62,11 +58,11 @@ class MenuBarPopup {
         pendingStep?.cancel()
         pendingStep = nil
 
+        // Like the system popovers, one popup is closed before the next one opens, with the same transitions as
+        // closing and opening each (see PopupMotion).
         if isContentChange {
-            NotificationCenter.default.post(
-                name: .willChangeContent, object: nil)
-            fadeOutIfGlass(panel)
-            schedule(after: animationDuration / 2) {
+            NotificationCenter.default.post(name: .willHideWindow, object: nil)
+            schedule(after: PopupMotion.hideDuration) {
                 present(in: panel, rect: rect, content: content)
             }
         } else {
@@ -80,8 +76,7 @@ class MenuBarPopup {
         guard isShown, let panel = panel else { return }
         isShown = false
         NotificationCenter.default.post(name: .willHideWindow, object: nil)
-        fadeOutIfGlass(panel)
-        schedule(after: animationDuration) {
+        schedule(after: PopupMotion.hideDuration) {
             panel.orderOut(nil)
             lastContentIdentifier = nil
         }
@@ -104,7 +99,6 @@ class MenuBarPopup {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
-        panel.alphaValue = 1
         panel.makeKeyAndOrderFront(nil)
         clearInitialFocus(of: panel)
         DispatchQueue.main.async {
@@ -131,7 +125,7 @@ class MenuBarPopup {
     /// Glass popups are dark in either system appearance, like the Control Center modules in macOS 26 and later.
     /// The window appearance, not the SwiftUI color scheme, decides whether Liquid Glass is drawn light or dark.
     /// The material popup keeps the system appearance and draws its own black background.
-    /// The glass also keeps its active look while the popup fades out after it stops being key.
+    /// The glass also keeps its active look while the popup disappears after it stops being key.
     private static func applyAppearance(to panel: NSPanel) {
         let usesGlass = ConfigManager.shared.config.usesLiquidGlass
         panel.appearance = usesGlass ? NSAppearance(named: .darkAqua) : nil
@@ -141,16 +135,6 @@ class MenuBarPopup {
         }
     }
     private static var panelForcesActiveGlass = false
-
-    /// Fades a glass popup out with its window. Liquid Glass ignores the opacity of the SwiftUI views around it, so
-    /// fading the view would leave the glass in place until the window is ordered out.
-    static func fadeOutIfGlass(_ panel: NSPanel) {
-        guard ConfigManager.shared.config.usesLiquidGlass else { return }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
-            panel.animator().alphaValue = 0
-        }
-    }
 
     /// The panel becomes key to receive clicks, and AppKit then focuses its first control, drawing a focus ring
     /// before any keyboard use. Clear that initial focus once the content is laid out; pressing Tab still moves
