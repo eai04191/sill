@@ -32,7 +32,10 @@ class CalendarManager: ObservableObject {
     @Published var todaysEvents: [EKEvent] = []
     @Published var tomorrowsEvents: [EKEvent] = []
     private let eventStore = EKEventStore()
-    private var timer: Timer?
+    private var observers: [NSObjectProtocol] = []
+    /// Fetches the events again when one of today's events starts or ends, which changes the next event and today's
+    /// events without a change to the store.
+    private var rolloverTimer: Timer?
 
     init(configProvider: ConfigProvider) {
         self.configProvider = configProvider
@@ -44,34 +47,61 @@ class CalendarManager: ObservableObject {
         stopMonitoring()
     }
 
+    /// Fetches the events again when the store changes, and when the day or the clock changes, which moves the fetched
+    /// day ranges, instead of polling the store.
     private func startMonitoring() {
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) {
-            [weak self] _ in
-            self?.fetchTodaysEvents()
-            self?.fetchTomorrowsEvents()
-            self?.fetchNextEvent()
+        let center = NotificationCenter.default
+        observers.append(
+            center.addObserver(forName: .EKEventStoreChanged, object: eventStore, queue: .main) { [weak self] _ in
+                self?.refresh()
+            })
+        for name in [Notification.Name.NSCalendarDayChanged, .NSSystemClockDidChange, .NSSystemTimeZoneDidChange] {
+            observers.append(
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    self?.refresh()
+                })
         }
-        fetchTodaysEvents()
-        fetchTomorrowsEvents()
-        fetchNextEvent()
+        refresh()
     }
 
     private func stopMonitoring() {
-        timer?.invalidate()
-        timer = nil
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers = []
+        rolloverTimer?.invalidate()
+        rolloverTimer = nil
     }
 
     private func requestAccess() {
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
             if granted && error == nil {
-                self?.fetchTodaysEvents()
-                self?.fetchTomorrowsEvents()
-                self?.fetchNextEvent()
+                DispatchQueue.main.async { self?.refresh() }
             } else {
                 print(
                     "Calendar access not granted: \(String(describing: error))")
             }
         }
+    }
+
+    /// Fetches every list and schedules the next rollover. Called on the main thread.
+    private func refresh() {
+        let now = Date()
+        todaysEvents = fetchTodaysEvents(now: now)
+        tomorrowsEvents = fetchTomorrowsEvents(now: now)
+        nextEvent = fetchNextEvent(now: now)
+        scheduleRollover(after: now)
+    }
+
+    private func scheduleRollover(after now: Date) {
+        rolloverTimer?.invalidate()
+        rolloverTimer = nil
+        let boundaries = todaysEvents.flatMap { [$0.startDate, $0.endDate] }.compactMap { $0 }
+        guard let boundary = boundaries.filter({ $0 > now }).min() else { return }
+        // A second after the boundary, so that an event ending then is no longer fetched as ongoing.
+        let timer = Timer(fire: boundary.addingTimeInterval(1), interval: 0, repeats: false) { [weak self] _ in
+            self?.refresh()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        rolloverTimer = timer
     }
 
     private func filterEvents(_ events: [EKEvent]) -> [EKEvent] {
@@ -85,16 +115,15 @@ class CalendarManager: ObservableObject {
         return filtered
     }
 
-    func fetchNextEvent() {
+    private func fetchNextEvent(now: Date) -> EKEvent? {
         let calendars = eventStore.calendars(for: .event)
-        let now = Date()
         let calendar = Calendar.current
         guard
             let endOfDay = calendar.date(
                 bySettingHour: 23, minute: 59, second: 59, of: now)
         else {
             print("Failed to get end of day.")
-            return
+            return nil
         }
         let predicate = eventStore.predicateForEvents(
             withStart: now, end: endOfDay, calendars: calendars)
@@ -103,15 +132,11 @@ class CalendarManager: ObservableObject {
         }
         let filteredEvents = filterEvents(events)
         let regularEvents = filteredEvents.filter { !$0.isAllDay }
-        let next = regularEvents.first ?? filteredEvents.first
-        DispatchQueue.main.async {
-            self.nextEvent = next
-        }
+        return regularEvents.first ?? filteredEvents.first
     }
 
-    func fetchTodaysEvents() {
+    private func fetchTodaysEvents(now: Date) -> [EKEvent] {
         let calendars = eventStore.calendars(for: .event)
-        let now = Date()
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: now)
         guard
@@ -119,22 +144,18 @@ class CalendarManager: ObservableObject {
                 bySettingHour: 23, minute: 59, second: 59, of: now)
         else {
             print("Failed to get end of day.")
-            return
+            return []
         }
         let predicate = eventStore.predicateForEvents(
             withStart: startOfDay, end: endOfDay, calendars: calendars)
         let events = eventStore.events(matching: predicate)
             .filter { $0.endDate >= now }
             .sorted { $0.startDate < $1.startDate }
-        let filteredEvents = filterEvents(events)
-        DispatchQueue.main.async {
-            self.todaysEvents = filteredEvents
-        }
+        return filterEvents(events)
     }
 
-    func fetchTomorrowsEvents() {
+    private func fetchTomorrowsEvents(now: Date) -> [EKEvent] {
         let calendars = eventStore.calendars(for: .event)
-        let now = Date()
         let calendar = Calendar.current
         let startOfToday = calendar.startOfDay(for: now)
         guard
@@ -144,7 +165,7 @@ class CalendarManager: ObservableObject {
                 bySettingHour: 23, minute: 59, second: 59, of: startOfTomorrow)
         else {
             print("Failed to get tomorrow's date range.")
-            return
+            return []
         }
         let predicate = eventStore.predicateForEvents(
             withStart: startOfTomorrow, end: endOfTomorrow, calendars: calendars
@@ -152,9 +173,6 @@ class CalendarManager: ObservableObject {
         let events = eventStore.events(matching: predicate).sorted {
             $0.startDate < $1.startDate
         }
-        let filteredEvents = filterEvents(events)
-        DispatchQueue.main.async {
-            self.tomorrowsEvents = filteredEvents
-        }
+        return filterEvents(events)
     }
 }
