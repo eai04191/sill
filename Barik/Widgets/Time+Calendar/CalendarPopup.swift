@@ -8,7 +8,7 @@ struct CalendarPopup: View {
     @State private var selectedVariant: MenuBarPopupVariant = .box
 
     var body: some View {
-        // The colors of every variant adapt to the appearance, so a glass popup can follow the system.
+        // The colors of every variant adapt to the appearance; popups are always dark (see MenuBarPopupView).
         variantView
     }
 
