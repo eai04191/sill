@@ -56,24 +56,16 @@ struct NowPlayingContent: View {
     var foregroundHeight: CGFloat { configManager.config.experimental.foreground.resolveHeight() }
     
     var body: some View {
-        Group {
-            if foregroundHeight < 38 {
-                HStack(spacing: 8) {
-                    AlbumArtView(song: song)
-                    SongTextView(song: song)
-                }
-            } else {
-                HStack(spacing: 8) {
-                    AlbumArtView(song: song)
-                    SongTextView(song: song)
-                }
-                .padding(.horizontal, foregroundHeight < 45 ? 8 : 12)
-                .frame(height: foregroundHeight < 45 ? 30 : 38)
-                .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule(), interactive: true) {
-                    Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
-                        .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
-                }
-            }
+        // A capsule at every bar height, like the other widgets; it used to lose its background below 38 points.
+        HStack(spacing: 8) {
+            AlbumArtView(song: song)
+            SongTextView(song: song)
+        }
+        .padding(.horizontal, foregroundHeight < 45 ? 8 : 12)
+        .frame(height: barWidgetHeight(forBarHeight: foregroundHeight))
+        .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule(), interactive: true) {
+            Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
+                .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
         }
         // On glass, use the system primary color like the other widgets (see ExperimentalConfigurationModifier).
         .foregroundStyle(configManager.config.usesLiquidGlass ? Color.primary : Color.foreground)
@@ -123,14 +115,19 @@ struct VisibleNowPlayingContent: View {
 /// A view that displays the album art with a fade animation and a pause indicator if needed.
 struct AlbumArtView: View {
     let song: NowPlayingSong
+    @ObservedObject var configManager = ConfigManager.shared
+    /// 20 points, or smaller on a bar too low for it inside the widget.
+    private var size: CGFloat {
+        min(20, barWidgetHeight(forBarHeight: configManager.config.experimental.foreground.resolveHeight()) - 4)
+    }
 
     var body: some View {
         ZStack {
             FadeAnimatedCachedImage(
                 url: song.albumArtURL,
-                targetSize: CGSize(width: 20, height: 20)
+                targetSize: CGSize(width: size, height: size)
             )
-            .frame(width: 20, height: 20)
+            .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .scaleEffect(song.state == .paused ? 0.9 : 1)
             .brightness(song.state == .paused ? -0.3 : 0)
