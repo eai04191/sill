@@ -34,8 +34,6 @@ private struct SpaceView: View {
 
     let space: AnySpace
 
-    @State var isHovered = false
-
     var body: some View {
         let isFocused = space.windows.contains { $0.isFocused } || space.isFocused
         HStack(spacing: 0) {
@@ -62,7 +60,7 @@ private struct SpaceView: View {
              : Color.clear) :
                 (isFocused
                  ? Color.active
-                 : isHovered ? Color.noActive : Color.noActive)
+                 : Color.noActive)
         )
         .clipShape(RoundedRectangle(cornerRadius: foregroundHeight < 30 ? 0 : 8, style: .continuous))
         .shadow(color: .shadow, radius: foregroundHeight < 30 ? 0 : 2)
@@ -77,10 +75,6 @@ private struct SpaceView: View {
         .accessibilityLabel("Space \(space.id)")
         .accessibilityAction {
             viewModel.switchToSpace(space, needWindowFocus: true)
-        }
-        .animation(.smooth, value: isHovered)
-        .onHover { value in
-            isHovered = value
         }
     }
 }
