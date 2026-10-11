@@ -86,17 +86,37 @@ final class ImageLoader: ObservableObject {
 // MARK: - NSImage Extension
 
 extension NSImage {
-    /// Returns a resized version of the image.
-    /// - Parameter newSize: The target size.
-    /// - Returns: A new NSImage resized to the given dimensions, or nil if resizing fails.
+    /// Returns the image scaled to fill the target size, cropping the overflow at the center, so that artwork of
+    /// another aspect ratio, such as a 16:9 video thumbnail, is not squashed.
+    /// Drawn with Core Graphics, as ImageLoader resizes off the main thread where lockFocus is not safe.
+    /// - Parameter newSize: The target size in points.
+    /// - Returns: A new NSImage of the given size, or nil if resizing fails.
     func resized(to newSize: NSSize) -> NSImage? {
-        let newImage = NSImage(size: newSize)
-        newImage.lockFocus()
-        let rect = NSRect(origin: .zero, size: newSize)
-        self.draw(in: rect, from: NSRect(origin: .zero, size: self.size), operation: .copy, fraction: 1.0)
-        newImage.unlockFocus()
-        newImage.size = newSize
-        return newImage
+        // Rendered at 2x, so the image stays sharp on Retina displays.
+        let scale: CGFloat = 2
+        let pixelWidth = Int((newSize.width * scale).rounded())
+        let pixelHeight = Int((newSize.height * scale).rounded())
+        guard pixelWidth > 0, pixelHeight > 0,
+            let cgImage = cgImage(forProposedRect: nil, context: nil, hints: nil),
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+            let context = CGContext(
+                data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else {
+            return nil
+        }
+        let fill = max(
+            CGFloat(pixelWidth) / CGFloat(cgImage.width), CGFloat(pixelHeight) / CGFloat(cgImage.height))
+        let drawWidth = CGFloat(cgImage.width) * fill
+        let drawHeight = CGFloat(cgImage.height) * fill
+        context.interpolationQuality = .high
+        context.draw(
+            cgImage,
+            in: CGRect(
+                x: (CGFloat(pixelWidth) - drawWidth) / 2, y: (CGFloat(pixelHeight) - drawHeight) / 2,
+                width: drawWidth, height: drawHeight))
+        guard let resized = context.makeImage() else { return nil }
+        return NSImage(cgImage: resized, size: newSize)
     }
 }
 
