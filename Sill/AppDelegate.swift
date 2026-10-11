@@ -23,6 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         Logger.app.notice("Launched version \(version, privacy: .public), pid \(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
+        if HiddenInstance.isEnabled {
+            Logger.app.notice("Running as a hidden instance below the desktop picture")
+        }
         handleTerminationSignal()
 
         if let error = ConfigManager.shared.initError {
@@ -108,9 +111,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// At the top the bar stays behind the system menu bar, which appears over it on hover. At the bottom nothing
-    /// needs to cover it, so it sits above windows like the Dock instead of being hidden by floating windows.
+    /// needs to cover it, so it sits above windows like the Dock instead of being hidden by floating windows. A hidden
+    /// instance's bar is below the desktop picture (see `HiddenInstance`).
     private func menuBarLevel() -> Int {
-        ConfigManager.shared.config.position == .bottom
+        if HiddenInstance.isEnabled {
+            return HiddenInstance.windowLevel
+        }
+        return ConfigManager.shared.config.position == .bottom
             ? Int(CGWindowLevelForKey(.statusWindow))
             : Int(CGWindowLevelForKey(.backstopMenu))
     }

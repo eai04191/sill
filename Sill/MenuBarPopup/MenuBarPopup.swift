@@ -113,7 +113,11 @@ class MenuBarPopup {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         )
-        panel.makeKeyAndOrderFront(nil)
+        if HiddenInstance.isEnabled {
+            panel.orderFront(nil)
+        } else {
+            panel.makeKeyAndOrderFront(nil)
+        }
         if !focusesContent {
             clearInitialFocus(of: panel)
         }
@@ -178,7 +182,7 @@ class MenuBarPopup {
         )
 
         newPanel.level = NSWindow.Level(
-            rawValue: Int(CGWindowLevelForKey(.floatingWindow)))
+            rawValue: HiddenInstance.isEnabled ? HiddenInstance.windowLevel : Int(CGWindowLevelForKey(.floatingWindow)))
         newPanel.backgroundColor = .clear
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
