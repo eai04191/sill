@@ -8,7 +8,6 @@ extension NSScreen {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var backgroundPanel: NSPanel?
     private var menuBarPanel: NSPanel?
     private var configCancellable: AnyCancellable?
 
@@ -41,16 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupPanels()
     }
 
-    /// Configures and displays the background and menu bar panels, and fits the popup panel to the same screen.
+    /// Configures and displays the menu bar panel, and fits the popup panel to the same screen.
     /// Without a screen nothing is set up; the next screen change sets it up.
     private func setupPanels() {
         guard let screenFrame = NSScreen.barScreen?.frame else { return }
         MenuBarPopup.setup(frame: screenFrame)
-        setupPanel(
-            &backgroundPanel,
-            frame: screenFrame,
-            level: Int(CGWindowLevelForKey(.desktopWindow)),
-            hostingRootView: AnyView(BackgroundView()))
         setupPanel(
             &menuBarPanel,
             frame: menuBarFrame(in: screenFrame),
@@ -60,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateActiveGlassAppearance()
     }
 
-    /// Only the bar has glass; the background panel has none.
+    /// Only the bar panel has glass.
     private func updateActiveGlassAppearance() {
         menuBarPanel?.setForcesActiveGlassAppearance(true)
     }

@@ -105,9 +105,6 @@ final class ConfigManager: ObservableObject {
 
             [widgets.default.time.popup]
             view-variant = "box"
-
-            [experimental.background]
-            displayed = true
             """
         try defaultTOML.write(toFile: path, atomically: true, encoding: .utf8)
     }

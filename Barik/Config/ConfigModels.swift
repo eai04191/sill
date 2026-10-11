@@ -219,21 +219,18 @@ extension TOMLValue {
 
 struct ExperimentalConfig: Decodable {
     let foreground: ForegroundConfig
-    let background: BackgroundConfig
     
     enum CodingKeys: String, CodingKey {
-        case foreground, background
+        case foreground
     }
     
     init() {
         self.foreground = ForegroundConfig()
-        self.background = BackgroundConfig()
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         foreground = try container.decodeIfPresent(ForegroundConfig.self, forKey: .foreground) ?? ForegroundConfig()
-        background = try container.decodeIfPresent(BackgroundConfig.self, forKey: .background) ?? BackgroundConfig()
     }
 }
 
@@ -292,58 +289,6 @@ struct WidgetBackgroundConfig: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case displayed, height
-    }
-}
-
-struct BackgroundConfig: Decodable {
-    let displayed: Bool
-    let height: BackgroundForegroundHeight
-    let blur: Material
-    let black: Bool
-
-    init() {
-        self.displayed = true
-        self.height = .barikDefault
-        self.blur = .regular
-        self.black = false
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        displayed = try container.decodeIfPresent(Bool.self, forKey: .displayed) ?? true
-        height = try container.decodeIfPresent(BackgroundForegroundHeight.self, forKey: .height) ?? .barikDefault
-        
-        let materialIndex = try container.decodeBlurIndex(forKey: .blur, maximum: 7)
-        blur = [.ultraThin, .thin, .regular, .thick, .ultraThick, .bar, .bar][materialIndex - 1]
-        self.black = materialIndex == 7
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case displayed, height, blur
-    }
-
-    func resolveHeight() -> CGFloat? {
-        switch height {
-        case .barikDefault:
-            return nil
-        case .menuBar:
-            return NSApplication.shared.mainMenu.map({ CGFloat($0.menuBarHeight) }) ?? 0
-        case .float(let value):
-            return CGFloat(value)
-        }
-    }
-}
-
-extension KeyedDecodingContainer {
-    /// Reads a `blur` index from 1 up to `maximum`. Without it the blur is 3 (`.regular`), as when the whole table is
-    /// not set. A value outside the range is an error instead of being changed to the nearest valid one.
-    fileprivate func decodeBlurIndex(forKey key: Key, maximum: Int) throws -> Int {
-        let index = try decodeIfPresent(Int.self, forKey: key) ?? 3
-        guard (1...maximum).contains(index) else {
-            throw DecodingError.dataCorruptedError(
-                forKey: key, in: self, debugDescription: "blur must be from 1 to \(maximum), but is \(index)")
-        }
-        return index
     }
 }
 
