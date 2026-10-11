@@ -1,0 +1,22 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": ["config:best-practices"],
+    "automerge": true,
+    "platformAutomerge": true,
+    "customManagers": [
+        {
+            "description": "Tools the release workflow downloads, pinned by a version and the SHA-512 of the release attachment",
+            "customType": "regex",
+            "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+            "matchStrings": [
+                "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+[A-Z_]+_VERSION: (?<currentValue>\\S+)\\s+[A-Z_]+_SHA512: (?<currentDigest>[0-9a-f]{128})"
+            ]
+        }
+    ],
+    "packageRules": [
+        {
+            "matchUpdateTypes": ["major"],
+            "automerge": false
+        }
+    ]
+}
