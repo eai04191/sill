@@ -36,16 +36,15 @@ struct NetworkWidget: View {
     /// The Wi-Fi network and Ethernet state shown by the icons.
     private var accessibilityValue: String {
         var parts: [String] = []
-        if viewModel.wifiState != .notSupported { parts.append("Wi-Fi \(viewModel.ssid), \(viewModel.wifiState.rawValue)") }
+        if viewModel.wifiState != .notSupported {
+            let name = viewModel.ssid.map { " \($0)" } ?? ""
+            parts.append("Wi-Fi\(name), \(viewModel.wifiState.rawValue)")
+        }
         if viewModel.ethernetState != .notSupported { parts.append("Ethernet \(viewModel.ethernetState.rawValue)") }
         return parts.joined(separator: ", ")
     }
 
     private var wifiIcon: some View {
-        if viewModel.ssid == "Not connected" {
-            return Image(systemName: "wifi.slash")
-                .foregroundColor(.red)
-        }
         switch viewModel.wifiState {
         case .connected:
             return Image(systemName: "wifi")

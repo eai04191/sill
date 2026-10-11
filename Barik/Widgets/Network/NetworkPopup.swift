@@ -9,13 +9,11 @@ struct NetworkPopup: View {
             if viewModel.wifiState != .notSupported {
                 HStack(spacing: 8) {
                     wifiIcon
-                    Text(viewModel.ssid)
+                    Text(viewModel.ssid ?? "Wi-Fi: \(viewModel.wifiState.rawValue)")
                         .font(.headline)
                 }
 
-                if viewModel.ssid != "Not connected"
-                    && viewModel.ssid != "No interface"
-                {
+                if viewModel.isWifiConnected {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(
                             "Signal strength: \(viewModel.wifiSignalStrength.rawValue)"
@@ -43,13 +41,6 @@ struct NetworkPopup: View {
 
     /// Chooses the Wi‑Fi icon based on the status and connection availability.
     private var wifiIcon: some View {
-        if viewModel.ssid == "Not connected" {
-            return Image(systemName: "wifi.slash")
-                .padding(8)
-                .background(Color.red.opacity(0.8))
-                .clipShape(Circle())
-                .foregroundStyle(.white)
-        }
         switch viewModel.wifiState {
         case .connected:
             return Image(systemName: "wifi")

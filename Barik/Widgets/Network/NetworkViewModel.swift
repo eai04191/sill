@@ -31,15 +31,21 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
     @Published var ethernetState: NetworkState = .disconnected
 
     // Wi‑Fi details obtained via CoreWLAN.
-    @Published var ssid: String = "Not connected"
+    /// The network name, or nil when Wi‑Fi is not connected or the name is unavailable. macOS gives the name only to
+    /// apps with Location access, so a connected Wi‑Fi can have no name.
+    @Published var ssid: String?
     @Published var rssi: Int = 0
     @Published var noise: Int = 0
     @Published var channel: String = "N/A"
 
+    /// Whether Wi‑Fi is associated with a network, with or without internet access.
+    var isWifiConnected: Bool {
+        wifiState == .connected || wifiState == .connectedWithoutInternet
+    }
+
     /// Computed property for signal strength.
     var wifiSignalStrength: WifiSignalStrength {
-        // If Wi‑Fi is not connected or the interface is missing – return unknown.
-        if ssid == "Not connected" || ssid == "No interface" {
+        if !isWifiConnected {
             return .unknown
         }
         if rssi >= -50 {
@@ -142,7 +148,7 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
     private func updateWiFiInfo() {
         let client = CWWiFiClient.shared()
         if let interface = client.interface() {
-            self.ssid = interface.ssid() ?? "Not connected"
+            self.ssid = interface.ssid()
             self.rssi = interface.rssiValue()
             self.noise = interface.noiseMeasurement()
             if let wlanChannel = interface.wlanChannel() {
@@ -165,7 +171,7 @@ final class NetworkStatusViewModel: NSObject, ObservableObject,
             }
         } else {
             // Interface not available – Wi‑Fi is off.
-            self.ssid = "No interface"
+            self.ssid = nil
             self.rssi = 0
             self.noise = 0
             self.channel = "N/A"
