@@ -15,7 +15,10 @@ struct VolumeWidget: View {
                 Image(systemName: VolumeSymbol.name(volume: volume, muted: volumeManager.isMuted))
                     .font(.barText)
                     .contentTransition(.symbolEffect(.replace))
-                    .frame(width: 18, alignment: .leading)
+                    // The symbol is sized by the bar text like other symbols next to text, and its slot is as wide as
+                    // the widest variant (speaker.wave.3.fill, 22 points at 13 points) so the percentage doesn't move
+                    // as the volume changes. At 18 points the wider variants ran into the percentage's spacing.
+                    .frame(width: 22, alignment: .leading)
                 if showPercentage {
                     Text("\(Int((volume * 100).rounded()))%")
                         .font(.barText)
