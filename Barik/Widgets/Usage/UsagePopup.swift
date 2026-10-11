@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Details of the rate limit usage: each window's progress and reset time, with a link to the usage page.
 struct UsagePopup: View {
-    @ObservedObject private var usageManager = UsageManager.shared
+    @StateObject private var usageManager = UsageManager.inUse.instance { UsageManager() }
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {

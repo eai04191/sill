@@ -85,7 +85,8 @@ enum UsageService: String, CaseIterable, Identifiable {
 /// `{"claude": {"primary": {"pct": 10, "reset": "2h"}, "secondary": ...}, "codex": ...}`.
 /// Fetching and caching the usage is left to that command, so this only reads its output.
 final class UsageManager: ObservableObject {
-    static let shared = UsageManager()
+    /// One manager for the usage widgets on the bar and their popup, released with its polling once none shows it.
+    static let inUse = SharedWhileInUse<UsageManager>()
     static let defaultCommand = "~/.local/bin/usage-display.sh"
 
     @Published private(set) var report: UsageReport?
@@ -97,7 +98,7 @@ final class UsageManager: ObservableObject {
     /// A command that hangs is stopped after this many seconds.
     private static let timeout: TimeInterval = 10
 
-    private init() {
+    init() {
         timer = Timer.publish(every: 5, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.refresh() }

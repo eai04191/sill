@@ -8,7 +8,7 @@ import SwiftUI
 /// - `command`: the command printing the usage JSON, `~/.local/bin/usage-display.sh` by default.
 struct UsageWidget: View {
     @EnvironmentObject var configProvider: ConfigProvider
-    @ObservedObject private var usageManager = UsageManager.shared
+    @StateObject private var usageManager = UsageManager.inUse.instance { UsageManager() }
 
     @State private var rect: CGRect = .zero
 
