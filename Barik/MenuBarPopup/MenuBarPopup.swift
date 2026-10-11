@@ -3,8 +3,6 @@ import SwiftUI
 private var panel: NSPanel?
 
 class HidingPanel: NSPanel, NSWindowDelegate {
-    var hideTimer: Timer?
-
     override var canBecomeKey: Bool {
         return true
     }
@@ -22,15 +20,7 @@ class HidingPanel: NSPanel, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        NotificationCenter.default.post(name: .willHideWindow, object: nil)
-        MenuBarPopup.fadeOutIfGlass(self)
-        hideTimer = Timer.scheduledTimer(
-            withTimeInterval: TimeInterval(
-                Constants.menuBarPopupAnimationDurationInMilliseconds) / 1000.0,
-            repeats: false
-        ) { [weak self] _ in
-            self?.orderOut(nil)
-        }
+        MenuBarPopup.hide()
     }
 }
 
@@ -42,82 +32,86 @@ class MenuBarPopup {
         ConfigManager.shared.config.position == .bottom ? panel.frame.height : 0
     }
 
+    /// Whether a popup is shown or about to be shown, as opposed to hidden or fading out.
+    private static var isShown = false
+    /// The delayed step of the latest show or hide: showing the new content once the old content has faded, or
+    /// ordering the panel out once the popup has faded. Each show or hide cancels the previous step, so a step
+    /// scheduled for an earlier popup never hides or shows a later one.
+    private static var pendingStep: DispatchWorkItem?
+
+    private static var animationDuration: Double {
+        Double(Constants.menuBarPopupAnimationDurationInMilliseconds) / 1000.0
+    }
+
     static func show<Content: View>(
         rect: CGRect, id: String, @ViewBuilder content: @escaping () -> Content
     ) {
         guard let panel = panel else { return }
 
-        if panel.isKeyWindow, lastContentIdentifier == id {
-            NotificationCenter.default.post(name: .willHideWindow, object: nil)
-            fadeOutIfGlass(panel)
-            let duration =
-                Double(Constants.menuBarPopupAnimationDurationInMilliseconds)
-                / 1000.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                panel.orderOut(nil)
-                lastContentIdentifier = nil
-            }
+        if isShown, lastContentIdentifier == id {
+            hide()
             return
         }
 
         applyAppearance(to: panel)
 
-        let isContentChange =
-            panel.isKeyWindow
-            && (lastContentIdentifier != nil && lastContentIdentifier != id)
+        let isContentChange = isShown
+        isShown = true
         lastContentIdentifier = id
+        pendingStep?.cancel()
+        pendingStep = nil
 
-        if let hidingPanel = panel as? HidingPanel {
-            hidingPanel.hideTimer?.invalidate()
-            hidingPanel.hideTimer = nil
-        }
-
-        if panel.isKeyWindow {
+        if isContentChange {
             NotificationCenter.default.post(
                 name: .willChangeContent, object: nil)
             fadeOutIfGlass(panel)
-            let baseDuration =
-                Double(Constants.menuBarPopupAnimationDurationInMilliseconds)
-                / 1000.0
-            let duration = isContentChange ? baseDuration / 2 : baseDuration
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                panel.contentView = NSHostingView(
-                    rootView:
-                        ZStack {
-                            MenuBarPopupView {
-                                content()
-                            }
-                            .position(x: rect.midX, y: edgeY(of: panel))
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .id(UUID())
-                )
-                panel.alphaValue = 1
-                panel.makeKeyAndOrderFront(nil)
-                clearInitialFocus(of: panel)
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: .willShowWindow, object: nil)
-                }
+            schedule(after: animationDuration / 2) {
+                present(in: panel, rect: rect, content: content)
             }
         } else {
-            panel.contentView = NSHostingView(
-                rootView:
-                    ZStack {
-                        MenuBarPopupView {
-                            content()
-                        }
-                        .position(x: rect.midX, y: edgeY(of: panel))
+            present(in: panel, rect: rect, content: content)
+        }
+    }
+
+    /// Hides the popup: closing it by clicking its widget again, or the panel losing key status. Ordering the panel
+    /// out also makes it lose key status, which then finds the popup already hiding.
+    static func hide() {
+        guard isShown, let panel = panel else { return }
+        isShown = false
+        NotificationCenter.default.post(name: .willHideWindow, object: nil)
+        fadeOutIfGlass(panel)
+        schedule(after: animationDuration) {
+            panel.orderOut(nil)
+            lastContentIdentifier = nil
+        }
+    }
+
+    private static func schedule(after delay: Double, _ step: @escaping () -> Void) {
+        pendingStep?.cancel()
+        let workItem = DispatchWorkItem(block: step)
+        pendingStep = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private static func present<Content: View>(
+        in panel: NSPanel, rect: CGRect, @ViewBuilder content: @escaping () -> Content
+    ) {
+        panel.contentView = NSHostingView(
+            rootView:
+                ZStack {
+                    MenuBarPopupView {
+                        content()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            )
-            panel.alphaValue = 1
-            panel.makeKeyAndOrderFront(nil)
-            clearInitialFocus(of: panel)
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .willShowWindow, object: nil)
-            }
+                    .position(x: rect.midX, y: edgeY(of: panel))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        )
+        panel.alphaValue = 1
+        panel.makeKeyAndOrderFront(nil)
+        clearInitialFocus(of: panel)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .willShowWindow, object: nil)
         }
     }
 
