@@ -57,7 +57,7 @@ struct TimeWidget: View {
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
         .monospacedDigit()
-        .onTapGesture {
+        .barButton(label: "Calendar", value: formattedTime(pattern: format, from: currentTime)) {
             MenuBarPopup.show(rect: rect, id: "calendar") {
                 CalendarPopup(
                     calendarManager: calendarManager,

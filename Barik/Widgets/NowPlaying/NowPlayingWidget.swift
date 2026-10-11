@@ -26,7 +26,7 @@ struct NowPlayingWidget: View {
 
                 // Visible content with fixed animated width.
                 VisibleNowPlayingContent(song: song, width: animatedWidth)
-                    .onTapGesture {
+                    .barButton(label: "Now Playing", value: "\(song.title), \(song.artist)") {
                         MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
                             NowPlayingPopup(configProvider: configProvider)
                         }

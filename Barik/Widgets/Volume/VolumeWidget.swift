@@ -35,7 +35,10 @@ struct VolumeWidget: View {
                         }
                 }
             )
-            .onTapGesture {
+            .barButton(
+                label: "Volume",
+                value: "\(Int((volume * 100).rounded()))%" + (volumeManager.isMuted ? ", muted" : "")
+            ) {
                 MenuBarPopup.show(rect: rect, id: "volume") { VolumePopup() }
             }
         }

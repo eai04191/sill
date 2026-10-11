@@ -36,7 +36,7 @@ struct UsageWidget: View {
                                 }
                         }
                     )
-                    .onTapGesture {
+                    .barButton(label: "Usage", value: accessibilitySummary(services)) {
                         MenuBarPopup.show(rect: rect, id: "usage") { UsagePopup() }
                     }
                 }
@@ -47,6 +47,17 @@ struct UsageWidget: View {
             usageManager.setCommand(config["command"]?.stringValue)
         }
     }
+}
+
+/// Reads each service and its windows, e.g. "Claude Code 16% resets in 1h, 48% resets in 4h".
+private func accessibilitySummary(_ services: [(UsageService, ServiceUsage)]) -> String {
+    services.map { service, usage in
+        let windows = usage.windows.map { window in
+            window.reset.map { "\(window.percentText) resets in \($0)" } ?? window.percentText
+        }
+        return "\(service.displayName) \(windows.joined(separator: ", "))"
+    }
+    .joined(separator: "; ")
 }
 
 /// One service: its logo followed by each window's bar and text.

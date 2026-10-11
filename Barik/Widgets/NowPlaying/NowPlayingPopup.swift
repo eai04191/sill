@@ -95,13 +95,13 @@ private struct NowPlayingVerticalPopup: View {
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 20))
-                        .onTapGesture { playingManager.previousTrack() }
+                        .barButton(label: "Previous Track") { playingManager.previousTrack() }
                     Image(systemName: song.state == .paused ? "play.fill" : "pause.fill")
                         .font(.system(size: 30))
-                        .onTapGesture { playingManager.togglePlayPause() }
+                        .barButton(label: song.state == .paused ? "Play" : "Pause") { playingManager.togglePlayPause() }
                     Image(systemName: "forward.fill")
                         .font(.system(size: 20))
-                        .onTapGesture { playingManager.nextTrack() }
+                        .barButton(label: "Next Track") { playingManager.nextTrack() }
                 }
             }
             .padding(.horizontal, 25)
@@ -167,13 +167,13 @@ struct NowPlayingHorizontalPopup: View {
                 HStack(spacing: 40) {
                     Image(systemName: "backward.fill")
                         .font(.system(size: 20))
-                        .onTapGesture { playingManager.previousTrack() }
+                        .barButton(label: "Previous Track") { playingManager.previousTrack() }
                     Image(systemName: song.state == .paused ? "play.fill" : "pause.fill")
                         .font(.system(size: 30))
-                        .onTapGesture { playingManager.togglePlayPause() }
+                        .barButton(label: song.state == .paused ? "Play" : "Pause") { playingManager.togglePlayPause() }
                     Image(systemName: "forward.fill")
                         .font(.system(size: 20))
-                        .onTapGesture { playingManager.nextTrack() }
+                        .barButton(label: "Next Track") { playingManager.nextTrack() }
                 }
             }
             .padding(.horizontal, 25)
