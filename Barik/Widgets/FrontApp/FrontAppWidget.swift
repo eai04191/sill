@@ -55,9 +55,11 @@ struct FrontAppWidget: View {
         if let app = frontAppManager.app, let name = app.localizedName {
             HStack(spacing: 6) {
                 if showIcon, let icon = app.icon {
+                    // The app name next to it is read instead.
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 16, height: 16)
+                        .accessibilityHidden(true)
                 }
                 Text(name)
                     .font(.barText)
