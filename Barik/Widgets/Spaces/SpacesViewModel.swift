@@ -3,16 +3,30 @@ import Combine
 import Foundation
 
 class SpacesViewModel: ObservableObject {
-    /// One view model, polling every 0.1 seconds, for all spaces widgets on the bar.
+    /// One view model, with its polling, for all spaces widgets on the bar.
     static let inUse = SharedWhileInUse<SpacesViewModel>()
+
+    /// AeroSpace and yabai can only notify other apps through commands set in their own config, so the spaces are
+    /// polled. Changes that come with a workspace notification, such as switching apps, are fetched right away.
+    private static let pollInterval: TimeInterval = 1
+    private static let changeNotifications: [Notification.Name] = [
+        NSWorkspace.activeSpaceDidChangeNotification,
+        NSWorkspace.didActivateApplicationNotification,
+        NSWorkspace.didLaunchApplicationNotification,
+        NSWorkspace.didTerminateApplicationNotification,
+        NSWorkspace.didHideApplicationNotification,
+        NSWorkspace.didUnhideApplicationNotification,
+    ]
 
     @Published var spaces: [AnySpace] = []
     private var timer: Timer?
     private var provider: AnySpacesProvider?
     /// Runs one fetch at a time, so the CLI calls of a slow fetch do not pile up behind each other.
     private let fetchQueue = DispatchQueue(label: "Barik.SpacesViewModel.fetch", qos: .utility)
-    /// Whether a fetch is running. Read and written on the main thread.
+    /// Whether a fetch is running, and whether another one was requested meanwhile. Used on the main thread.
     private var isFetching = false
+    private var fetchesAgain = false
+    private var observers: [NSObjectProtocol] = []
     /// The last error printed, so a failure that lasts is printed once instead of on every fetch.
     private var lastPrintedError: String?
 
@@ -35,9 +49,15 @@ class SpacesViewModel: ObservableObject {
     }
 
     private func startMonitoring() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {
+        timer = Timer.scheduledTimer(withTimeInterval: Self.pollInterval, repeats: true) {
             [weak self] _ in
             self?.loadSpaces()
+        }
+        let center = NSWorkspace.shared.notificationCenter
+        observers = Self.changeNotifications.map { name in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.requestSpaces()
+            }
         }
         loadSpaces()
     }
@@ -45,6 +65,17 @@ class SpacesViewModel: ObservableObject {
     private func stopMonitoring() {
         timer?.invalidate()
         timer = nil
+        observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        observers = []
+    }
+
+    /// Fetches the spaces now, or once the running fetch ends, since it may have read the state before the change.
+    private func requestSpaces() {
+        if isFetching {
+            fetchesAgain = true
+        } else {
+            loadSpaces()
+        }
     }
 
     /// Fetches the spaces unless a fetch is running. Results are applied on the main thread in the order the fetches
@@ -72,6 +103,10 @@ class SpacesViewModel: ObservableObject {
                         self.lastPrintedError = message
                     }
                     self.apply([])
+                }
+                if self.fetchesAgain {
+                    self.fetchesAgain = false
+                    self.loadSpaces()
                 }
             }
         }
