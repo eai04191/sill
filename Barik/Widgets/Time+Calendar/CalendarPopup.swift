@@ -246,6 +246,11 @@ private struct CalendarDaysView: View {
     /// The calendar in the configured time zone, in which `today` is the current day.
     let calendar: Calendar
 
+    /// The full date of a day for VoiceOver, e.g. "Sunday, October 11, 2026", in the configured time zone.
+    private var dayLabelStyle: Date.FormatStyle {
+        Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone).year().month(.wide).day().weekday(.wide)
+    }
+
     var body: some View {
         let weeks = weeks(of: today, in: calendar)
         let currentYear = calendar.component(.year, from: today)
@@ -279,6 +284,10 @@ private struct CalendarDaysView: View {
                                     .foregroundColor(color)
                                     .frame(width: 30, height: 30)
                             }
+                            // VoiceOver read only the number; it reads the full date, with today as selected.
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(date.formatted(dayLabelStyle))
+                            .accessibilityAddTraits(isToday ? .isSelected : [])
                         } else {
                             Color.clear.frame(width: 30, height: 30)
                         }

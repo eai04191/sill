@@ -55,9 +55,12 @@ private struct ServiceUsageSection: View {
                 Link(destination: service.usagePageURL) {
                     Image(systemName: "arrow.up.right.square")
                         .font(.headline)
+                        .minimumHitArea()
                 }
                 .buttonStyle(.plain)
                 .help("Open the usage page")
+                // The symbol alone was read as "arrow up right square".
+                .accessibilityLabel("Open usage page for \(service.displayName)")
             }
             ForEach(Array(usage.windows.enumerated()), id: \.offset) { _, window in
                 VStack(alignment: .leading, spacing: 4) {

@@ -109,6 +109,11 @@ private struct PlaybackTimeline: View {
                 }
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+                // VoiceOver reads the timeline as one element, instead of two times and a percentage apart.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(String(localized: "Playback position"))
+                .accessibilityValue(
+                    String(localized: "\(timeString(from: position)) of \(timeString(from: duration))"))
             }
         }
     }

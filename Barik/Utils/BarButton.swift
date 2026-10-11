@@ -6,6 +6,7 @@ extension View {
     func barButton(label: String, value: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             self.barHitArea()
+                .minimumHitArea()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -25,6 +26,17 @@ extension View {
     func barHitArea() -> some View {
         background(.black.opacity(0.001))
             .contentShape(Rectangle())
+    }
+
+    /// Makes a small control receive clicks in at least a 28-point square around its center, the HIG's minimum
+    /// control size on macOS; a symbol alone received them only on its own shape, about 15 points tall. The larger
+    /// area is behind the control and does not take part in the layout, so the control keeps its size and position.
+    func minimumHitArea() -> some View {
+        background {
+            Color.clear
+                .frame(minWidth: 28, minHeight: 28)
+                .contentShape(Rectangle())
+        }
     }
 }
 
