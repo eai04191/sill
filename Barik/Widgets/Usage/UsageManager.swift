@@ -25,7 +25,8 @@ struct UsageWindow: Decodable, Equatable {
     }
 
     var fraction: Double { min(max(pct / 100, 0), 1) }
-    var percentText: String { "\(Int(pct.rounded()))%" }
+    /// Formatted rather than converted to Int, which traps for a value beyond Int's range.
+    var percentText: String { "\(pct.formatted(.number.precision(.fractionLength(0)).grouping(.never)))%" }
 }
 
 /// The usage of one service, with its primary (shorter) and secondary (longer) windows.
