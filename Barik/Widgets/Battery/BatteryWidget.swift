@@ -42,7 +42,7 @@ struct BatteryWidget: View {
                     level: level, isCharging: isCharging,
                     isPluggedIn: isPluggedIn
                 )
-                .foregroundStyle(batteryTextColor)
+                .foregroundStyle(showPercentage ? batteryTextColor : .foregroundOutside)
             }
             .frame(width: 30, height: 10)
             .background(
@@ -67,6 +67,7 @@ struct BatteryWidget: View {
 
     }
 
+    /// The color of the percentage, which is drawn on the level fill: dark on the warning and critical colors.
     private var batteryTextColor: Color {
         if isCharging {
             return .foregroundOutsideInvert
@@ -118,9 +119,6 @@ private struct BatteryText: View {
                     .padding(.leading, 1)
             }
         }
-        .foregroundStyle(
-            showPercentage ? .foregroundOutsideInvert : .foregroundOutside
-        )
         .fontWeight(.semibold)
         .transition(.blurReplace)
         .animation(.smooth, value: isCharging)
