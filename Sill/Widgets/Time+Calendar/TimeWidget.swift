@@ -25,6 +25,11 @@ struct TimeWidget: View {
     @ObservedObject var calendarManager: CalendarManager
 
     @State private var rect = CGRect()
+    /// The label's width with the whole event name, and without the event, inside the glass button's margin, and the
+    /// width it has when the bar has less room (see `TruncatingWidgetWidth`).
+    @State private var fullWidth: CGFloat = 0
+    @State private var timeOnlyWidth: CGFloat = 0
+    @State private var availableWidth: CGFloat = .infinity
 
     /// Seconds between updates of the bar's time: every second only when the shown format has seconds.
     private var tickInterval: TimeInterval {
@@ -39,15 +44,7 @@ struct TimeWidget: View {
     }
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            Text(barTime)
-            if let event = calendarManager.nextEvent, calendarShowEvents {
-                Text(eventText(for: event))
-                    .opacity(0.8)
-                    .font(.subheadline)
-            }
-        }
-        .font(.barText)
+        clockText(showsEvent: true)
         .task(id: tickInterval) {
             // Wake at each boundary of the interval, e.g. on the minute, instead of polling every second.
             currentTime = Date()
@@ -73,14 +70,53 @@ struct TimeWidget: View {
             }
         )
         .experimentalConfiguration()
+        // A long event name truncates to the room the bar has, down to the time's width, instead of moving widgets
+        // into the "more" widget.
+        .frame(width: fullWidth > 0 ? min(fullWidth, availableWidth) : nil, alignment: .trailing)
         .frame(maxHeight: .infinity)
         .background(.black.opacity(0.001))
-        .monospacedDigit()
         .barWidgetButton(label: "Calendar", value: accessibilityValue) {
             MenuBarPopup.show(rect: rect, id: "calendar") {
                 CalendarPopup(item: item)
             }
         }
+        .modifier(
+            TruncatingWidgetWidth(
+                fullWidth: fullWidth, minimumWidth: timeOnlyWidth, alignment: .trailing,
+                availableWidth: $availableWidth))
+        .background {
+            // Hidden copies measuring the label at its full width, with and without the event. They are backgrounds,
+            // so they do not widen the widget. Measured like the visible label, which is in a system glass button.
+            ZStack {
+                measuredLabel(showsEvent: true) { fullWidth = $0 }
+                measuredLabel(showsEvent: false) { timeOnlyWidth = $0 }
+            }
+            .environment(\.widgetGlassIsButton, true)
+            .hidden()
+        }
+    }
+
+    /// The time and, when shown on the bar, the next event under it.
+    private func clockText(showsEvent: Bool) -> some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            Text(barTime)
+            if showsEvent, let event = calendarManager.nextEvent, calendarShowEvents {
+                Text(eventText(for: event))
+                    .opacity(0.8)
+                    .font(.subheadline)
+                    .lineLimit(1)
+            }
+        }
+        .font(.barText)
+        .monospacedDigit()
+    }
+
+    /// The label at its full width, reporting that width.
+    private func measuredLabel(showsEvent: Bool, onWidth: @escaping (CGFloat) -> Void) -> some View {
+        clockText(showsEvent: showsEvent)
+            .experimentalConfiguration()
+            .fixedSize(horizontal: true, vertical: false)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { onWidth($0) }
     }
 
     /// The time and, when shown on the bar, the next event, so VoiceOver reads what is displayed.

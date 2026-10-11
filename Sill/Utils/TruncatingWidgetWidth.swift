@@ -19,11 +19,15 @@ struct TruncatingWidgetWidth: ViewModifier {
 
     func body(content: Content) -> some View {
         let margin = GlassButtonInset.regular.width * 2
-        let minimum = min(fullWidth, minimumWidth) + margin
+        // Before the label is measured the widget keeps its own size.
+        let measured = fullWidth > 0
+        let minimum = measured ? min(fullWidth, minimumWidth) + margin : nil
         // The frame's size depends only on these widths and the offered width, not on the label inside it, so the
         // label taking the written-back width does not change it again.
         content
-            .frame(minWidth: minimum, idealWidth: minimum, maxWidth: fullWidth + margin, alignment: alignment)
+            .frame(
+                minWidth: minimum, idealWidth: minimum, maxWidth: measured ? fullWidth + margin : nil,
+                alignment: alignment)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                 availableWidth = width - margin
             }
