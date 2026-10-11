@@ -6,7 +6,7 @@ struct UsagePopup: View {
     @ObservedObject private var configManager = ConfigManager.shared
 
     var body: some View {
-        modules.popupFollowsSystemAppearance()
+        modules
     }
 
     @ViewBuilder

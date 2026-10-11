@@ -31,7 +31,6 @@ struct ChangelogPopup: View {
         .task {
             await loadChangelog()
         }
-        .popupFollowsSystemAppearance()
     }
 
     // Asynchronously loads the changelog from the remote URL

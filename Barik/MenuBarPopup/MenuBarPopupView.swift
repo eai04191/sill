@@ -19,14 +19,8 @@ struct MenuBarPopupView<Content: View>: View {
     @State private var glassVisible = false
     /// Set by content that draws its own glass modules (see `popupProvidesGlassModules()`), so no outer glass is added.
     @State private var providesModules = false
-    /// Set by content whose colors adapt to the system appearance (see `popupFollowsSystemAppearance()`). Other
-    /// content still hard-codes white text or black backgrounds, so it keeps the dark appearance even on glass.
-    @State private var followsAppearance = false
     /// The last size of the glass content, kept while it is removed so the popup does not move as it dematerializes.
     @State private var glassContentSize: CGSize = .zero
-    private var adaptsAppearance: Bool { usesGlass && followsAppearance }
-    /// The appearance of the window, which follows the system.
-    @Environment(\.colorScheme) private var systemColorScheme
 
     private let willShowWindow = NotificationCenter.default.publisher(
         for: .willShowWindow)
@@ -151,15 +145,11 @@ struct MenuBarPopupView<Content: View>: View {
                     }
             }
         )
-        // The material popup is always dark. Glass follows the system appearance like other system popovers and
-        // the Control Center, and its content uses semantic colors that Liquid Glass keeps legible.
-        // The scheme is set in the environment rather than with preferredColorScheme, which changes the window's
-        // appearance and kept it dark after content asked to follow the system. Always applying the modifier keeps
-        // the view identity, so the content is not rebuilt when the preference arrives.
-        .foregroundStyle(adaptsAppearance ? Color.primary : Color.white)
-        .environment(\.colorScheme, adaptsAppearance ? systemColorScheme : .dark)
+        // Popups are always dark: the material popup draws a black background, and glass popups are dark like the
+        // Control Center (MenuBarPopup gives their window the dark appearance, which the glass follows).
+        .foregroundStyle(Color.white)
+        .environment(\.colorScheme, .dark)
         .onPreferenceChange(PopupProvidesGlassModulesKey.self) { providesModules = $0 }
-        .onPreferenceChange(PopupFollowsSystemAppearanceKey.self) { followsAppearance = $0 }
         // MenuBarPopup builds a new view for every popup and may post willShowWindow before this view subscribes,
         // so also materialize the glass when the view appears. The offset is not animated while it appears.
         .onAppear {

@@ -58,6 +58,8 @@ class MenuBarPopup {
             return
         }
 
+        applyAppearance(to: panel)
+
         let isContentChange =
             panel.isKeyWindow
             && (lastContentIdentifier != nil && lastContentIdentifier != id)
@@ -112,6 +114,13 @@ class MenuBarPopup {
                     name: .willShowWindow, object: nil)
             }
         }
+    }
+
+    /// Glass popups are dark in either system appearance, like the Control Center modules in macOS 26 and later.
+    /// The window appearance, not the SwiftUI color scheme, decides whether Liquid Glass is drawn light or dark.
+    /// The material popup keeps the system appearance and draws its own black background.
+    private static func applyAppearance(to panel: NSPanel) {
+        panel.appearance = ConfigManager.shared.config.usesLiquidGlass ? NSAppearance(named: .darkAqua) : nil
     }
 
     /// The panel becomes key to receive clicks, and AppKit then focuses its first control, drawing a focus ring

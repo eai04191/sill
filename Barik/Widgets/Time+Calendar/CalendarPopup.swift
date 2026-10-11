@@ -9,7 +9,7 @@ struct CalendarPopup: View {
 
     var body: some View {
         // The colors of every variant adapt to the appearance, so a glass popup can follow the system.
-        variantView.popupFollowsSystemAppearance()
+        variantView
     }
 
     private var variantView: some View {

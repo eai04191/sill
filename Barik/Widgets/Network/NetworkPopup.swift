@@ -39,7 +39,6 @@ struct NetworkPopup: View {
         }
         .padding(25)
         // The popup container draws the background, and the text inherits its color, so this follows the appearance.
-        .popupFollowsSystemAppearance()
     }
 
     /// Chooses the Wi‑Fi icon based on the status and connection availability.

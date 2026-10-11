@@ -36,7 +36,6 @@ struct BatteryPopup: View {
         }
         .frame(width: 60, height: 60)
         .padding(30)
-        .popupFollowsSystemAppearance()
     }
 
     private var batteryColor: Color {
