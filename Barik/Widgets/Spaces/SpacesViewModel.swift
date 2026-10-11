@@ -121,7 +121,7 @@ class SpacesViewModel: ObservableObject {
     }
 
     /// Fetches the spaces unless a fetch is running. Results are applied on the main thread in the order the fetches
-    /// ran, and only when they differ from the shown spaces.
+    /// ran, and only when they differ from the shown spaces. The spaces keep the order the provider lists them in.
     private func loadSpaces() {
         guard !isFetching, let provider else { return }
         isFetching = true
@@ -146,7 +146,7 @@ class SpacesViewModel: ObservableObject {
         switch result {
         case .success(let spaces):
             lastPrintedError = nil
-            apply(spaces.sorted { $0.id < $1.id })
+            apply(spaces)
         case .failure(let error):
             let message = "\(error)"
             if message != lastPrintedError {

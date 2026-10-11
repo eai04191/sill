@@ -37,7 +37,8 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
                 }
             }
         }
-        var resultSpaces = Array(spaceDict.values)
+        // Keeps the order of list-workspaces, which sorts names with numbers by value, so 2 comes before 10.
+        var resultSpaces = spaces.compactMap { spaceDict[$0.id] }
         for i in 0..<resultSpaces.count {
             resultSpaces[i].windows.sort { $0.id < $1.id }
         }

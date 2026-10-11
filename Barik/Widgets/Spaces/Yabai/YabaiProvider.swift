@@ -36,7 +36,8 @@ class YabaiSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
                 spaceDict[window.spaceId] = space
             }
         }
-        var resultSpaces = Array(spaceDict.values)
+        // Keeps the order of the query, which is the order of the space indexes.
+        var resultSpaces = spaces.compactMap { spaceDict[$0.id] }
         for i in 0..<resultSpaces.count {
             resultSpaces[i].windows.sort { $0.stackIndex < $1.stackIndex }
         }
