@@ -53,10 +53,13 @@ final class CodexBarServer {
     func stop() {
         stopped = true
         if let process {
-            ProcessStopper.stop(process)
+            // Signaled now rather than from a queue, as Sill can exit before a queued signal is sent when it quits.
+            // The PID file is kept until the server is seen to exit, so one that still outlives Sill is stopped on
+            // the next launch.
+            process.terminate()
+            ProcessStopper.stop(process, after: ProcessStopper.killGracePeriod)
         }
         process = nil
-        Self.removePIDFile()
         onChange(nil)
     }
 
@@ -81,6 +84,7 @@ final class CodexBarServer {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         process.terminationHandler = { [weak self] exited in
+            Self.removePIDFile(for: exited.processIdentifier)
             Logger.usage.notice(
                 "codexbar serve, pid \(exited.processIdentifier, privacy: .public), exited: reason \(exited.terminationReason.rawValue, privacy: .public), status \(exited.terminationStatus, privacy: .public)"
             )
@@ -146,10 +150,8 @@ final class CodexBarServer {
     /// is still CodexBar's CLI and was orphaned (its parent is now launchd), so a reused process ID or a server the
     /// user started is left alone.
     private static func stopOrphan() {
-        guard let pidFileURL, let text = try? String(contentsOf: pidFileURL, encoding: .utf8),
-            let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines))
-        else { return }
-        removePIDFile()
+        guard let pid = recordedPID() else { return }
+        removePIDFile(for: pid)
         guard processName(of: pid) == processName, parentProcessID(of: pid) == 1 else { return }
         Logger.usage.notice("Stopping codexbar serve left by an earlier run, pid \(pid, privacy: .public)")
         kill(pid, SIGTERM)
@@ -180,8 +182,14 @@ final class CodexBarServer {
         }
     }
 
-    private static func removePIDFile() {
-        guard let pidFileURL else { return }
+    private static func recordedPID() -> pid_t? {
+        guard let pidFileURL, let text = try? String(contentsOf: pidFileURL, encoding: .utf8) else { return nil }
+        return pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Removes the PID file if it still records `pid`, as a server started since may have replaced it.
+    private static func removePIDFile(for pid: pid_t) {
+        guard let pidFileURL, recordedPID() == pid else { return }
         try? FileManager.default.removeItem(at: pidFileURL)
     }
 }
