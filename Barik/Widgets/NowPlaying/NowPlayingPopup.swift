@@ -76,10 +76,13 @@ private struct NowPlayingVerticalPopup: View {
                         .multilineTextAlignment(.center)
                         .font(.system(size: 15))
                         .fontWeight(.medium)
-                    Text(song.artist)
-                        .opacity(0.6)
-                        .font(.system(size: 15))
-                        .fontWeight(.light)
+                    // Some players, such as Firefox, report an empty artist.
+                    if !song.artist.isEmpty {
+                        Text(song.artist)
+                            .opacity(0.6)
+                            .font(.system(size: 15))
+                            .fontWeight(.light)
+                    }
                 }
 
                 PlaybackTimeline(song: song)
@@ -139,11 +142,13 @@ struct NowPlayingHorizontalPopup: View {
                             .font(.headline)
                             .fontWeight(.medium)
                             .lineLimit(2)
-                        Text(song.artist)
-                            .opacity(0.6)
-                            .font(.headline)
-                            .fontWeight(.light)
-                            .lineLimit(1)
+                        if !song.artist.isEmpty {
+                            Text(song.artist)
+                                .opacity(0.6)
+                                .font(.headline)
+                                .fontWeight(.light)
+                                .lineLimit(1)
+                        }
                     }
                     .padding(.trailing, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -26,7 +26,7 @@ struct NowPlayingWidget: View {
 
                 // Visible content with fixed animated width.
                 VisibleNowPlayingContent(song: song, width: animatedWidth)
-                    .barButton(label: "Now Playing", value: "\(song.title), \(song.artist)") {
+                    .barButton(label: "Now Playing", value: song.artist.isEmpty ? song.title : "\(song.title), \(song.artist)") {
                         MenuBarPopup.show(rect: widgetFrame, id: "nowplaying") {
                             NowPlayingPopup(configProvider: configProvider)
                         }
@@ -163,13 +163,16 @@ struct SongTextView: View {
                     .fontWeight(.medium)
                     .lineLimit(1)
                     .padding(.trailing, 2)
-                Text(song.artist)
-                    .opacity(0.8)
-                    .font(.system(size: 10))
-                    .lineLimit(1)
-                    .padding(.trailing, 2)
+                // Some players, such as Firefox, report an empty artist.
+                if !song.artist.isEmpty {
+                    Text(song.artist)
+                        .opacity(0.8)
+                        .font(.system(size: 10))
+                        .lineLimit(1)
+                        .padding(.trailing, 2)
+                }
             } else {
-                Text(song.artist + " — " + song.title)
+                Text(song.artist.isEmpty ? song.title : song.artist + " — " + song.title)
                     .font(.system(size: 12))
                     .lineLimit(1)
             }
