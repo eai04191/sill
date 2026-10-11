@@ -11,12 +11,20 @@ Sill is a fork of [barik](https://github.com/mocki-toki/barik) by Simon Butenko,
 
 ## Requirements
 
-- macOS 26+
-- Xcode, to build it
+- macOS 26+ on Apple silicon
+- Xcode, to build it yourself
 
 ## Quick Start
 
-1. Build Sill and copy it to your Applications folder:
+1. Install Sill with Homebrew:
+
+```sh
+brew install --cask eai04191/tap/sill
+```
+
+Update it with `brew upgrade --cask sill`. Sill is not notarized, so the cask removes the quarantine attribute after installing.
+
+Or build Sill and copy it to your Applications folder:
 
 ```sh
 xcodebuild -project Sill.xcodeproj -scheme Sill -configuration Release -derivedDataPath build build
