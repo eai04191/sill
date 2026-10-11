@@ -5,8 +5,16 @@ import SwiftUI
 // MARK: - Image Cache
 
 /// A singleton cache for storing downloaded NSImage objects.
+///
+/// The now playing artwork is written to a new file for each track, so an entry is only looked up again while its
+/// track plays; without a limit, the entries of past tracks piled up, about 4 MB for each popup-sized artwork. The
+/// limit keeps the current track's sizes, for the bar and the popup, and a few recent ones.
 final class ImageCache {
-    static let shared = NSCache<NSString, NSImage>()
+    static let shared: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 8
+        return cache
+    }()
 }
 
 // MARK: - Image Loader
