@@ -92,6 +92,15 @@ private struct WindowView: View {
 
     var showTitle: Bool { windowConfig["show-title"]?.boolValue ?? true }
     var maxLength: Int { titleConfig["max-length"]?.intValue ?? 50 }
+    /// The widest a focused window's title gets: `max-length` times the average width of a lowercase Latin letter in
+    /// the title font. A Latin title gets about as many characters as before, and wide characters such as CJK take
+    /// more of the width, so no title gets wider than this.
+    var maxTitleWidth: CGFloat {
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        let letters = "abcdefghijklmnopqrstuvwxyz"
+        let letterWidth = (letters as NSString).size(withAttributes: [.font: font]).width / CGFloat(letters.count)
+        return CGFloat(maxLength) * letterWidth
+    }
     var alwaysDisplayAppTitleFor: [String] { titleConfig["always-display-app-name-for"]?.arrayValue?.filter({ $0.stringValue != nil }).map { $0.stringValue! } ?? [] }
 
     let window: AnyWindow
@@ -100,7 +109,6 @@ private struct WindowView: View {
     @State var isHovered = false
 
     var body: some View {
-        let titleMaxLength = maxLength
         let size: CGFloat = 21
         let sameAppCount = space.windows.filter { $0.appName == window.appName }
             .count
@@ -127,12 +135,11 @@ private struct WindowView: View {
 
             if window.isFocused, !title.isEmpty, showTitle {
                 HStack {
-                    Text(
-                        title.count > titleMaxLength
-                            ? String(title.prefix(titleMaxLength)) + "..."
-                            : title
-                    )
-                    .fixedSize(horizontal: true, vertical: false)
+                    MaxWidthLayout(maxWidth: maxTitleWidth) {
+                        Text(title)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                     .shadow(color: .foregroundShadow, radius: 3)
                     .fontWeight(.semibold)
                     Spacer().frame(width: 5)
@@ -159,5 +166,20 @@ private struct WindowView: View {
         .onHover { value in
             isHovered = value
         }
+    }
+}
+
+/// Lays out its only subview at most `maxWidth` wide, even when offered unlimited width, as when the bar measures
+/// whether its widgets fit. A long title is then truncated instead of widening the bar.
+private struct MaxWidthLayout: Layout {
+    let maxWidth: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = min(proposal.width ?? maxWidth, maxWidth)
+        return subviews.first?.sizeThatFits(ProposedViewSize(width: width, height: proposal.height)) ?? .zero
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
