@@ -17,7 +17,15 @@ final class AppUpdater: ObservableObject {
     // Timer to schedule periodic update checks
     private var updateTimer: Timer?
 
+    /// Whether this build checks mocki-toki/barik for updates. An update replaces the app with the upstream release,
+    /// so a modified build sets `BarikChecksForUpdates` to false in its Info.plist to keep its changes; without the
+    /// key, updates are checked.
+    static var checksForUpdates: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "BarikChecksForUpdates") as? Bool ?? true
+    }
+
     private init() {
+        guard Self.checksForUpdates else { return }
         fetchLatestRelease()
         // Check for updates every 30 minutes
         updateTimer = Timer.scheduledTimer(
