@@ -1,16 +1,18 @@
 name: Lint
 
-# Checks the workflows with jactionlint's strictest profile, including the shell scripts in run: with shellcheck.
-# Renovate waits for this check before it automerges an update.
+# Checks the workflows with jactionlint's strictest profile, including the shell scripts in run: with shellcheck, and
+# the release scripts with shellcheck. Renovate waits for this check before it automerges an update.
 on:
   push:
     branches:
       - main
     paths:
       - ".github/**"
+      - "scripts/**"
   pull_request:
     paths:
       - ".github/**"
+      - "scripts/**"
 
 permissions: {}
 
@@ -51,5 +53,12 @@ jobs:
           tar -xzf "$archive" -C jactionlint
           echo "$RUNNER_TEMP/jactionlint" >> "$GITHUB_PATH"
 
-      - name: Lint
+      # jactionlint skips the run: scripts without a word when shellcheck is missing, and it does not read
+      # scripts/release. Running shellcheck here fails when it is missing and covers those scripts.
+      - name: Lint the scripts
+        run: |
+          shellcheck --version
+          shellcheck --format=gcc scripts/release/*.sh
+
+      - name: Lint the workflows
         run: jactionlint --profile=pedantic --format=github
