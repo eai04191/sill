@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import os
 
 // MARK: - Usage Models
 
@@ -154,13 +155,26 @@ final class UsageManager: ObservableObject {
             try process.run()
         } catch {
             _ = reader.finish()
+            Logger.usage.error("Could not start \(path, privacy: .public): \(String(describing: error), privacy: .public)")
             return nil
         }
         ProcessStopper.stop(process, after: timeout)
         process.waitUntilExit()
         let output = reader.finish()
-        guard process.terminationStatus == 0, !reader.exceededLimit else { return nil }
-        return try? JSONDecoder().decode(UsageReport.self, from: output)
+        guard process.terminationReason == .exit, process.terminationStatus == 0, !reader.exceededLimit else {
+            Logger.usage.error(
+                "\(path, privacy: .public) failed: reason \(process.terminationReason.rawValue, privacy: .public), status \(process.terminationStatus, privacy: .public), output over limit \(reader.exceededLimit, privacy: .public)"
+            )
+            return nil
+        }
+        do {
+            return try JSONDecoder().decode(UsageReport.self, from: output)
+        } catch {
+            Logger.usage.error(
+                "\(path, privacy: .public) printed a report that could not be read (\(output.count, privacy: .public) bytes): \(String(describing: error), privacy: .public)"
+            )
+            return nil
+        }
     }
 }
 
@@ -174,9 +188,13 @@ enum ProcessStopper {
     static func stop(_ process: Process, after delay: TimeInterval = 0) {
         DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
             guard process.isRunning else { return }
+            let name = process.executableURL?.lastPathComponent ?? "unknown"
+            Logger.commands.notice("Terminating \(name, privacy: .public), pid \(process.processIdentifier, privacy: .public)")
             process.terminate()
             DispatchQueue.global().asyncAfter(deadline: .now() + killGracePeriod) {
-                if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+                guard process.isRunning else { return }
+                Logger.commands.error("Killing \(name, privacy: .public), pid \(process.processIdentifier, privacy: .public), which ignored SIGTERM")
+                kill(process.processIdentifier, SIGKILL)
             }
         }
     }

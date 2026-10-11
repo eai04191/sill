@@ -1,4 +1,5 @@
 import AppKit
+import os
 
 /// A window as AeroSpace lists it.
 struct AeroSpaceWindow: Decodable, Identifiable, Equatable {
@@ -52,7 +53,7 @@ enum AeroSpace {
         do {
             return try JSONDecoder().decode([AeroSpaceWindow].self, from: output)
         } catch {
-            print("AeroSpace printed a window list that could not be read: \(error)")
+            Logger.windowSwitcher.error("AeroSpace printed a window list that could not be read (\(output.count, privacy: .public) bytes): \(String(describing: error), privacy: .public)")
             throw Failure.commandFailed
         }
     }
@@ -66,7 +67,11 @@ enum AeroSpace {
     /// Runs the CLI with the arguments and returns its output, stopping it after `timeout` seconds as the usage
     /// command is (see `ProcessStopper` and `OutputReader`).
     private static func run(_ arguments: [String]) throws -> Data {
-        guard let executableURL else { throw Failure.notInstalled }
+        guard let executableURL else {
+            Logger.windowSwitcher.error("AeroSpace is not installed")
+            throw Failure.notInstalled
+        }
+        let start = ContinuousClock.now
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
@@ -80,16 +85,20 @@ enum AeroSpace {
             try process.run()
         } catch {
             _ = reader.finish()
-            print("Failed to start AeroSpace: \(error)")
+            Logger.windowSwitcher.error("Could not start aerospace \(arguments.first ?? "", privacy: .public): \(String(describing: error), privacy: .public)")
             throw Failure.commandFailed
         }
         ProcessStopper.stop(process, after: timeout)
         process.waitUntilExit()
         let output = reader.finish()
         guard process.terminationReason == .exit, process.terminationStatus == 0, !reader.exceededLimit else {
-            print("AeroSpace \(arguments.first ?? "") failed with status \(process.terminationStatus)")
+            Logger.windowSwitcher.error(
+                "aerospace \(arguments.first ?? "", privacy: .public) failed after \(secondsSince(start), format: .fixed(precision: 3), privacy: .public) s: reason \(process.terminationReason.rawValue, privacy: .public), status \(process.terminationStatus, privacy: .public), output over limit \(reader.exceededLimit, privacy: .public)"
+            )
             throw Failure.commandFailed
         }
+        Logger.windowSwitcher.notice(
+            "aerospace \(arguments.first ?? "", privacy: .public) took \(secondsSince(start), format: .fixed(precision: 3), privacy: .public) s")
         return output
     }
 }
@@ -110,12 +119,14 @@ final class WindowSwitcherModel: ObservableObject {
     private(set) var icons: [String: NSImage] = [:]
 
     func load() async {
+        Logger.windowSwitcher.notice("Loading the window list")
         state = .loading
         let result = await Task.detached(priority: .userInitiated) {
             Result { try AeroSpace.listWindows() }
         }.value
         switch result {
         case .success(let windows):
+            Logger.windowSwitcher.notice("Loaded \(windows.count, privacy: .public) windows")
             loadIcons(for: windows)
             state = .loaded(windows)
         case .failure(let error):
@@ -142,9 +153,10 @@ final class WindowSwitcherModel: ObservableObject {
         }.value
         switch result {
         case .success:
+            Logger.windowSwitcher.notice("Focused window \(window.id, privacy: .public) of \(window.bundleIdentifier ?? "unknown", privacy: .public)")
             MenuBarPopup.hide()
         case .failure(let error):
-            print("Failed to focus window \(window.id) with AeroSpace: \(error)")
+            Logger.windowSwitcher.error("Could not focus window \(window.id, privacy: .public): \(String(describing: error), privacy: .public)")
             focusFailed = true
             await load()
         }

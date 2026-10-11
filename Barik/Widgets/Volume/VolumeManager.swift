@@ -1,6 +1,7 @@
 import AudioToolbox
 import CoreAudio
 import Foundation
+import os
 
 /// Follows the default output device's volume and mute state through CoreAudio property listeners.
 final class VolumeManager: ObservableObject {
@@ -51,7 +52,7 @@ final class VolumeManager: ObservableObject {
         let status = AudioObjectSetPropertyData(
             deviceID, &Self.volumeAddress, 0, nil, UInt32(MemoryLayout<Float32>.size), &value)
         if status != noErr {
-            print("Failed to set the volume: \(status)")
+            Logger.volume.error("Could not set the volume: OSStatus \(status, privacy: .public)")
             // Publish the device's actual state, as no listener reports an unchanged value.
             readValues()
         }
@@ -63,7 +64,7 @@ final class VolumeManager: ObservableObject {
         let status = AudioObjectSetPropertyData(
             deviceID, &Self.muteAddress, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
         if status != noErr {
-            print("Failed to set mute: \(status)")
+            Logger.volume.error("Could not set mute: OSStatus \(status, privacy: .public)")
             readValues()
         }
     }

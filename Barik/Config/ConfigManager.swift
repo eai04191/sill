@@ -1,4 +1,5 @@
 import Foundation
+import os
 import SwiftUI
 import TOMLDecoder
 
@@ -42,7 +43,7 @@ final class ConfigManager: ObservableObject {
                 chosenPath = path1
             } catch {
                 initError = String(localized: "Error creating default config: \(error.localizedDescription)")
-                print("Error when creating default config:", error)
+                Logger.config.error("Could not create the default config at \(path1, privacy: .public): \(String(describing: error), privacy: .public)")
                 return
             }
         }
@@ -67,7 +68,7 @@ final class ConfigManager: ObservableObject {
                 self.reloadError = nil
             }
         } catch {
-            print("Error when parsing TOML file:", error)
+            Logger.config.error("Could not read \(path, privacy: .public): \(String(describing: error), privacy: .public)")
             if atLaunch {
                 initError = String(localized: "Error parsing TOML file: \(error.localizedDescription)")
             } else {
@@ -126,7 +127,7 @@ final class ConfigManager: ObservableObject {
         guard descriptor != -1 else {
             // The replacing file does not exist yet; try again until it does, or later edits would go unnoticed.
             if retryDelay == 0.25 {
-                print("Config file is missing, waiting for it:", path)
+                Logger.config.notice("\(path, privacy: .public) is missing; waiting for it")
             }
             watchQueue.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
                 self?.startWatchingFile(
@@ -170,7 +171,7 @@ final class ConfigManager: ObservableObject {
         watchQueue.async { [weak self] in
             guard let self else { return }
             guard let path = self.configFilePath else {
-                print("Config file path is not set")
+                Logger.config.error("Could not save \(key, privacy: .public): the config file path is not set")
                 return
             }
             do {
@@ -178,7 +179,7 @@ final class ConfigManager: ObservableObject {
                 DispatchQueue.main.async { self.updateError = nil }
                 self.parseConfigFile(at: path)
             } catch {
-                print("Error updating config:", error)
+                Logger.config.error("Could not save \(key, privacy: .public) to \(path, privacy: .public): \(String(describing: error), privacy: .public)")
                 let message = String(
                     localized: "Could not save \(key) to \(path): \(error.localizedDescription)",
                     comment: "The config key, the config file's path, and the error.")

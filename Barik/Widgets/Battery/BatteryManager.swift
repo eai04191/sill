@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import os
 import IOKit.ps
 
 /// This class monitors the battery status.
@@ -45,7 +46,7 @@ class BatteryManager: ObservableObject {
                     Unmanaged<BatteryManager>.fromOpaque(context).takeUnretainedValue().updateBatteryStatus()
                 }, context)?.takeRetainedValue()
         else {
-            print("Battery: cannot observe power source changes")
+            Logger.battery.error("Could not observe power source changes")
             updateBatteryStatus()
             return
         }

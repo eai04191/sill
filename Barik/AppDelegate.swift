@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import os
 
 extension NSScreen {
     /// The screen with Barik's bar and popups: the primary screen, which has the system menu bar. `NSScreen.main` is
@@ -14,9 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var fullscreenDetector: FullscreenDetector?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        Logger.app.notice("Launched version \(version, privacy: .public), pid \(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
         handleTerminationSignal()
 
         if let error = ConfigManager.shared.initError {
+            Logger.app.error("Stopping on a config error: \(error, privacy: .public)")
             showFatalConfigError(message: error)
             return
         }
@@ -46,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateVisibility(fullscreen: Bool) {
+        Logger.app.notice("\(fullscreen ? "Hiding" : "Showing", privacy: .public) the bar")
         if fullscreen {
             MenuBarPopup.hide()
             menuBarPanel?.orderOut(nil)
@@ -60,12 +65,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleTerminationSignal() {
         signal(SIGTERM, SIG_IGN)
         let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
-        source.setEventHandler { NSApp.terminate(nil) }
+        source.setEventHandler {
+            Logger.app.notice("Received SIGTERM; quitting")
+            NSApp.terminate(nil)
+        }
         source.resume()
         terminationSignalSource = source
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        Logger.app.notice("Quitting")
+    }
+
     @objc private func screenParametersDidChange(_ notification: Notification) {
+        Logger.app.notice("Screens changed; placing the panels again")
         setupPanels()
     }
 

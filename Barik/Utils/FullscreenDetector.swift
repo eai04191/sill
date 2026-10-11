@@ -1,4 +1,5 @@
 import AppKit
+import os
 
 /// Tells whether full-screen content is in front on the bar's screen, so the bar can step aside for it.
 ///
@@ -43,6 +44,8 @@ final class FullscreenDetector {
     private func update() {
         let fullscreen = Self.frontWindowCoversBarScreen()
         guard fullscreen != isFullscreen else { return }
+        let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown"
+        Logger.fullscreen.notice("Full-screen content \(fullscreen ? "in front" : "gone", privacy: .public); active app \(app, privacy: .public)")
         isFullscreen = fullscreen
         onChange(fullscreen)
     }

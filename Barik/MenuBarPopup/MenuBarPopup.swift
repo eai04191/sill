@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 private var panel: NSPanel?
 
@@ -55,6 +56,7 @@ class MenuBarPopup {
             hide()
             return
         }
+        Logger.popup.notice("Showing popup \(id, privacy: .public)")
 
         applyAppearance(to: panel)
 
@@ -84,6 +86,7 @@ class MenuBarPopup {
     /// Ordering the panel out also makes it lose key status, which then finds the popup already hiding.
     static func hide() {
         guard isShown, let panel = panel else { return }
+        Logger.popup.notice("Hiding popup \(lastContentIdentifier ?? "unknown", privacy: .public)")
         isShown = false
         NotificationCenter.default.post(name: .willHideWindow, object: nil)
         schedule(after: PopupMotion.hideDuration) {

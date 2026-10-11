@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import os
 
 // MARK: - Playback State
 
@@ -134,7 +135,7 @@ final class MediaControl {
     private func launch() {
         guard let executableURL = Self.executableURL else {
             if !reportedMissing {
-                print("media-control was not found; install it with `brew install media-control`")
+                Logger.nowPlaying.error("media-control was not found; install it with `brew install media-control`")
                 reportedMissing = true
             }
             relaunch(after: Self.installCheckInterval)
@@ -161,6 +162,9 @@ final class MediaControl {
             }
         }
         process.terminationHandler = { [weak self] exited in
+            Logger.nowPlaying.notice(
+                "media-control, pid \(exited.processIdentifier, privacy: .public), exited: reason \(exited.terminationReason.rawValue, privacy: .public), status \(exited.terminationStatus, privacy: .public)"
+            )
             pipe.fileHandleForReading.readabilityHandler = nil
             DispatchQueue.main.async {
                 // A media-control replaced by `restart()` or stopped by `stop()` is not started again.
@@ -170,9 +174,10 @@ final class MediaControl {
         }
         do {
             try process.run()
+            Logger.nowPlaying.notice("Started media-control, pid \(process.processIdentifier, privacy: .public)")
             self.process = process
         } catch {
-            print("Failed to start media-control: \(error)")
+            Logger.nowPlaying.error("Could not start media-control: \(String(describing: error), privacy: .public)")
             pipe.fileHandleForReading.readabilityHandler = nil
             relaunch(after: Self.restartDelay)
         }
@@ -197,6 +202,7 @@ final class MediaControl {
     /// left the song from before the sleep shown. Waiting for a restart is left to the one already scheduled.
     func restart() {
         guard !stopped, let process else { return }
+        Logger.nowPlaying.notice("Restarting media-control")
         self.process = nil
         ProcessStopper.stop(process)
         buffer.removeAll()
@@ -212,7 +218,7 @@ final class MediaControl {
             onPayload(message.payload.title == nil ? nil : message.payload)
         }
         if buffer.count > Self.lineLimit {
-            print("media-control printed more than \(Self.lineLimit) bytes without a line break; restarting it")
+            Logger.nowPlaying.error("media-control printed more than \(Self.lineLimit, privacy: .public) bytes without a line break; restarting it")
             let overflowing = process
             // Clears the process first, so its remaining output and its exit are ignored.
             relaunch(after: Self.restartDelay)

@@ -1,6 +1,7 @@
 import Combine
 import EventKit
 import Foundation
+import os
 
 class CalendarManager: ObservableObject {
     private static let inUse = SharedWhileInUse<CalendarManager>()
@@ -91,8 +92,8 @@ class CalendarManager: ObservableObject {
     private func requestAccess() {
         eventStore.requestFullAccessToEvents { [weak self] granted, error in
             if !granted || error != nil {
-                print(
-                    "Calendar access not granted: \(String(describing: error))")
+                Logger.calendar.error(
+                    "Calendar access not granted: \(String(describing: error), privacy: .public)")
             }
             DispatchQueue.main.async { self?.refresh() }
         }
@@ -147,7 +148,7 @@ class CalendarManager: ObservableObject {
             let endOfDay = calendar.date(
                 bySettingHour: 23, minute: 59, second: 59, of: now)
         else {
-            print("Failed to get end of day.")
+            Logger.calendar.error("Could not get the end of the day")
             return nil
         }
         let predicate = eventStore.predicateForEvents(
@@ -175,7 +176,7 @@ class CalendarManager: ObservableObject {
             let endOfDay = calendar.date(
                 bySettingHour: 23, minute: 59, second: 59, of: now)
         else {
-            print("Failed to get end of day.")
+            Logger.calendar.error("Could not get the end of the day")
             return []
         }
         let predicate = eventStore.predicateForEvents(
@@ -195,7 +196,7 @@ class CalendarManager: ObservableObject {
             let endOfTomorrow = calendar.date(
                 bySettingHour: 23, minute: 59, second: 59, of: startOfTomorrow)
         else {
-            print("Failed to get tomorrow's date range.")
+            Logger.calendar.error("Could not get tomorrow's date range")
             return []
         }
         let predicate = eventStore.predicateForEvents(
