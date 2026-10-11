@@ -18,12 +18,13 @@ extension Config {
 
 extension View {
     /// Draws the regular Liquid Glass in `shape` when enabled, or `fallback` behind the view otherwise.
+    /// - Parameter interactive: For controls, makes the glass react to the pointer like system glass buttons.
     @ViewBuilder
     func liquidGlassBackground<S: Shape, Fallback: View>(
-        _ enabled: Bool, in shape: S, @ViewBuilder fallback: () -> Fallback
+        _ enabled: Bool, in shape: S, interactive: Bool = false, @ViewBuilder fallback: () -> Fallback
     ) -> some View {
         if enabled, #available(macOS 26.0, *) {
-            self.glassEffect(.regular, in: shape)
+            self.glassEffect(.regular.interactive(interactive), in: shape)
         } else {
             self.background(fallback())
         }

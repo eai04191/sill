@@ -69,7 +69,7 @@ struct NowPlayingContent: View {
                 }
                 .padding(.horizontal, foregroundHeight < 45 ? 8 : 12)
                 .frame(height: foregroundHeight < 45 ? 30 : 38)
-                .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule()) {
+                .liquidGlassBackground(configManager.config.usesLiquidGlass, in: Capsule(), interactive: true) {
                     Capsule().fill(configManager.config.experimental.foreground.widgetsBackground.blur)
                         .overlay(Capsule().stroke(Color.noActive, lineWidth: 1))
                 }
