@@ -69,7 +69,7 @@ class AerospaceSpacesProvider: SpacesProvider, SwitchableSpacesProvider {
     private func fetchWindows() throws -> [AeroWindow] {
         let data = try runAerospaceCommand(arguments: [
             "list-windows", "--all", "--json", "--format",
-            "%{window-id} %{app-name} %{window-title} %{workspace}",
+            "%{window-id} %{app-name} %{app-pid} %{window-title} %{workspace}",
         ])
         return try JSONDecoder().decode([AeroWindow].self, from: data)
     }

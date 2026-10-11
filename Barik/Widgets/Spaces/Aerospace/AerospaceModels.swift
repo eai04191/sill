@@ -4,6 +4,7 @@ struct AeroWindow: WindowModel {
     let id: Int
     let title: String
     let appName: String?
+    let appPid: pid_t?
     var isFocused: Bool = false
     var appIcon: NSImage?
     let workspace: String?
@@ -12,6 +13,7 @@ struct AeroWindow: WindowModel {
         case id = "window-id"
         case title = "window-title"
         case appName = "app-name"
+        case appPid = "app-pid"
         case workspace
     }
 
@@ -23,8 +25,9 @@ struct AeroWindow: WindowModel {
         workspace = try container.decodeIfPresent(
             String.self, forKey: .workspace)
         isFocused = false
-        if let name = appName {
-            appIcon = IconCache.shared.icon(for: name)
+        appPid = try container.decodeIfPresent(pid_t.self, forKey: .appPid)
+        if let appPid {
+            appIcon = IconCache.shared.icon(forProcess: appPid)
         }
     }
 }

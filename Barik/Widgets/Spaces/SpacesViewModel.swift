@@ -194,24 +194,32 @@ class SpacesViewModel: ObservableObject {
     }
 }
 
-class IconCache {
+/// App icons by process identifier, so apps with the same name keep their own icons. A running app without a bundle
+/// icon is cached too, instead of being looked up again on every fetch. A process that is not known as an app yet,
+/// such as one that has just launched, is looked up again next time.
+final class IconCache {
     static let shared = IconCache()
-    private let cache = NSCache<NSString, NSImage>()
+    private let cache = NSCache<NSNumber, CachedIcon>()
     private init() {}
-    func icon(for appName: String) -> NSImage? {
-        if let cached = cache.object(forKey: appName as NSString) {
-            return cached
+
+    func icon(forProcess pid: pid_t) -> NSImage? {
+        let key = NSNumber(value: pid)
+        if let cached = cache.object(forKey: key) {
+            return cached.image
         }
-        let workspace = NSWorkspace.shared
-        if let app = workspace.runningApplications.first(where: {
-            $0.localizedName == appName
-        }),
-            let bundleURL = app.bundleURL
-        {
-            let icon = workspace.icon(forFile: bundleURL.path)
-            cache.setObject(icon, forKey: appName as NSString)
-            return icon
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
+            return nil
         }
-        return nil
+        let image = app.bundleURL.map { NSWorkspace.shared.icon(forFile: $0.path) }
+        cache.setObject(CachedIcon(image), forKey: key)
+        return image
+    }
+
+    private final class CachedIcon {
+        let image: NSImage?
+
+        init(_ image: NSImage?) {
+            self.image = image
+        }
     }
 }
