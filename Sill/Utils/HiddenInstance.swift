@@ -34,3 +34,37 @@ enum HiddenInstance {
     /// Below the desktop picture.
     static let windowLevel = Int(CGWindowLevelForKey(.desktopWindow)) - 2
 }
+
+extension HiddenInstance {
+    private static var wallpaperPanel: NSPanel?
+
+    /// Shows the screen's desktop picture behind the bar and popups, one level below them and still below the real
+    /// desktop picture, so their glass has something behind it in the window server. Without it the glass of a
+    /// hidden instance is gray. A capture of one window with `screencapture -l` still shows gray glass; a capture of
+    /// the window together with this panel (scripts/verify/composite.swift) shows the desktop picture through it. The
+    /// panel is not shown on the display, takes no keyboard focus and lets the pointer through.
+    static func placeWallpaper(on screen: NSScreen) {
+        guard let url = NSWorkspace.shared.desktopImageURL(for: screen), let image = NSImage(contentsOf: url) else {
+            Logger.app.error("Cannot read the desktop picture of the bar's screen; showing no wallpaper behind the bar")
+            wallpaperPanel?.orderOut(nil)
+            return
+        }
+        let panel = wallpaperPanel ?? {
+            let panel = NSPanel(
+                contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered,
+                defer: false)
+            panel.level = NSWindow.Level(rawValue: windowLevel - 1)
+            panel.hasShadow = false
+            panel.ignoresMouseEvents = true
+            panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
+            let imageView = NSImageView()
+            imageView.imageScaling = .scaleAxesIndependently
+            panel.contentView = imageView
+            wallpaperPanel = panel
+            return panel
+        }()
+        (panel.contentView as? NSImageView)?.image = image
+        panel.setFrame(screen.frame, display: true)
+        panel.orderFront(nil)
+    }
+}

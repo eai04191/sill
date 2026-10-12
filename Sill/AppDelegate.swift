@@ -99,7 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Configures and displays the menu bar panel, and fits the popup panel to the same screen.
     /// Without a screen nothing is set up; the next screen change sets it up.
     private func setupPanels() {
-        guard let screenFrame = NSScreen.barScreen?.frame else { return }
+        guard let screen = NSScreen.barScreen else { return }
+        let screenFrame = screen.frame
+        if HiddenInstance.isEnabled {
+            HiddenInstance.placeWallpaper(on: screen)
+        }
         MenuBarPopup.setup(frame: screenFrame)
         setupPanel(
             &menuBarPanel,
