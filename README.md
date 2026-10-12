@@ -5,6 +5,8 @@
 
 # Sill
 
+<img src="resources/screenshot.webp" alt="Sill at the bottom of the screen with the Now Playing popup open">
+
 **Sill** is a lightweight macOS menu bar replacement with Liquid Glass, built for macOS 26. It sits at the top or bottom of the screen.
 
 Sill is a fork of [barik](https://github.com/mocki-toki/barik) by Simon Butenko, reworked to follow the Human Interface Guidelines and Liquid Glass, with a window switcher, a Now Playing widget for any player, and fewer features to maintain. It does not read barik's config file.
