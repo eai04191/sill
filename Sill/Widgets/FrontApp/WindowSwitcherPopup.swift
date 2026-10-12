@@ -155,11 +155,12 @@ struct WindowSwitcherPopup: View {
                 Text(window.displayTitle)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(window.workspace)
-                    .lineLimit(1)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
-                    .frame(maxWidth: 120, alignment: .trailing)
-                    .layoutPriority(1)
+                WidthLimit(maxWidth: 120) {
+                    Text(window.workspace)
+                        .lineLimit(1)
+                        .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.8)) : AnyShapeStyle(.secondary))
+                }
+                .layoutPriority(1)
                     .padding(.leading, 4)
             }
             .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
@@ -254,5 +255,21 @@ struct WindowSwitcherPopup: View {
     private func focusSelectedWindow() {
         guard let window = visibleWindows.first(where: { $0.id == selectedID }) else { return }
         Task { await model.focus(window) }
+    }
+}
+
+/// Makes its content as wide as it needs, up to `maxWidth` and the width offered. A `frame(maxWidth:)` grows to the
+/// width it is offered instead, which gave a one-letter workspace name the whole 120 points and cut the title short.
+private struct WidthLimit: Layout {
+    let maxWidth: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+        let width = min(proposal.width ?? maxWidth, maxWidth)
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: proposal.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
     }
 }
