@@ -12,8 +12,8 @@ fi
 version=$1
 : "${SIGNING_IDENTITY:?SIGNING_IDENTITY is required}"
 
-# The same signing settings as make install-sill-dev in eai04191/dotfiles, so the hardened runtime is on and the build
-# has no get-task-allow.
+# The hardened runtime is on and the build has no get-task-allow, so other processes cannot inject code into Sill to use
+# its calendar access.
 xcodebuild -project Sill.xcodeproj -scheme Sill -configuration Release \
   -derivedDataPath build \
   MARKETING_VERSION="$version" \
