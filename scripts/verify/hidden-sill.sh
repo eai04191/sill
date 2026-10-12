@@ -13,10 +13,11 @@
 #          build/hidden-sill/config/sill/config.toml, and prints its pid. A missing config is written with every widget
 #          on the bar, so each widget's popup can be opened; the instance reads the config again when it is edited.
 # pid      Prints the instance's pid, for SILL_PID with axpress and axscroll.
-# capture  Captures each of the instance's windows on screen into <directory>/<window number>.png, cropped to what is
-#          drawn: a popup's window covers the screen and is transparent outside the popup. A capture shows the moment it
-#          is taken, so something shown only briefly, such as an overlay scroll bar after a popup opens, can be missed;
-#          capture several times before deciding it does not show.
+# capture  Captures each of the instance's windows on screen into <directory>/<window number>.png, over the desktop
+#          picture that the instance puts behind them, so their glass shows it. Each capture is cropped to what the
+#          window draws: a popup's window covers the screen and is transparent outside the popup. A capture shows the
+#          moment it is taken, so something shown only briefly, such as an overlay scroll bar after a popup opens, can be
+#          missed; capture several times before deciding it does not show.
 # stop     Quits the instance.
 set -euo pipefail
 
@@ -81,7 +82,7 @@ build)
         CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$identity" DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
         ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO build -quiet
     mkdir -p "$tools"
-    for tool in axpress axscroll windows trim; do
+    for tool in axpress axscroll windows trim composite; do
         swiftc -o "$tools/$tool" "$root/scripts/verify/$tool.swift"
     done
     echo "Built $app and the tools in $tools"
@@ -130,12 +131,21 @@ capture)
     directory="${2:?Usage: $0 capture <directory>}"
     pid=$(require_pid)
     mkdir -p "$directory"
-    "$tools/windows" "$pid" | while read -r number _ _ _ _ _ onscreen; do
-        if [ "$onscreen" = on ]; then
-            screencapture -x -o -l "$number" "$directory/$number.png"
-            "$tools/trim" "$directory/$number.png"
-            echo "$directory/$number.png"
-        fi
+    windows=$("$tools/windows" "$pid" | awk '$7 == "on"')
+    # The desktop picture is the instance's only window at the lowest level (HiddenInstance.placeWallpaper).
+    lowest=$(sort -n -k2 <<<"$windows" | awk 'NR == 1 { print $2 }')
+    wallpaper=$(awk -v layer="$lowest" '$2 == layer { print $1 }' <<<"$windows")
+    if [ -z "$wallpaper" ] || [ "$(wc -l <<<"$wallpaper")" -ne 1 ] || [ "$(wc -l <<<"$windows")" -lt 2 ]; then
+        echo "The instance shows no desktop picture behind its windows; its log says why" >&2
+        exit 1
+    fi
+    awk -v wallpaper="$wallpaper" '$1 != wallpaper { print $1 }' <<<"$windows" | while read -r number; do
+        # The window alone shows what it draws, as its capture over the desktop picture is opaque everywhere.
+        screencapture -x -o -l "$number" "$directory/$number-alone.png"
+        "$tools/composite" "$directory/$number.png" "$number" "$wallpaper"
+        "$tools/trim" "$directory/$number.png" "$directory/$number-alone.png"
+        rm "$directory/$number-alone.png"
+        echo "$directory/$number.png"
     done
     ;;
 stop)
