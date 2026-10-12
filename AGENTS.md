@@ -17,6 +17,7 @@ Sill is a macOS 26 menu bar replacement in SwiftUI, a fork of [barik](https://gi
 
 - User-visible text is localized in Sill/Resources/Localizable.xcstrings (English source, Japanese translation). Add each new key in place without re-sorting the file: letting Xcode rewrite it reorders every entry and buries the change in the diff.
 - Log with the `Logger` categories in Sill/Utils/Log.swift, not `print`. Read the log with `/usr/bin/log show --last 1h --predicate 'subsystem == "net.mizle.sill"'`: in zsh, `log` alone is a shell builtin and reads nothing.
+- Give a commit that only changes how Sill is developed, such as the hidden instance or the scripts in scripts/verify and scripts/release, the dev scope (`feat(dev):`, `fix(dev):`). The release notes leave these out (cliff.toml), since they are for the people who use Sill.
 - External tools are looked up in /opt/homebrew/bin and /usr/local/bin on every use: `media-control` for Now Playing, `aerospace` for the window switcher and `codexbar` for the usage widget. Say in the UI when one is missing.
 
 ## Build and check
