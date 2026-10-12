@@ -27,8 +27,11 @@ final class CodexBarServer {
     private static let processName = "CodexBarCLI"
 
     /// Records the server's process ID, so a server left running by a Sill that crashed is stopped on the next launch.
-    private static let pidFileURL: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-        .appendingPathComponent(Bundle.main.bundleIdentifier ?? "net.mizle.sill", isDirectory: true)
+    /// A hidden instance keeps its own, so it does not replace the record of the maintainer's Sill.
+    private static let pidFileURL: URL? =
+        (HiddenInstance.directory
+        ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent(Bundle.main.bundleIdentifier ?? "net.mizle.sill", isDirectory: true))?
         .appendingPathComponent("codexbar-serve.pid")
 
     /// Called on the main queue with the URL of the running server's usage endpoint, or nil once it stops.

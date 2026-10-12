@@ -9,7 +9,8 @@
 # build    Builds into build/ and signs it with the certificate of the maintainer's Sill, so the calendar access already
 #          granted to it applies and no permission prompt shows. That Sill is the running one outside this checkout, or
 #          SILL_INSTALLED_APP when it is set.
-# start    Starts the instance with its config in build/hidden-sill/config/sill/config.toml and prints its pid.
+# start    Starts the instance with its files in build/hidden-sill, its config in
+#          build/hidden-sill/config/sill/config.toml, and prints its pid.
 # pid      Prints the instance's pid, for SILL_PID with axpress and axscroll.
 # capture  Captures each of the instance's windows on screen into <directory>/<window number>.png.
 # stop     Quits the instance.
@@ -89,7 +90,7 @@ start)
     mkdir -p "$state/config"
     # open, rather than running the executable from this shell, so that Sill itself is responsible for its calendar
     # access instead of the app the shell runs in. -g keeps it from coming to the front.
-    open -g -n --env SILL_HIDDEN_INSTANCE=1 --env XDG_CONFIG_HOME="$state/config" "$app"
+    open -g -n --env SILL_HIDDEN_INSTANCE="$state" --env XDG_CONFIG_HOME="$state/config" "$app"
     for _ in $(seq 50); do
         pid=$(running_pid)
         if [ -n "$pid" ]; then
