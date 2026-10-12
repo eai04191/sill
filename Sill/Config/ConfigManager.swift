@@ -126,6 +126,7 @@ final class ConfigManager: ObservableObject {
 
             [widgets.default.time.popup]
             view-variant = "box"
+            # weekday-english = true # show the English weekday names under the locale's
             """
         try defaultTOML.write(toFile: path, atomically: true, encoding: .utf8)
     }

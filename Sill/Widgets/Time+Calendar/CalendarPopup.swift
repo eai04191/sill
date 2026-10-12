@@ -27,6 +27,11 @@ struct CalendarPopup: View {
         config["popup"]?.dictionaryValue?["view-variant"]?.stringValue.flatMap(MenuBarPopupVariant.init(rawValue:))
     }
 
+    /// Whether the weekday header shows the English names under the locale's names (`popup.weekday-english`).
+    private var showsEnglishWeekdays: Bool {
+        config["popup"]?.dictionaryValue?["weekday-english"]?.boolValue ?? false
+    }
+
     var body: some View {
         // The colors of every variant adapt to the appearance; popups are always dark (see MenuBarPopupView).
         variantView(calendarManager: CalendarManager.shared(for: ConfigProvider(config: config)))
@@ -42,9 +47,9 @@ struct CalendarPopup: View {
                     newValue: variant.rawValue
                 )
             },
-            box: { CalendarBoxPopup(calendarManager) },
-            vertical: { CalendarVerticalPopup(calendarManager) },
-            horizontal: { CalendarHorizontalPopup(calendarManager) }
+            box: { CalendarBoxPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) },
+            vertical: { CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) },
+            horizontal: { CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) }
         )
         .onAppear {
             selectedVariant = configuredVariant ?? .box
@@ -59,9 +64,11 @@ struct CalendarPopup: View {
 
 struct CalendarBoxPopup: View {
     @ObservedObject var calendarManager: CalendarManager
+    let showsEnglishWeekdays: Bool
 
-    init(_ calendarManager: CalendarManager) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
+        self.showsEnglishWeekdays = showsEnglishWeekdays
     }
 
     var body: some View {
@@ -70,7 +77,7 @@ struct CalendarBoxPopup: View {
             Text(monthYear(of: today, in: calendarManager.calendar))
                 .font(.popupHeading)
                 .padding(.bottom, 25)
-            WeekdayHeaderView()
+            WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
         }
         .padding(Constants.popupPadding)
@@ -80,9 +87,11 @@ struct CalendarBoxPopup: View {
 
 struct CalendarVerticalPopup: View {
     @ObservedObject var calendarManager: CalendarManager
+    let showsEnglishWeekdays: Bool
 
-    init(_ calendarManager: CalendarManager) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
+        self.showsEnglishWeekdays = showsEnglishWeekdays
     }
 
     var body: some View {
@@ -91,7 +100,7 @@ struct CalendarVerticalPopup: View {
             Text(monthYear(of: today, in: calendarManager.calendar))
                 .font(.popupHeading)
                 .padding(.bottom, 25)
-            WeekdayHeaderView()
+            WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
             
             Group {
@@ -123,9 +132,11 @@ struct CalendarVerticalPopup: View {
 
 struct CalendarHorizontalPopup: View {
     @ObservedObject var calendarManager: CalendarManager
+    let showsEnglishWeekdays: Bool
 
-    init(_ calendarManager: CalendarManager) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
+        self.showsEnglishWeekdays = showsEnglishWeekdays
     }
 
     var body: some View {
@@ -136,7 +147,7 @@ struct CalendarHorizontalPopup: View {
                     .font(.popupHeading)
                     .padding(.bottom, 25)
                     .fixedSize(horizontal: true, vertical: false)
-                WeekdayHeaderView()
+                WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
                 CalendarDaysView(today: today, calendar: calendarManager.calendar)
             }
             
@@ -210,34 +221,56 @@ private func weeks(of date: Date, in calendar: Calendar) -> [[Int?]] {
     }
 }
 
-private struct WeekdayHeaderView: View {
-    var body: some View {
-        let calendar = Calendar.current
-        let weekdaySymbols = calendar.shortWeekdaySymbols
-        let firstWeekdayIndex = calendar.firstWeekday - 1
-        let reordered = Array(
-            weekdaySymbols[firstWeekdayIndex...]
-                + weekdaySymbols[..<firstWeekdayIndex]
+/// A column of the weekday header.
+struct WeekdayHeader: Equatable {
+    /// The locale's short name, e.g. "日" or "Sun".
+    let symbol: String
+    /// The English short name shown under `symbol`, or nil when it is not shown.
+    let englishSymbol: String?
+    let isWeekend: Bool
+}
+
+/// The weekday header columns, starting on the calendar's first weekday. The English names are left out when the
+/// locale's names are already the same, as they would only repeat them.
+func weekdayHeaders(in calendar: Calendar, showsEnglish: Bool) -> [WeekdayHeader] {
+    let symbols = calendar.shortWeekdaySymbols
+    var englishCalendar = calendar
+    englishCalendar.locale = Locale(identifier: "en_US_POSIX")
+    let englishSymbols = englishCalendar.shortWeekdaySymbols
+    let showsEnglishRow = showsEnglish && symbols != englishSymbols
+    // 2020-12-13 is a Sunday, the first weekday in `shortWeekdaySymbols`.
+    let referenceDate = DateComponents(calendar: calendar, year: 2020, month: 12, day: 13).date!
+    return (0..<7).map { i in
+        let index = (i + calendar.firstWeekday - 1) % 7
+        let day = calendar.date(byAdding: .day, value: index, to: referenceDate)!
+        return WeekdayHeader(
+            symbol: symbols[index],
+            englishSymbol: showsEnglishRow ? englishSymbols[index] : nil,
+            isWeekend: calendar.isDateInWeekend(day)
         )
-        let referenceDate = DateComponents(
-            calendar: calendar, year: 2020, month: 12, day: 13
-        ).date!
-        let referenceDays = (0..<7).map { i in
-            calendar.date(byAdding: .day, value: i, to: referenceDate)!
-        }
+    }
+}
 
+private struct WeekdayHeaderView: View {
+    let showsEnglish: Bool
+
+    var body: some View {
         HStack {
-            ForEach(reordered.indices, id: \.self) { i in
-                let originalIndex = (i + firstWeekdayIndex) % 7
-                let isWeekend = calendar.isDateInWeekend(
-                    referenceDays[originalIndex]
-                )
+            let headers = weekdayHeaders(in: Calendar.current, showsEnglish: showsEnglish)
+            ForEach(headers.indices, id: \.self) { i in
+                let header = headers[i]
                 // The secondary color takes on the glass behind it and faded out; weekends are dimmed primary.
-                let color = isWeekend ? Color.primary.opacity(0.75) : Color.primary
+                let color = header.isWeekend ? Color.primary.opacity(0.75) : Color.primary
 
-                Text(reordered[i])
-                    .frame(width: 30)
-                    .foregroundColor(color)
+                VStack(spacing: 0) {
+                    Text(header.symbol)
+                    if let englishSymbol = header.englishSymbol {
+                        Text(englishSymbol)
+                            .font(.caption2)
+                    }
+                }
+                .frame(width: 30)
+                .foregroundColor(color)
             }
         }
         .padding(.bottom, 10)
@@ -416,15 +449,15 @@ struct CalendarPopup_Previews: PreviewProvider {
         let configProvider = ConfigProvider(config: ConfigData())
         let calendarManager = CalendarManager(configProvider: configProvider)
 
-        CalendarBoxPopup(calendarManager)
+        CalendarBoxPopup(calendarManager, showsEnglishWeekdays: false)
             .background(Color.black)
             .previewLayout(.sizeThatFits)
             .previewDisplayName("Box")
-        CalendarVerticalPopup(calendarManager)
+        CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: false)
             .background(Color.black)
             .frame(height: 600)
             .previewDisplayName("Vertical")
-        CalendarHorizontalPopup(calendarManager)
+        CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: false)
             .background(Color.black)
             .previewLayout(.sizeThatFits)
             .previewDisplayName("Horizontal")

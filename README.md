@@ -82,6 +82,7 @@ calendar.show-events = true
 
 [widgets.default.time.popup]
 view-variant = "box"
+# weekday-english = true # show the English weekday names under the locale's
 
 
 
