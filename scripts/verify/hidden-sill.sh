@@ -13,7 +13,10 @@
 #          build/hidden-sill/config/sill/config.toml, and prints its pid. A missing config is written with every widget
 #          on the bar, so each widget's popup can be opened; the instance reads the config again when it is edited.
 # pid      Prints the instance's pid, for SILL_PID with axpress and axscroll.
-# capture  Captures each of the instance's windows on screen into <directory>/<window number>.png.
+# capture  Captures each of the instance's windows on screen into <directory>/<window number>.png, cropped to what is
+#          drawn: a popup's window covers the screen and is transparent outside the popup. A capture shows the moment it
+#          is taken, so something shown only briefly, such as an overlay scroll bar after a popup opens, can be missed;
+#          capture several times before deciding it does not show.
 # stop     Quits the instance.
 set -euo pipefail
 
@@ -78,7 +81,7 @@ build)
         CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$identity" DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
         ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO build -quiet
     mkdir -p "$tools"
-    for tool in axpress axscroll windows; do
+    for tool in axpress axscroll windows trim; do
         swiftc -o "$tools/$tool" "$root/scripts/verify/$tool.swift"
     done
     echo "Built $app and the tools in $tools"
@@ -130,6 +133,7 @@ capture)
     "$tools/windows" "$pid" | while read -r number _ _ _ _ _ onscreen; do
         if [ "$onscreen" = on ]; then
             screencapture -x -o -l "$number" "$directory/$number.png"
+            "$tools/trim" "$directory/$number.png"
             echo "$directory/$number.png"
         fi
     done
