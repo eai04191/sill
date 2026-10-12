@@ -380,7 +380,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
-				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 Simon Butenko, 2026 eai04191";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -414,7 +414,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "We need this permission for displaying calendar events";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "We need this permission for displaying calendar events";
-				INFOPLIST_KEY_NSHumanReadableCopyright = Pansy;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 Simon Butenko, 2026 eai04191";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
