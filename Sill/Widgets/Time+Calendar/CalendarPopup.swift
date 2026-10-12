@@ -32,6 +32,11 @@ struct CalendarPopup: View {
         config["popup"]?.dictionaryValue?["weekday-english"]?.boolValue ?? false
     }
 
+    /// Whether the months are listed with their numbers and English names under the days (`popup.month-english`).
+    private var showsEnglishMonths: Bool {
+        config["popup"]?.dictionaryValue?["month-english"]?.boolValue ?? false
+    }
+
     var body: some View {
         // The colors of every variant adapt to the appearance; popups are always dark (see MenuBarPopupView).
         variantView(calendarManager: CalendarManager.shared(for: ConfigProvider(config: config)))
@@ -47,9 +52,9 @@ struct CalendarPopup: View {
                     newValue: variant.rawValue
                 )
             },
-            box: { CalendarBoxPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) },
-            vertical: { CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) },
-            horizontal: { CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays) }
+            box: { CalendarBoxPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays, showsEnglishMonths: showsEnglishMonths) },
+            vertical: { CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays, showsEnglishMonths: showsEnglishMonths) },
+            horizontal: { CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: showsEnglishWeekdays, showsEnglishMonths: showsEnglishMonths) }
         )
         .onAppear {
             selectedVariant = configuredVariant ?? .box
@@ -65,10 +70,12 @@ struct CalendarPopup: View {
 struct CalendarBoxPopup: View {
     @ObservedObject var calendarManager: CalendarManager
     let showsEnglishWeekdays: Bool
+    let showsEnglishMonths: Bool
 
-    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool, showsEnglishMonths: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
         self.showsEnglishWeekdays = showsEnglishWeekdays
+        self.showsEnglishMonths = showsEnglishMonths
     }
 
     var body: some View {
@@ -79,6 +86,9 @@ struct CalendarBoxPopup: View {
                 .padding(.bottom, 25)
             WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
+            if showsEnglishMonths {
+                EnglishMonthsView(today: today, calendar: calendarManager.calendar)
+            }
         }
         .padding(Constants.popupPadding)
         .fontWeight(.semibold)
@@ -88,10 +98,12 @@ struct CalendarBoxPopup: View {
 struct CalendarVerticalPopup: View {
     @ObservedObject var calendarManager: CalendarManager
     let showsEnglishWeekdays: Bool
+    let showsEnglishMonths: Bool
 
-    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool, showsEnglishMonths: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
         self.showsEnglishWeekdays = showsEnglishWeekdays
+        self.showsEnglishMonths = showsEnglishMonths
     }
 
     var body: some View {
@@ -102,6 +114,9 @@ struct CalendarVerticalPopup: View {
                 .padding(.bottom, 25)
             WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
             CalendarDaysView(today: today, calendar: calendarManager.calendar)
+            if showsEnglishMonths {
+                EnglishMonthsView(today: today, calendar: calendarManager.calendar)
+            }
             
             Group {
                 if calendarManager.accessDenied {
@@ -133,10 +148,12 @@ struct CalendarVerticalPopup: View {
 struct CalendarHorizontalPopup: View {
     @ObservedObject var calendarManager: CalendarManager
     let showsEnglishWeekdays: Bool
+    let showsEnglishMonths: Bool
 
-    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool) {
+    init(_ calendarManager: CalendarManager, showsEnglishWeekdays: Bool, showsEnglishMonths: Bool) {
         _calendarManager = ObservedObject(wrappedValue: calendarManager)
         self.showsEnglishWeekdays = showsEnglishWeekdays
+        self.showsEnglishMonths = showsEnglishMonths
     }
 
     var body: some View {
@@ -149,6 +166,9 @@ struct CalendarHorizontalPopup: View {
                     .fixedSize(horizontal: true, vertical: false)
                 WeekdayHeaderView(showsEnglish: showsEnglishWeekdays)
                 CalendarDaysView(today: today, calendar: calendarManager.calendar)
+                if showsEnglishMonths {
+                    EnglishMonthsView(today: today, calendar: calendarManager.calendar)
+                }
             }
             
             Group {
@@ -274,6 +294,53 @@ private struct WeekdayHeaderView: View {
             }
         }
         .padding(.bottom, 10)
+    }
+}
+
+/// A month in the list of months under the days.
+struct EnglishMonth: Equatable {
+    let number: Int
+    /// The English short name, e.g. "Jan".
+    let symbol: String
+    let isCurrent: Bool
+}
+
+/// The Gregorian months with their English short names, marking the month of `today` in the time zone of `calendar`.
+/// They are Gregorian whatever calendar the system uses: a Chinese calendar names its months "Mo1" to "Mo12" and a
+/// Hebrew one has 14 names, which do not tell the English name of a month's number.
+func englishMonths(of today: Date, in calendar: Calendar) -> [EnglishMonth] {
+    var englishCalendar = Calendar(identifier: .gregorian)
+    englishCalendar.locale = Locale(identifier: "en_US_POSIX")
+    englishCalendar.timeZone = calendar.timeZone
+    let currentMonth = englishCalendar.component(.month, from: today)
+    return englishCalendar.shortStandaloneMonthSymbols.enumerated().map { index, symbol in
+        EnglishMonth(number: index + 1, symbol: symbol, isCurrent: index + 1 == currentMonth)
+    }
+}
+
+/// The months with their numbers and English names, four to a row, for telling a month's English name from its
+/// number. The current month is in full primary and the others are dimmed, like the weekends.
+private struct EnglishMonthsView: View {
+    let today: Date
+    let calendar: Calendar
+
+    var body: some View {
+        let months = englishMonths(of: today, in: calendar)
+        // Four columns as wide as the seven days above them (7 × 30 pt with 8 pt between), so the popup keeps its width.
+        VStack(spacing: 6) {
+            ForEach(Array(stride(from: 0, to: months.count, by: 4)), id: \.self) { start in
+                HStack(spacing: 0) {
+                    ForEach(months[start..<min(start + 4, months.count)], id: \.number) { month in
+                        Text("\(month.number) \(month.symbol)")
+                            .monospacedDigit()
+                            .foregroundColor(month.isCurrent ? Color.primary : Color.primary.opacity(0.6))
+                            .frame(width: 64.5)
+                    }
+                }
+            }
+        }
+        .font(.callout)
+        .padding(.top, 15)
     }
 }
 
@@ -449,15 +516,15 @@ struct CalendarPopup_Previews: PreviewProvider {
         let configProvider = ConfigProvider(config: ConfigData())
         let calendarManager = CalendarManager(configProvider: configProvider)
 
-        CalendarBoxPopup(calendarManager, showsEnglishWeekdays: false)
+        CalendarBoxPopup(calendarManager, showsEnglishWeekdays: false, showsEnglishMonths: false)
             .background(Color.black)
             .previewLayout(.sizeThatFits)
             .previewDisplayName("Box")
-        CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: false)
+        CalendarVerticalPopup(calendarManager, showsEnglishWeekdays: false, showsEnglishMonths: false)
             .background(Color.black)
             .frame(height: 600)
             .previewDisplayName("Vertical")
-        CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: false)
+        CalendarHorizontalPopup(calendarManager, showsEnglishWeekdays: false, showsEnglishMonths: false)
             .background(Color.black)
             .previewLayout(.sizeThatFits)
             .previewDisplayName("Horizontal")
