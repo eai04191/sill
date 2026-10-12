@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.7.0
+
+### Features
+
+- Read the config from ~/.config/sill/config.toml and follow XDG_CONFIG_HOME
+- Read the usage from codexbar serve and show its pace, plan and extra usage
+- Show when each window resets in the usage popup, not the bar's short countdown
+- Run as a hidden instance below the desktop picture with SILL_HIDDEN_INSTANCE
+- Add hidden-sill.sh to build, start, capture and quit a hidden instance per checkout
+- Start a hidden instance with every widget on the bar
+- Crop a hidden instance's captures to what is drawn
+- Replace barik's app icon with a Liquid Glass icon from Icon Composer
+
+### Fixes
+
+- Truncate a long song title instead of moving the now playing widget into the more widget
+- Truncate a long event name instead of moving other widgets into the more widget
+- Keep the scroll view from cutting off the shadows of popups with their own glass modules
+- Stop codexbar serve before Sill exits, and keep its PID file until it does
+- Keep a hidden instance from showing the config alert, calendar prompts or VoiceOver announcements
+- Keep a hidden instance's codexbar serve PID file in its own directory
+- Show the window switcher's overlay scroller in the popup's padding
+- Print usage from axpress and axscroll when their arguments are missing
+- Show Sill's copyright instead of barik's leftover Pansy
+
 ## 0.6.0
 
 ### Features
