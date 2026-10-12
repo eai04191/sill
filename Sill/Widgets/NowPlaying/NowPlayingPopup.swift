@@ -8,6 +8,15 @@ import SwiftUI
 /// paused, as the controls already show the state.
 struct NowPlayingPopup: View {
     @ObservedObject private var playingManager = NowPlayingManager.shared
+    @ObservedObject private var configManager = ConfigManager.shared
+
+    /// The client ID of the user's app in the Spotify developer dashboard (`spotify.client-id`), read from
+    /// ConfigManager like `CalendarPopup` so an open popup follows edits of the config.
+    private var spotifyClientID: String? {
+        let clientID = configManager.globalWidgetConfig(for: "default.nowplaying")["spotify"]?
+            .dictionaryValue?["client-id"]?.stringValue
+        return clientID?.isEmpty == false ? clientID : nil
+    }
 
     private let width: CGFloat = 300
     private let padding = Constants.popupPadding
@@ -50,8 +59,16 @@ struct NowPlayingPopup: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, likeButtonClientID(for: song) == nil ? 0 : LikeButton.width)
             }
             .opensPlayingApp(song)
+            // Beside the title, where Music puts the favorite button. It is laid over the button that opens the app
+            // rather than inside it, as a button inside another does not receive its own clicks.
+            .overlay(alignment: .bottomTrailing) {
+                if let clientID = likeButtonClientID(for: song) {
+                    LikeButton(song: song, clientID: clientID)
+                }
+            }
 
             PlaybackTimeline(song: song)
 
@@ -72,6 +89,71 @@ struct NowPlayingPopup: View {
         .padding(padding)
         .frame(width: width)
         .animation(.easeInOut, value: song.albumArtURL)
+    }
+
+    /// The client ID when the song plays in Spotify and the config has one; otherwise the popup shows no like button.
+    private func likeButtonClientID(for song: NowPlayingSong) -> String? {
+        song.bundleIdentifier == SpotifyAPI.bundleIdentifier ? spotifyClientID : nil
+    }
+}
+
+/// Shows whether the song is in the Spotify Liked Songs and adds or removes it. Before signing in, it signs in.
+private struct LikeButton: View {
+    let song: NowPlayingSong
+    let clientID: String
+
+    @ObservedObject private var library = SpotifyLibrary.shared
+
+    static let width: CGFloat = 28
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 18))
+            .foregroundStyle(library.state == .liked(true) ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            .contentTransition(.symbolEffect(.replace))
+            .animation(.snappy, value: library.state)
+            .frame(width: Self.width, height: Self.width)
+            .barButton(label: label) { press() }
+            .help(Text(label))
+            // Never disabled: a disabled button dims while the state loads or a change is sent, which flickered, and
+            // shows no help tag (measured), which is how the paused state explains itself. Presses that cannot act
+            // are ignored (see `press` and `SpotifyLibrary.toggle`).
+            // Read when the popup opens, when the song changes, when it starts or stops playing and after signing in;
+            // the request stops when the popup closes.
+            .task(id: "\(song.id)\u{1f}\(song.state.rawValue)\u{1f}\(library.state == .signedOut)") {
+                await library.refresh(song: song, clientID: clientID)
+            }
+    }
+
+    private var symbol: String {
+        switch library.state {
+        case .liked(true): "heart.fill"
+        case .failed: "exclamationmark.triangle"
+        default: "heart"
+        }
+    }
+
+    private var label: LocalizedStringKey {
+        switch library.state {
+        case .signedOut: "Sign In to Spotify"
+        case .loading: "Add to Liked Songs"
+        case .paused: "Play the Song to See If It Is Liked"
+        case .liked(true): "Remove from Liked Songs"
+        case .liked(false): "Add to Liked Songs"
+        case .failed: "Could Not Read the Liked Songs"
+        }
+    }
+
+    private func press() {
+        // Not tied to the popup: signing in continues in the browser after the popup closes.
+        Task {
+            switch library.state {
+            case .signedOut: await library.signIn(clientID: clientID)
+            case .liked: await library.toggle(clientID: clientID)
+            case .failed, .paused: await library.refresh(song: song, clientID: clientID)
+            case .loading: break
+            }
+        }
     }
 }
 

@@ -114,6 +114,9 @@ show-percentage = true
 
 [widgets.default.frontapp]
 show-icon = true
+
+[widgets.default.nowplaying.spotify]
+client-id = "your app's client ID" # show and change Liked Songs while Spotify plays (see below)
 ```
 
 With `theme = "system"` (the default), the bar is dark glass with white text even in Light Mode, so it stays legible on any wallpaper; only `theme = "light"` makes it light. Popups follow `theme`, and with `"system"` the system appearance.
@@ -129,6 +132,17 @@ brew install media-control
 ```
 
 Sill looks for it in `/opt/homebrew/bin` and `/usr/local/bin` and picks it up within 30 seconds of installing it, without a restart. If a player is still not shown, check that it appears in Control Center's Now Playing and that `media-control get` prints it.
+
+## Liked Songs in Spotify
+
+While Spotify plays, the Now Playing popup can show whether the song is in your Liked Songs and add or remove it, through the Spotify Web API. Spotify gives access to the API only to apps registered by their users, so register your own:
+
+1. Open the [Spotify developer dashboard](https://developer.spotify.com/dashboard) with a Premium account, which Spotify requires of the app's owner, and create an app.
+2. Add `http://127.0.0.1:53682/callback` as a redirect URI, and select **Web API**.
+3. In the app's **User Management**, add the Spotify account you listen with, if it is not the owner.
+4. Put the app's client ID in the config as `client-id` under `[widgets.default.nowplaying.spotify]`.
+
+The heart beside the title then signs in to Spotify in your browser the first time. Sill asks for no permission on the Mac: it finds the playing song with the Web API rather than by controlling the Spotify app. It keeps the token in `~/Library/Application Support/net.mizle.sill/spotify-token.json`, readable only by your user account; delete the file to sign out, and remove the app's access in Spotify's account settings to revoke it.
 
 ## Window Switcher
 

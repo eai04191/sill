@@ -207,6 +207,16 @@
         }
       }
     },
+    "Add to Liked Songs" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りの曲に追加"
+          }
+        }
+      }
+    },
     "AeroSpace is not available" : {
       "localizations" : {
         "ja" : {
@@ -409,6 +419,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定エラー"
+          }
+        }
+      }
+    },
+    "Could Not Read the Liked Songs" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りの曲を読み込めませんでした"
           }
         }
       }
@@ -792,6 +812,16 @@
         }
       }
     },
+    "Play the Song to See If It Is Liked" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生するとお気に入りか確認できます"
+          }
+        }
+      }
+    },
     "Playback position" : {
       "localizations" : {
         "ja" : {
@@ -843,12 +873,32 @@
         }
       }
     },
+    "Remove from Liked Songs" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りの曲から削除"
+          }
+        }
+      }
+    },
     "Search windows" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ウィンドウを検索"
+          }
+        }
+      }
+    },
+    "Sign In to Spotify" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spotifyにサインイン"
           }
         }
       }
