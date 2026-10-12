@@ -24,7 +24,11 @@ func walk(_ element: AXUIElement, _ visit: (AXUIElement) -> Void) {
     for child in (attribute(element, kAXChildrenAttribute) as? [AXUIElement]) ?? [] { walk(child, visit) }
 }
 
-let mode = CommandLine.arguments[1]
+let arguments = CommandLine.arguments
+guard arguments.count == 2 && arguments[1] == "list" || arguments.count == 3 && arguments[1] == "press" else {
+    print("Usage: axpress list | axpress press <label>"); exit(1)
+}
+let mode = arguments[1]
 var pressed = false
 walk(root) { element in
     guard (attribute(element, kAXRoleAttribute) as? String) == kAXButtonRole else { return }

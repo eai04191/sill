@@ -11,7 +11,9 @@ let running: NSRunningApplication? =
 guard let sill = running else {
     print("Sill is not running"); exit(1)
 }
-let position = Double(CommandLine.arguments[1])!
+guard CommandLine.arguments.count == 2, let position = Double(CommandLine.arguments[1]) else {
+    print("Usage: axscroll <0...1>"); exit(1)
+}
 let root = AXUIElementCreateApplication(sill.processIdentifier)
 
 func attribute(_ element: AXUIElement, _ name: String) -> AnyObject? {
