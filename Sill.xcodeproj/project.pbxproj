@@ -10,7 +10,18 @@
 		F66C98C52D60E35600C3C53C /* TOMLDecoder in Frameworks */ = {isa = PBXBuildFile; productRef = F66C98C42D60E35600C3C53C /* TOMLDecoder */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		5E11A0000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C10E2F822D41235900AC957C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C10E2F892D41235900AC957C;
+			remoteInfo = Sill;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		5E11A0000000000000000001 /* SillTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SillTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10E2F8A2D41235900AC957C /* Sill.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sill.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -33,6 +44,11 @@
 			path = Sill;
 			sourceTree = "<group>";
 		};
+		5E11A0000000000000000002 /* SillTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SillTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +60,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5E11A0000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -52,6 +75,7 @@
 			children = (
 				C10E2F8B2D41235900AC957C /* Products */,
 				C1BB4B332D526B5C00A1F46E /* Sill */,
+				5E11A0000000000000000002 /* SillTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -59,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				C10E2F8A2D41235900AC957C /* Sill.app */,
+				5E11A0000000000000000001 /* SillTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,6 +114,29 @@
 			productReference = C10E2F8A2D41235900AC957C /* Sill.app */;
 			productType = "com.apple.product-type.application";
 		};
+		5E11A0000000000000000008 /* SillTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E11A0000000000000000009 /* Build configuration list for PBXNativeTarget "SillTests" */;
+			buildPhases = (
+				5E11A0000000000000000005 /* Sources */,
+				5E11A0000000000000000006 /* Frameworks */,
+				5E11A0000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5E11A0000000000000000004 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5E11A0000000000000000002 /* SillTests */,
+			);
+			name = SillTests;
+			packageProductDependencies = (
+			);
+			productName = SillTests;
+			productReference = 5E11A0000000000000000001 /* SillTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -101,6 +149,10 @@
 				TargetAttributes = {
 					C10E2F892D41235900AC957C = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					5E11A0000000000000000008 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = C10E2F892D41235900AC957C;
 					};
 				};
 			};
@@ -140,12 +192,20 @@
 			projectRoot = "";
 			targets = (
 				C10E2F892D41235900AC957C /* Sill */,
+				5E11A0000000000000000008 /* SillTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		C10E2F882D41235900AC957C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E11A0000000000000000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -162,7 +222,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5E11A0000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5E11A0000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C10E2F892D41235900AC957C /* Sill */;
+			targetProxy = 5E11A0000000000000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C10E2FAD2D41235B00AC957C /* Debug */ = {
@@ -353,6 +428,42 @@
 			};
 			name = Release;
 		};
+		5E11A000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.mizle.sill.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sill.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sill";
+			};
+			name = Debug;
+		};
+		5E11A000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.mizle.sill.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Sill.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Sill";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -370,6 +481,15 @@
 			buildConfigurations = (
 				C10E2FB02D41235B00AC957C /* Debug */,
 				C10E2FB12D41235B00AC957C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E11A0000000000000000009 /* Build configuration list for PBXNativeTarget "SillTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E11A000000000000000000A /* Debug */,
+				5E11A000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

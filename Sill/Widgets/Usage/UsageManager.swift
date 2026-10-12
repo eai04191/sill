@@ -1,22 +1,22 @@
+import AppKit
 import Combine
 import Foundation
 import os
 
 // MARK: - Usage Models
 
-/// One rate limit window, e.g. the 5-hour or the weekly limit.
+/// One rate limit window, e.g. the 5-hour or the weekly limit, as CodexBar reports it.
 struct UsageWindow: Decodable, Equatable {
     /// Used percentage between 0 and 100.
-    let pct: Double
-    /// Time until the window resets, already formatted (e.g. "2h", "4d").
-    let reset: String?
-    /// Length of the window in minutes (e.g. 300 for the 5-hour limit), when the command reports it.
-    let mins: Int?
+    let usedPercent: Double
+    /// Length of the window in minutes (e.g. 300 for the 5-hour limit), when the service reports it.
+    let windowMinutes: Int?
+    let resetsAt: Date?
 
     /// The window's name from its length. Services do not agree on which limit comes first (Codex can report only a
     /// weekly window as primary), so without a length the window is not named by its position.
     var label: String {
-        switch mins {
+        switch windowMinutes {
         case 10080: return String(localized: "Weekly", comment: "The weekly rate limit window.")
         case let mins? where mins > 0 && mins % 1440 == 0:
             return String(localized: "\(mins / 1440)-day", comment: "A rate limit window of this many days.")
@@ -28,26 +28,186 @@ struct UsageWindow: Decodable, Equatable {
         }
     }
 
-    var fraction: Double { min(max(pct / 100, 0), 1) }
+    var fraction: Double { min(max(usedPercent / 100, 0), 1) }
     /// Formatted rather than converted to Int, which traps for a value beyond Int's range.
-    var percentText: String { "\(pct.formatted(.number.precision(.fractionLength(0)).grouping(.never)))%" }
+    var percentText: String { "\(usedPercent.formatted(.number.precision(.fractionLength(0)).grouping(.never)))%" }
+
+    /// Time until the window resets, e.g. "2h", for the bar, or nil once it has passed or when the service does not
+    /// report it.
+    func resetText(now: Date) -> String? {
+        guard let resetsAt, resetsAt > now else { return nil }
+        return compactDuration(resetsAt.timeIntervalSince(now))
+    }
+
+    /// When the window resets, e.g. "2:30" today or "Oct 18, 9:00" on another day, for the popup, which has room to
+    /// tell more than the bar's "6d".
+    func resetDateText(now: Date) -> String? {
+        guard let resetsAt, resetsAt > now else { return nil }
+        if Calendar.current.isDate(resetsAt, inSameDayAs: now) {
+            return resetsAt.formatted(date: .omitted, time: .shortened)
+        }
+        return resetsAt.formatted(.dateTime.month().day().hour().minute())
+    }
 }
 
-/// The usage of one service, with its primary (shorter) and secondary (longer) windows.
+/// A window limited to part of a service, e.g. a weekly limit for one model.
+struct ScopedUsageWindow: Decodable, Equatable {
+    let id: String
+    /// The scope as CodexBar names it, e.g. "Fable only"; it comes in English only.
+    let title: String
+    let window: UsageWindow
+}
+
+/// How the use of a window compares with an even use of it up to now.
+struct UsagePace: Decodable, Equatable {
+    /// Percentage points used beyond (positive) or short of (negative) an even use.
+    let deltaPercent: Double
+    let willLastToReset: Bool
+    /// Seconds until the window runs out at the current pace, when it runs out before resetting.
+    let etaSeconds: Double?
+
+    var text: String {
+        let delta = abs(deltaPercent).formatted(.number.precision(.fractionLength(0)).grouping(.never))
+        let balance =
+            deltaPercent < 0
+            ? String(localized: "\(delta)% in reserve", comment: "Usage below an even pace, e.g. \"72% in reserve\".")
+            : String(localized: "\(delta)% in deficit", comment: "Usage above an even pace, e.g. \"3% in deficit\".")
+        if willLastToReset {
+            return String(
+                localized: "\(balance) · lasts until reset",
+                comment: "The pace of a rate limit window that lasts until it resets, e.g. \"72% in reserve · lasts until reset\".")
+        }
+        if let etaSeconds {
+            return String(
+                localized: "\(balance) · runs out in \(compactDuration(etaSeconds, maximumUnitCount: 2))",
+                comment: "The pace of a rate limit window that runs out before it resets, e.g. \"3% in deficit · runs out in 4d 15h\".")
+        }
+        return balance
+    }
+}
+
+struct WindowPaces: Decodable, Equatable {
+    let primary: UsagePace?
+    let secondary: UsagePace?
+    let tertiary: UsagePace?
+}
+
+/// Paid usage beyond the plan's limits, e.g. Claude's extra usage with its monthly cap.
+struct ExtraUsage: Decodable, Equatable {
+    let used: Double
+    let limit: Double
+    /// An ISO 4217 code such as "USD", or "Credits" for Codex.
+    let currencyCode: String
+
+    /// Codex reports 0 of 0 credits for an account without extra usage, which is not worth a row.
+    var isInUse: Bool { limit > 0 || used > 0 }
+
+    var text: String { "\(format(used)) / \(format(limit))" }
+
+    private func format(_ amount: Double) -> String {
+        if Locale.Currency.isoCurrencies.contains(where: { $0.identifier == currencyCode }) {
+            return amount.formatted(.currency(code: currencyCode))
+        }
+        return "\(amount.formatted(.number.precision(.fractionLength(0...2)))) \(currencyCode)"
+    }
+}
+
+/// Free resets of the rate limits that the service granted, which Codex reports apart from its details.
+struct ResetCredits: Decodable, Equatable {
+    let available: Int
+    let nextExpiresAt: Date?
+}
+
+/// A section of service-specific information, which CodexBar prepares for display and sends in English only.
+struct UsageDetailSection: Decodable, Equatable {
+    struct Row: Decodable, Equatable {
+        let label: String
+        let value: String
+        let secondaryValue: String?
+    }
+
+    let title: String?
+    let rows: [Row]?
+}
+
+/// The usage of one service, CodexBar's `usage` object.
 struct ServiceUsage: Decodable, Equatable {
     let primary: UsageWindow?
     let secondary: UsageWindow?
-
-    var windows: [UsageWindow] { [primary, secondary].compactMap { $0 } }
+    let tertiary: UsageWindow?
+    let extraRateWindows: [ScopedUsageWindow]?
+    /// The plan, e.g. "Claude Max 20x".
+    let loginMethod: String?
+    let providerCost: ExtraUsage?
+    let details: [UsageDetailSection]?
 }
 
-/// The JSON printed by the usage command.
-struct UsageReport: Decodable, Equatable {
-    let claude: ServiceUsage?
-    let codex: ServiceUsage?
+/// One service's entry in the array `GET /usage` returns.
+private struct ProviderEntry: Decodable {
+    struct ProviderError: Decodable {
+        let message: String?
+    }
+
+    let provider: String
+    let usage: ServiceUsage?
+    let pace: WindowPaces?
+    let resetCredits: ResetCredits?
+    let error: ProviderError?
 }
 
-/// The services shown by the usage widget.
+/// What the widget and its popup show of one service.
+struct ServiceReport: Equatable, Identifiable {
+    let service: UsageService
+    let usage: ServiceUsage
+    let pace: WindowPaces?
+    let resetCredits: ResetCredits?
+
+    var id: UsageService { service }
+
+    /// The service's own windows with their pace, shortest first as the service orders them.
+    var windows: [(window: UsageWindow, pace: UsagePace?)] {
+        [(usage.primary, pace?.primary), (usage.secondary, pace?.secondary), (usage.tertiary, pace?.tertiary)]
+            .compactMap { window, pace in window.map { ($0, pace) } }
+    }
+}
+
+/// The services CodexBar reported usage for, in the widget's order.
+struct UsageReport: Equatable {
+    let services: [ServiceReport]
+
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            if let date = try? Date(text, strategy: .iso8601) { return date }
+            if let date = try? Date(text, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Not an ISO 8601 date: \(text)")
+        }
+        return decoder
+    }()
+
+    /// Reads the response of `GET /usage`. A service that failed is left out and its error logged; CodexBar keeps
+    /// the last good usage of a service whose fetch failed only for a while, so such an error is not a passing one.
+    init(from data: Data) throws {
+        let entries = try Self.decoder.decode([ProviderEntry].self, from: data)
+        for entry in entries where entry.error != nil {
+            Logger.usage.error(
+                "CodexBar could not get the usage of \(entry.provider, privacy: .public): \(entry.error?.message ?? "no message", privacy: .public)"
+            )
+        }
+        services = UsageService.allCases.compactMap { service in
+            guard let entry = entries.first(where: { $0.provider == service.rawValue }), let usage = entry.usage
+            else { return nil }
+            let report = ServiceReport(service: service, usage: usage, pace: entry.pace, resetCredits: entry.resetCredits)
+            return report.windows.isEmpty ? nil : report
+        }
+    }
+}
+
+/// The services shown by the usage widget, named by their CodexBar provider IDs.
 enum UsageService: String, CaseIterable, Identifiable {
     case claude, codex
 
@@ -74,111 +234,135 @@ enum UsageService: String, CaseIterable, Identifiable {
         }
     }
 
-    func usage(in report: UsageReport) -> ServiceUsage? {
+    var statusPageURL: URL {
         switch self {
-        case .claude: report.claude
-        case .codex: report.codex
+        case .claude: URL(string: "https://status.claude.com/")!
+        case .codex: URL(string: "https://status.openai.com/")!
         }
     }
+}
+
+/// A duration in its largest units, rounded down, e.g. "4d" or "4d 15h" ("4日", "4日15時間" in Japanese).
+func compactDuration(_ seconds: TimeInterval, maximumUnitCount: Int = 1) -> String {
+    Duration.seconds(seconds).formatted(
+        .units(
+            allowed: [.days, .hours, .minutes], width: .narrow, maximumUnitCount: maximumUnitCount,
+            fractionalPart: .hide(rounded: .down)))
 }
 
 // MARK: - Usage Manager
 
-/// Periodically runs the usage command and publishes its report.
-///
-/// The command (by default `~/.local/bin/usage-display.sh`) is expected to print
-/// `{"claude": {"primary": {"pct": 10, "reset": "2h"}, "secondary": ...}, "codex": ...}`.
-/// Fetching and caching the usage is left to that command, so this only reads its output.
+/// Reads the usage from the CodexBar server this manager runs, and publishes it.
 final class UsageManager: ObservableObject {
-    /// One manager for the usage widgets on the bar and their popup, released with its polling once none shows it.
+    /// One manager for the usage widgets on the bar and their popup, released with its server once none shows it.
     static let inUse = SharedWhileInUse<UsageManager>()
-    static let defaultCommand = "~/.local/bin/usage-display.sh"
 
     @Published private(set) var report: UsageReport?
+    /// Set while CodexBar's CLI is not installed, which the widget says instead of hiding.
+    @Published private(set) var isCodexBarMissing = false
 
-    private var command = UsageManager.defaultCommand
+    private var server: CodexBarServer?
+    private var usageURL: URL?
+    private var task: URLSessionDataTask?
     private var timer: AnyCancellable?
-    /// Set while the command runs, so a slow command is not started again on every tick.
-    private var isRunning = false
-    /// A command that hangs is stopped after this many seconds.
-    private static let timeout: TimeInterval = 10
-    /// A usage report is a few hundred bytes, so a command printing more than this is stopped rather than read into
-    /// memory without a limit.
-    private static let outputLimit = 1_000_000
+    private var terminateObserver: NSObjectProtocol?
+    /// Connections refused since the server started, which it does until it listens.
+    private var refusedConnections = 0
+
+    /// The server answers from its cache, which decides how often the services are asked (see
+    /// `CodexBarServer.refreshInterval`), so reading it often costs little and only bounds how late a new value shows.
+    private static let pollInterval: TimeInterval = 60
+    /// The first request after the server starts waits for the services, which took up to about 6 seconds; the
+    /// server gives up on a request after 30 seconds by default.
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 40
+        return URLSession(configuration: configuration)
+    }()
+    /// The server listens within about a second of starting; it is asked once a second until then.
+    private static let maxRefusedConnections = 10
 
     init() {
-        // The command's data changes by the minute and the widget shows minutes, so a 30-second interval keeps it
-        // current without running the command about 17,000 times a day.
-        timer = Timer.publish(every: 30, on: .main, in: .common)
+        server = CodexBarServer(
+            onChange: { [weak self] url in self?.serverDidChange(url) },
+            onMissingChange: { [weak self] missing in self?.isCodexBarMissing = missing })
+        timer = Timer.publish(every: Self.pollInterval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.refresh() }
-        refresh()
+        // Ends the server with Sill, as a child process otherwise outlives it.
+        terminateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.server?.stop()
+        }
+        server?.start()
     }
 
-    /// Changes the command from the widget config; an empty or missing value keeps the default.
-    func setCommand(_ newCommand: String?) {
-        let resolved = (newCommand?.isEmpty == false ? newCommand : nil) ?? Self.defaultCommand
-        guard resolved != command else { return }
-        command = resolved
-        refresh()
+    deinit {
+        if let terminateObserver {
+            NotificationCenter.default.removeObserver(terminateObserver)
+        }
+        task?.cancel()
+        server?.stop()
+    }
+
+    private func serverDidChange(_ url: URL?) {
+        usageURL = url
+        task?.cancel()
+        task = nil
+        refusedConnections = 0
+        if url == nil {
+            report = nil
+        } else {
+            refresh()
+        }
     }
 
     private func refresh() {
-        guard !isRunning else { return }
-        isRunning = true
-        let path = (command as NSString).expandingTildeInPath
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            let report = Self.run(path)
+        guard let url = usageURL, task == nil else { return }
+        let task = Self.session.dataTask(with: url) { [weak self] data, response, error in
             DispatchQueue.main.async {
-                guard let self else { return }
-                self.isRunning = false
-                if self.report != report {
-                    self.report = report
-                }
+                guard let self, url == self.usageURL else { return }
+                self.task = nil
+                self.receive(data: data, response: response, error: error)
             }
         }
+        self.task = task
+        task.resume()
     }
 
-    /// Returns nil when the command is missing, fails, or prints something that is not a usage report,
-    /// which hides the widget instead of showing stale numbers.
-    private static func run(_ path: String) -> UsageReport? {
-        guard FileManager.default.isExecutableFile(atPath: path) else { return nil }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: path)
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        let reader = OutputReader(pipe.fileHandleForReading, limit: outputLimit) {
-            ProcessStopper.stop(process)
+    private func receive(data: Data?, response: URLResponse?, error: Error?) {
+        if let error = error as? URLError, error.code == .cannotConnectToHost,
+            refusedConnections < Self.maxRefusedConnections
+        {
+            refusedConnections += 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.refresh() }
+            return
         }
-        do {
-            try process.run()
-        } catch {
-            _ = reader.finish()
-            Logger.usage.error("Could not start \(path, privacy: .public): \(String(describing: error), privacy: .public)")
-            return nil
+        let report: UsageReport?
+        if let error {
+            Logger.usage.error("Could not read codexbar serve: \(String(describing: error), privacy: .public)")
+            report = nil
+        } else if let status = (response as? HTTPURLResponse)?.statusCode, status != 200 {
+            Logger.usage.error("codexbar serve answered with status \(status, privacy: .public)")
+            report = nil
+        } else {
+            do {
+                report = try UsageReport(from: data ?? Data())
+            } catch {
+                Logger.usage.error(
+                    "codexbar serve sent usage that could not be read (\(data?.count ?? 0, privacy: .public) bytes): \(String(describing: error), privacy: .public)"
+                )
+                report = nil
+            }
         }
-        ProcessStopper.stop(process, after: timeout)
-        process.waitUntilExit()
-        let output = reader.finish()
-        guard process.terminationReason == .exit, process.terminationStatus == 0, !reader.exceededLimit else {
-            Logger.usage.error(
-                "\(path, privacy: .public) failed: reason \(process.terminationReason.rawValue, privacy: .public), status \(process.terminationStatus, privacy: .public), output over limit \(reader.exceededLimit, privacy: .public)"
-            )
-            return nil
-        }
-        do {
-            return try JSONDecoder().decode(UsageReport.self, from: output)
-        } catch {
-            Logger.usage.error(
-                "\(path, privacy: .public) printed a report that could not be read (\(output.count, privacy: .public) bytes): \(String(describing: error), privacy: .public)"
-            )
-            return nil
+        if self.report != report {
+            self.report = report
         }
     }
 }
 
-/// Stops a command that hangs, for the usage command, media-control and AeroSpace.
+/// Stops a command that hangs, for codexbar serve, media-control and AeroSpace.
 enum ProcessStopper {
     /// Seconds a terminated process has to exit before it is killed.
     static let killGracePeriod: TimeInterval = 2

@@ -31,7 +31,7 @@ extension Logger {
     static let windowSwitcher = Logger(subsystem: subsystem, category: "WindowSwitcher")
     /// The now playing widget and media-control.
     static let nowPlaying = Logger(subsystem: subsystem, category: "NowPlaying")
-    /// The usage widget and its command.
+    /// The usage widget and the CodexBar server it runs.
     static let usage = Logger(subsystem: subsystem, category: "Usage")
     /// The volume widget.
     static let volume = Logger(subsystem: subsystem, category: "Volume")

@@ -17,11 +17,12 @@ Sill is a macOS 26 menu bar replacement in SwiftUI, a fork of [barik](https://gi
 
 - User-visible text is localized in Sill/Resources/Localizable.xcstrings (English source, Japanese translation). Add each new key in place without re-sorting the file: letting Xcode rewrite it reorders every entry and buries the change in the diff.
 - Log with the `Logger` categories in Sill/Utils/Log.swift, not `print`. Read the log with `/usr/bin/log show --last 1h --predicate 'subsystem == "net.mizle.sill"'`: in zsh, `log` alone is a shell builtin and reads nothing.
-- External tools are looked up in /opt/homebrew/bin and /usr/local/bin on every use: `media-control` for Now Playing and `aerospace` for the window switcher. Say in the UI when one is missing.
+- External tools are looked up in /opt/homebrew/bin and /usr/local/bin on every use: `media-control` for Now Playing, `aerospace` for the window switcher and `codexbar` for the usage widget. Say in the UI when one is missing.
 
 ## Build and check
 
 - Build: `xcodebuild -project Sill.xcodeproj -scheme Sill -configuration Release -derivedDataPath build build`.
+- Test: `xcodebuild -project Sill.xcodeproj -scheme Sill -derivedDataPath build test`. The unit tests in SillTests run inside Sill, which shows no bar when it is the tests' host. Test what can be checked without the screen, such as reading a tool's output; check the UI on the real machine.
 - The maintainer installs it with `make install-sill-dev` from the dotfiles repository (eai04191/dotfiles), which signs it with a local self-signed certificate so permissions such as calendar access survive rebuilds.
 - Check UI changes on the real machine, not only by building. The scripts in scripts/verify synthesize input and list windows; build one with `swiftc -o <output> scripts/verify/<name>.swift`. Use `move` to hover rather than `click` at guessed coordinates, which can click into other apps. Record the screen with `screencapture -v` and measure transitions frame by frame, for example with ffmpeg's `signalstats` filter.
 - The maintainer uses the Mac while Sill is checked, and moving the pointer takes it from them: ask before using `move`, `click`, `press` or `scroll`. Open popups with `axpress` and scroll them with `axscroll`, which go through the accessibility API and leave the pointer alone. Glass reacts to hover only under the real pointer (a move sent only to Sill with `CGEvent.postToPid` did not light it), so hover needs the pointer.

@@ -2,86 +2,89 @@ import SwiftUI
 
 // MARK: - Usage Widget
 
-/// Shows the Claude Code and Codex rate limit usage as a logo, a small bar and "10% 2h" per window.
-///
-/// Config (`[widgets.default.usage]`):
-/// - `command`: the command printing the usage JSON, `~/.local/bin/usage-display.sh` by default.
+/// Shows the Claude Code and Codex rate limit usage as a logo, a small bar and "10% 2h" per window, from CodexBar
+/// (`brew install --cask codexbar`).
 struct UsageWidget: View {
-    @EnvironmentObject var configProvider: ConfigProvider
     @StateObject private var usageManager = UsageManager.inUse.instance { UsageManager() }
 
     @State private var rect: CGRect = .zero
 
     var body: some View {
-        Group {
-            if let report = usageManager.report {
-                let services = UsageService.allCases.compactMap { service in
-                    service.usage(in: report).flatMap { $0.windows.isEmpty ? nil : (service, $0) }
-                }
-                if !services.isEmpty {
-                    HStack(spacing: 14) {
-                        ForEach(services, id: \.0) { service, usage in
-                            ServiceUsageView(service: service, usage: usage)
-                        }
-                    }
-                    .experimentalConfiguration()
-                    .frame(maxHeight: .infinity)
-                    .background(.black.opacity(0.001))
-                    .background(
-                        GeometryReader { geometry in
-                            Color.clear
-                                .onAppear { rect = geometry.frame(in: .global) }
-                                .onChange(of: geometry.frame(in: .global)) { _, newFrame in
-                                    rect = newFrame
-                                }
-                        }
-                    )
-                    .barWidgetButton(label: "Usage", value: accessibilitySummary(services)) {
-                        MenuBarPopup.show(rect: rect, id: "usage", providesGlassModules: true) { UsagePopup() }
+        if let report = usageManager.report, !report.services.isEmpty {
+            // The time until each window resets is counted down between reads of the server.
+            TimelineView(.everyMinute) { context in
+                HStack(spacing: 14) {
+                    ForEach(report.services) { service in
+                        ServiceUsageView(report: service, now: context.date)
                     }
                 }
+                .popupButton(rect: $rect, value: accessibilitySummary(report.services, now: context.date))
             }
-        }
-        .onAppear { usageManager.setCommand(configProvider.config["command"]?.stringValue) }
-        .onReceive(configProvider.$config) { config in
-            usageManager.setCommand(config["command"]?.stringValue)
+        } else if usageManager.isCodexBarMissing {
+            // Says that CodexBar is missing rather than hiding, as a widget that never appears gives no hint why.
+            Image(systemName: "gauge.with.dots.needle.33percent")
+                .font(.barText)
+                .popupButton(
+                    rect: $rect,
+                    value: String(localized: "CodexBar is not installed", comment: "VoiceOver: the usage widget without CodexBar."))
         }
     }
 }
 
+extension View {
+    /// Makes the widget's content a bar button that opens the usage popup below it.
+    fileprivate func popupButton(rect: Binding<CGRect>, value: String) -> some View {
+        experimentalConfiguration()
+            .frame(maxHeight: .infinity)
+            .background(.black.opacity(0.001))
+            .background(
+                GeometryReader { geometry in
+                    Color.clear
+                        .onAppear { rect.wrappedValue = geometry.frame(in: .global) }
+                        .onChange(of: geometry.frame(in: .global)) { _, newFrame in
+                            rect.wrappedValue = newFrame
+                        }
+                }
+            )
+            .barWidgetButton(label: "Usage", value: value) {
+                MenuBarPopup.show(rect: rect.wrappedValue, id: "usage", providesGlassModules: true) { UsagePopup() }
+            }
+    }
+}
+
 /// Reads each service and its windows, e.g. "Claude Code 16% resets in 1h, 48% resets in 4h".
-private func accessibilitySummary(_ services: [(UsageService, ServiceUsage)]) -> String {
-    services.map { service, usage in
-        let windows = usage.windows.map { window in
-            window.reset.map {
+private func accessibilitySummary(_ services: [ServiceReport], now: Date) -> String {
+    services.map { report in
+        let windows = report.windows.map { window, _ in
+            window.resetText(now: now).map {
                 String(
                     localized: "\(window.percentText) resets in \($0)",
                     comment: "VoiceOver: a rate limit window's usage and the time until it resets, e.g. \"16% resets in 1h\".")
             } ?? window.percentText
         }
-        return "\(service.displayName) \(windows.joined(separator: ", "))"
+        return "\(report.service.displayName) \(windows.joined(separator: ", "))"
     }
     .joined(separator: "; ")
 }
 
 /// One service: its logo followed by each window's bar and text.
 private struct ServiceUsageView: View {
-    let service: UsageService
-    let usage: ServiceUsage
+    let report: ServiceReport
+    let now: Date
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(service.logoName)
+            Image(report.service.logoName)
                 .font(.barText)
-            ForEach(Array(usage.windows.enumerated()), id: \.offset) { index, window in
+            ForEach(Array(report.windows.enumerated()), id: \.offset) { index, item in
                 if index > 0 {
                     Circle()
                         .frame(width: 3, height: 3)
                         .opacity(0.5)
                 }
-                UsageBar(fraction: window.fraction)
+                UsageBar(fraction: item.window.fraction)
                     .frame(width: 28, height: 4)
-                Text(window.reset.map { "\(window.percentText) \($0)" } ?? window.percentText)
+                Text(item.window.resetText(now: now).map { "\(item.window.percentText) \($0)" } ?? item.window.percentText)
                     .font(.barText)
                     .monospacedDigit()
                     .lineLimit(1)
