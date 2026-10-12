@@ -10,7 +10,8 @@
 #          granted to it applies and no permission prompt shows. That Sill is the running one outside this checkout, or
 #          SILL_INSTALLED_APP when it is set.
 # start    Starts the instance with its files in build/hidden-sill, its config in
-#          build/hidden-sill/config/sill/config.toml, and prints its pid.
+#          build/hidden-sill/config/sill/config.toml, and prints its pid. A missing config is written with every widget
+#          on the bar, so each widget's popup can be opened; the instance reads the config again when it is edited.
 # pid      Prints the instance's pid, for SILL_PID with axpress and axscroll.
 # capture  Captures each of the instance's windows on screen into <directory>/<window number>.png.
 # stop     Quits the instance.
@@ -87,7 +88,24 @@ start)
         echo "The hidden instance is already running: pid $(running_pid)" >&2
         exit 1
     fi
-    mkdir -p "$state/config"
+    mkdir -p "$state/config/sill"
+    # Every widget that MenuBarView.buildView knows, so that each can be checked. Sill writes its own default config,
+    # with only the battery and the time, when none exists.
+    if [ ! -e "$state/config/sill/config.toml" ]; then
+        cat >"$state/config/sill/config.toml" <<'EOF'
+theme = "system" # system, light, dark
+
+[widgets]
+displayed = [
+    "default.frontapp",
+    "default.nowplaying",
+    "default.usage",
+    "default.volume",
+    "default.battery",
+    "default.time"
+]
+EOF
+    fi
     # open, rather than running the executable from this shell, so that Sill itself is responsible for its calendar
     # access instead of the app the shell runs in. -g keeps it from coming to the front.
     open -g -n --env SILL_HIDDEN_INSTANCE="$state" --env XDG_CONFIG_HOME="$state/config" "$app"
@@ -127,7 +145,8 @@ stop)
     exit 1
     ;;
 *)
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    # The comment at the top of this file, up to its first line that is not a comment.
+    awk 'NR > 1 { if (!/^#/) exit; sub(/^# ?/, ""); print }' "$0"
     exit 1
     ;;
 esac
