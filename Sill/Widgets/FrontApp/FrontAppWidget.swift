@@ -86,12 +86,13 @@ struct FrontAppWidget: View {
                         }
                 }
             )
-            .animation(.smooth(duration: 0.15), value: name)
             .barWidgetButton(label: "Windows", value: name) {
                 MenuBarPopup.show(rect: rect, id: "windowswitcher", focusesContent: true) {
                     WindowSwitcherPopup()
                 }
             }
+            // Outside the button, so the button's glass, which is the chip, follows the new name's width too.
+            .animation(.smooth(duration: 0.15), value: name)
         }
     }
 }
