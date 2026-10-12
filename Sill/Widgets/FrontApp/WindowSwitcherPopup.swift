@@ -122,7 +122,18 @@ struct WindowSwitcherPopup: View {
         }
         // The list is as tall as its rows up to the maximum, and scrolls beyond it.
         .frame(height: min(listHeight, Self.maxListHeight))
+        // An overlay scroller is drawn over the content and would cover the workspace names, so the scroll view
+        // reaches into the popup's padding by the scroller's width and keeps the rows out of it: the scroller then
+        // shows in the padding and the rows keep their width.
+        .contentMargins(.trailing, scrollerGutter, for: .scrollContent)
+        .padding(.trailing, -scrollerGutter)
         .scrollIndicators(.automatic)
+    }
+
+    /// The width of an overlay scroller. A legacy scroller takes its own room beside the content.
+    private var scrollerGutter: CGFloat {
+        guard NSScroller.preferredScrollerStyle == .overlay else { return 0 }
+        return NSScroller.scrollerWidth(for: .regular, scrollerStyle: .overlay)
     }
 
     private func row(_ window: AeroSpaceWindow) -> some View {
