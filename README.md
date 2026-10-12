@@ -9,6 +9,22 @@
 
 Sill is a fork of [barik](https://github.com/mocki-toki/barik) by Simon Butenko, reworked to follow the Human Interface Guidelines and Liquid Glass, with a window switcher, a Now Playing widget for any player, and fewer features to maintain. It does not read barik's config file.
 
+## Differences from barik
+
+The main changes, not a complete list:
+
+- Liquid Glass throughout: every bar widget is a system glass button, and popups are Liquid Glass modules. The look without Liquid Glass is gone, and Sill requires macOS 26.
+- Follows the Human Interface Guidelines more closely: the system menu bar font, popups that open and close like a system popover, Escape to close them, Reduce Motion, popups that follow the appearance, and clicks between widgets that reach the app behind the bar.
+- The bar can sit at the bottom of the screen, keep widgets at the center, collect widgets that do not fit into a "more" widget, and hide while full-screen content is in front.
+- New widgets: front app with a window switcher (via AeroSpace), volume, and Claude Code / Codex usage (via CodexBar).
+- Now Playing reads from media-control instead of AppleScript, so it shows any player, browsers included, and its popup is laid out like the system's Now Playing.
+- The time widget has a `fixed-format` option.
+- VoiceOver support and a Japanese translation.
+- 50+ bug and performance fixes to what barik had, for example in config reloading, calendar time zones and events, battery levels, and popups taller than the screen.
+- The config lives in `~/.config/sill/config.toml` (following `XDG_CONFIG_HOME`).
+- Installed from a Homebrew tap; the built-in auto updater is gone.
+- Removed: the Spaces widget, the Network widget, the What's new banner and the experimental full-screen background.
+
 ## Requirements
 
 - macOS 26+ on Apple silicon
