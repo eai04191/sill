@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// How every popup appears and disappears, timed like the system popover (NSPopover) in macOS 26: quickly and without
@@ -12,6 +13,9 @@ enum PopupMotion {
 }
 
 struct MenuBarPopupView<Content: View>: View {
+    /// Identifies this popup in the notifications that show and hide it: the panel can hold the popup that is
+    /// disappearing and the one replacing it at once.
+    let presentationID: UUID
     /// The horizontal center of the widget the popup belongs to, in the panel's coordinates.
     let anchorX: CGFloat
     let content: Content
@@ -28,12 +32,21 @@ struct MenuBarPopupView<Content: View>: View {
     /// kept the modules' glass from materializing, so they appeared at once (see `MenuBarPopup.show`).
     private let providesModules: Bool
 
-    private let willShowWindow = NotificationCenter.default.publisher(
-        for: .willShowWindow)
-    private let willHideWindow = NotificationCenter.default.publisher(
-        for: .willHideWindow)
+    private let willShowWindow: AnyPublisher<Notification, Never>
+    private let willHideWindow: AnyPublisher<Notification, Never>
 
-    init(anchorX: CGFloat, providesModules: Bool, @ViewBuilder content: () -> Content) {
+    private static func notifications(_ name: Notification.Name, for presentationID: UUID)
+        -> AnyPublisher<Notification, Never>
+    {
+        NotificationCenter.default.publisher(for: name)
+            .filter { $0.object as? UUID == presentationID }
+            .eraseToAnyPublisher()
+    }
+
+    init(presentationID: UUID, anchorX: CGFloat, providesModules: Bool, @ViewBuilder content: () -> Content) {
+        self.presentationID = presentationID
+        willShowWindow = Self.notifications(.willShowWindow, for: presentationID)
+        willHideWindow = Self.notifications(.willHideWindow, for: presentationID)
         self.anchorX = anchorX
         self.providesModules = providesModules
         self.content = content()

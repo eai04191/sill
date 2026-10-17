@@ -31,15 +31,27 @@ class HidingPanel: NSPanel, NSWindowDelegate {
     }
 }
 
-class MenuBarPopup {
-    static var lastContentIdentifier: String? = nil
+/// One popup in the panel: its own hosting view, so the popup it replaces can disappear while it appears.
+private struct PresentedPopup {
+    let id: String
+    /// Tells this popup's view, and not the others in the panel, to appear or disappear (see `MenuBarPopupView`).
+    let presentationID: UUID
+    let view: PopupHostingView
+}
 
-    /// Whether a popup is shown or about to be shown, as opposed to hidden or disappearing.
-    private static var isShown = false
-    /// The delayed step of the latest show or hide: showing the new content once the old popup has disappeared, or
-    /// ordering the panel out once the popup has disappeared. Each show or hide cancels the previous step, so a step
-    /// scheduled for an earlier popup never hides or shows a later one.
-    private static var pendingStep: DispatchWorkItem?
+/// A popup's hosting view, which stops taking clicks once its popup starts to disappear, so a click during the
+/// transition reaches the popup that replaces it.
+private final class PopupHostingView: NSHostingView<AnyView> {
+    var isDisappearing = false
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        isDisappearing ? nil : super.hitTest(point)
+    }
+}
+
+class MenuBarPopup {
+    /// The popup shown or about to be shown, as opposed to hidden or disappearing.
+    private static var current: PresentedPopup?
 
     /// - Parameter providesGlassModules: The content draws its own glass modules, so the popup adds no glass behind
     ///   them (glass on glass, which the HIG asks to avoid).
@@ -52,7 +64,7 @@ class MenuBarPopup {
     ) {
         guard let panel = panel else { return }
 
-        if isShown, lastContentIdentifier == id {
+        if current?.id == id {
             hide()
             return
         }
@@ -60,59 +72,56 @@ class MenuBarPopup {
 
         applyAppearance(to: panel)
 
-        let isContentChange = isShown
-        isShown = true
-        lastContentIdentifier = id
-        pendingStep?.cancel()
-        pendingStep = nil
-
-        // Like the system popovers, one popup is closed before the next one opens, with the same transitions as
-        // closing and opening each (see PopupMotion).
-        if isContentChange {
-            NotificationCenter.default.post(name: .willHideWindow, object: nil)
-            schedule(after: PopupMotion.hideDuration) {
-                present(
-                    in: panel, rect: rect, providesGlassModules: providesGlassModules,
-                    focusesContent: focusesContent, content: content)
-            }
-        } else {
-            present(
-                in: panel, rect: rect, providesGlassModules: providesGlassModules, focusesContent: focusesContent,
-                content: content)
+        // Switching to another widget's popup disappears the open popup while the new one appears, each with its own
+        // transition (see PopupMotion), rather than waiting for the open popup to be gone first.
+        if let previous = current {
+            dismiss(previous, from: panel)
         }
+        current = present(
+            id: id, in: panel, rect: rect, providesGlassModules: providesGlassModules, focusesContent: focusesContent,
+            content: content)
     }
 
     /// Hides the popup: closing it by clicking its widget again or pressing Escape, or the panel losing key status.
     /// Ordering the panel out also makes it lose key status, which then finds the popup already hiding.
     static func hide() {
-        guard isShown, let panel = panel else { return }
-        Logger.popup.notice("Hiding popup \(lastContentIdentifier ?? "unknown", privacy: .public)")
-        isShown = false
-        NotificationCenter.default.post(name: .willHideWindow, object: nil)
-        schedule(after: PopupMotion.hideDuration) {
-            panel.orderOut(nil)
-            lastContentIdentifier = nil
+        guard let popup = current, let panel = panel else { return }
+        Logger.popup.notice("Hiding popup \(popup.id, privacy: .public)")
+        current = nil
+        dismiss(popup, from: panel)
+    }
+
+    /// Lets the popup disappear, then removes its view, and orders the panel out once no popup is left in it. A popup
+    /// shown while this one disappears keeps the panel ordered in.
+    private static func dismiss(_ popup: PresentedPopup, from panel: NSPanel) {
+        popup.view.isDisappearing = true
+        NotificationCenter.default.post(name: .willHideWindow, object: popup.presentationID)
+        DispatchQueue.main.asyncAfter(deadline: .now() + PopupMotion.hideDuration) {
+            popup.view.removeFromSuperview()
+            if current == nil, panel.contentView?.subviews.isEmpty ?? true {
+                panel.orderOut(nil)
+            }
         }
     }
 
-    private static func schedule(after delay: Double, _ step: @escaping () -> Void) {
-        pendingStep?.cancel()
-        let workItem = DispatchWorkItem(block: step)
-        pendingStep = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
-    }
-
     private static func present<Content: View>(
-        in panel: NSPanel, rect: CGRect, providesGlassModules: Bool, focusesContent: Bool,
+        id: String, in panel: NSPanel, rect: CGRect, providesGlassModules: Bool, focusesContent: Bool,
         @ViewBuilder content: @escaping () -> Content
-    ) {
-        panel.contentView = NSHostingView(
-            rootView:
-                MenuBarPopupView(anchorX: rect.midX, providesModules: providesGlassModules) {
+    ) -> PresentedPopup {
+        let presentationID = UUID()
+        let view = PopupHostingView(
+            rootView: AnyView(
+                MenuBarPopupView(
+                    presentationID: presentationID, anchorX: rect.midX, providesModules: providesGlassModules
+                ) {
                     content()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)))
+        if let container = panel.contentView {
+            view.frame = container.bounds
+            view.autoresizingMask = [.width, .height]
+            container.addSubview(view)
+        }
         if HiddenInstance.isEnabled {
             panel.orderFront(nil)
         } else {
@@ -122,19 +131,19 @@ class MenuBarPopup {
             clearInitialFocus(of: panel)
         }
         DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .willShowWindow, object: nil)
+            NotificationCenter.default.post(name: .willShowWindow, object: presentationID)
             // A hidden instance's popup is not on the display, so VoiceOver should not interrupt the maintainer for it.
             if !HiddenInstance.isEnabled {
-                announceToAssistiveTechnologies(panel)
+                announceToAssistiveTechnologies(view)
             }
         }
+        return PresentedPopup(id: id, presentationID: presentationID, view: view)
     }
 
     /// Sill stays in the background while its popup is key, so tell VoiceOver that the popup opened and point it at
     /// the popup's content; Escape closes the popup (see HidingPanel).
-    private static func announceToAssistiveTechnologies(_ panel: NSPanel) {
-        guard isShown, let contentView = panel.contentView else { return }
+    private static func announceToAssistiveTechnologies(_ contentView: NSView) {
+        guard current?.view === contentView else { return }
         NSAccessibility.post(
             element: NSApp as Any, notification: .announcementRequested,
             userInfo: [
@@ -190,6 +199,8 @@ class MenuBarPopup {
         newPanel.hasShadow = false
         newPanel.collectionBehavior = [.canJoinAllSpaces]
         newPanel.setFrame(frame, display: false)
+        // Holds a hosting view for each popup in the panel (see `present`).
+        newPanel.contentView = NSView(frame: NSRect(origin: .zero, size: frame.size))
 
         panel = newPanel
     }
