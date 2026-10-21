@@ -35,8 +35,8 @@ jobs:
     env:
       # The linux_amd64 archive of jactionlint, checked against this SHA-256.
       # renovate: datasource=github-release-attachments depName=jdx/jactionlint
-      JACTIONLINT_VERSION: v2.2.0
-      JACTIONLINT_SHA256: 8137d5bfe266dd5e48d2af2306827785ce07c6988e04b1c3d6ad4776e97d27d2
+      JACTIONLINT_VERSION: v2.3.0
+      JACTIONLINT_SHA256: 907e6f6a59e181879f7e6936e19ee2eca1cbc51de134fb85460cfa8d65a71f28
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
