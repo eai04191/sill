@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0
+
+### Features
+
+- Show the English weekday names in the calendar with popup.weekday-english
+- List the months with their English names in the calendar with popup.month-english
+- Show and change whether the Spotify song is in the Liked Songs in the now playing popup
+
+### Fixes
+
+- Show more of the window titles in the window switcher
+- Animate the front app chip's width again when the app changes
+
 ## 0.7.0
 
 ### Features
