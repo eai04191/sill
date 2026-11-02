@@ -36,7 +36,7 @@ struct UsageWindow: Decodable, Equatable {
     /// report it.
     func resetText(now: Date) -> String? {
         guard let resetsAt, resetsAt > now else { return nil }
-        return compactDuration(resetsAt.timeIntervalSince(now))
+        return roundedCompactDuration(resetsAt.timeIntervalSince(now))
     }
 
     /// When the window resets, e.g. "2:30" today or "Oct 18, 9:00" on another day, for the popup, which has room to
@@ -248,6 +248,13 @@ func compactDuration(_ seconds: TimeInterval, maximumUnitCount: Int = 1) -> Stri
         .units(
             allowed: [.days, .hours, .minutes], width: .narrow, maximumUnitCount: maximumUnitCount,
             fractionalPart: .hide(rounded: .down)))
+}
+
+/// A duration in its largest unit, rounded to the nearest, e.g. "2h" for 1h 40m. It is rounded here rather than by
+/// the format style, which leaves 23h 42m as "24h" instead of carrying it into "1d".
+func roundedCompactDuration(_ seconds: TimeInterval) -> String {
+    let unit: TimeInterval = [86_400, 3_600].first { seconds >= $0 } ?? 60
+    return compactDuration((seconds / unit).rounded() * unit)
 }
 
 // MARK: - Usage Manager

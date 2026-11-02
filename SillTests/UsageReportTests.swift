@@ -115,4 +115,18 @@ struct UsageReportTests {
         #expect(compactDuration(5_399).hasPrefix("1"))
         #expect(compactDuration(400_100, maximumUnitCount: 2).filter(\.isNumber) == "415")
     }
+
+    @Test func roundsTheTimeUntilAResetToTheNearestUnit() {
+        func resetText(in seconds: TimeInterval) -> String? {
+            UsageWindow(usedPercent: 10, windowMinutes: 300, resetsAt: Date(timeIntervalSince1970: seconds))
+                .resetText(now: Date(timeIntervalSince1970: 0))
+        }
+        // 1h 40m, 1h 20m and 4d 15h.
+        #expect(resetText(in: 6_000) == compactDuration(2 * 3_600))
+        #expect(resetText(in: 4_800) == compactDuration(3_600))
+        #expect(resetText(in: 400_100) == compactDuration(5 * 86_400))
+        // Rounding up into the next unit shows that unit: 23h 42m as 1d, not 24h, and 59m 36s as 1h.
+        #expect(resetText(in: 85_320) == compactDuration(86_400))
+        #expect(resetText(in: 3_576) == compactDuration(3_600))
+    }
 }
