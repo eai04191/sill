@@ -23,6 +23,8 @@ final class CodexBarServer {
     private static let restartDelay: TimeInterval = 5
     /// Seconds between looks for the CLI while it is not installed.
     private static let installCheckInterval: TimeInterval = 30
+    /// Seconds between looks for a new CLI while the server runs.
+    private static let updateCheckInterval: TimeInterval = 30
     /// The CLI's executable behind the Homebrew link, which names the process.
     private static let processName = "CodexBarCLI"
 
@@ -39,6 +41,8 @@ final class CodexBarServer {
     /// Called on the main queue when the CLI is found missing or found again.
     private let onMissingChange: (Bool) -> Void
     private var process: Process?
+    /// The file the running server was started from.
+    private var launchedExecutable: FileIdentity?
     private var stopped = false
     private var isMissing = false
 
@@ -98,15 +102,38 @@ final class CodexBarServer {
                 self.relaunch(after: Self.restartDelay)
             }
         }
+        // Taken before the server starts, so a CLI replaced while it starts differs from the one recorded for it.
+        let executable = FileIdentity(of: executableURL)
         do {
             try process.run()
             Logger.usage.notice("Started codexbar serve on port \(port, privacy: .public), pid \(process.processIdentifier, privacy: .public)")
             self.process = process
+            launchedExecutable = executable
             Self.writePIDFile(process.processIdentifier)
             onChange(URL(string: "http://127.0.0.1:\(port)/usage?provider=both"))
+            checkForUpdate(of: process)
         } catch {
             Logger.usage.error("Could not start codexbar serve: \(String(describing: error), privacy: .public)")
             relaunch(after: Self.restartDelay)
+        }
+    }
+
+    /// Updating CodexBar replaces the CLI under a running server, which keeps running the old one. After CodexBar
+    /// 0.83.0 replaced it, the old server answered every request for Claude's usage with a timeout for hours while a
+    /// server started from the new CLI answered, so a server whose CLI was replaced or removed is stopped, and its
+    /// termination handler starts it again from the CLI now installed.
+    private func checkForUpdate(of process: Process) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.updateCheckInterval) { [weak self] in
+            guard let self, !self.stopped, self.process === process else { return }
+            let installed = Self.executableURL.flatMap(FileIdentity.init(of:))
+            guard installed == self.launchedExecutable else {
+                Logger.usage.notice(
+                    "Restarting codexbar serve, pid \(process.processIdentifier, privacy: .public), as its CLI was replaced or removed"
+                )
+                ProcessStopper.stop(process)
+                return
+            }
+            self.checkForUpdate(of: process)
         }
     }
 
@@ -194,5 +221,19 @@ final class CodexBarServer {
     private static func removePIDFile(for pid: pid_t) {
         guard let pidFileURL, recordedPID() == pid else { return }
         try? FileManager.default.removeItem(at: pidFileURL)
+    }
+}
+
+/// A file as the file system identifies it, which changes when the file is replaced even if its path does not.
+struct FileIdentity: Equatable {
+    let device: dev_t
+    let inode: ino_t
+
+    /// The file at `url`, following links such as Homebrew's, or nil when there is none.
+    init?(of url: URL) {
+        var info = stat()
+        guard stat(url.path, &info) == 0 else { return nil }
+        device = info.st_dev
+        inode = info.st_ino
     }
 }
