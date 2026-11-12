@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+### Fixes
+
+- Let the open popup disappear while another widget's popup appears
+- Round the time until a usage window resets to the nearest unit on the bar
+- Restart codexbar serve when updating CodexBar replaces its CLI
+
 ## 0.8.0
 
 ### Features
